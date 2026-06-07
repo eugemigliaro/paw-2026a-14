@@ -742,45 +742,12 @@ final class EventPageSupport {
                         "event.participants.many", new Object[] {participantCount}, locale);
     }
 
-    private String reservationErrorMessage(
-            final String code,
-            final Locale
-                    locale) { // TODO: check. could be rewritten to be "reservation.error." + code
-        // in the message key, and then have a default message for unknown
-        // codes
-        switch (code) {
-            case "closed":
-                return messageSource.getMessage("reservation.error.closed", null, locale);
-            case "started":
-                return messageSource.getMessage("reservation.error.started", null, locale);
-            case "already_joined":
-                return messageSource.getMessage("reservation.error.alreadyJoined", null, locale);
-            case "is_host":
-                return messageSource.getMessage("reservation.error.isHost", null, locale);
-            case "not_joined":
-                return messageSource.getMessage("reservation.error.notJoined", null, locale);
-            case "not_cancellable":
-                return messageSource.getMessage("reservation.error.notCancellable", null, locale);
-            case "full":
-                return messageSource.getMessage(
-                        "reservation.error.fullBeforeConfirm", null, locale);
-            case "not_recurring":
-                return messageSource.getMessage("reservation.error.notRecurring", null, locale);
-            case "series_started":
-                return messageSource.getMessage("reservation.error.seriesStarted", null, locale);
-            case "series_closed":
-                return messageSource.getMessage("reservation.error.seriesClosed", null, locale);
-            case "series_already_joined":
-                return messageSource.getMessage(
-                        "reservation.error.seriesAlreadyJoined", null, locale);
-            case "series_full":
-                return messageSource.getMessage("reservation.error.seriesFull", null, locale);
-            case "series_not_joined":
-                return messageSource.getMessage("reservation.error.seriesNotJoined", null, locale);
-            case "not_found":
-            default:
-                return messageSource.getMessage("reservation.error.notFound", null, locale);
+    private String reservationErrorMessage(final String code, final Locale locale) {
+        if (code == null) {
+            return null;
         }
+        final String errorKey = "reservation.error." + code;
+        return messageSource.getMessage(errorKey, null, locale);
     }
 
     private static String avatarLabelForUsername(final String username) {
@@ -800,94 +767,25 @@ final class EventPageSupport {
         return compact.substring(0, 1).toUpperCase();
     }
 
-    private String joinErrorMessage(
-            final String code, final Locale locale) { // TODO: same obs as reservationErrorMessage
-        switch (code) {
-            case "closed":
-                return messageSource.getMessage("join.error.closed", null, locale);
-            case "started":
-                return messageSource.getMessage("join.error.started", null, locale);
-            case "already_joined":
-                return messageSource.getMessage("join.error.alreadyJoined", null, locale);
-            case "already_pending":
-                return messageSource.getMessage("join.error.alreadyPending", null, locale);
-            case "full":
-                return messageSource.getMessage("join.error.full", null, locale);
-            case "is_host":
-                return messageSource.getMessage("join.error.isHost", null, locale);
-            case "not_invite_only":
-                return messageSource.getMessage("join.error.notInviteOnly", null, locale);
-            case "no_pending_request":
-                return messageSource.getMessage("join.error.noPendingRequest", null, locale);
-            case "not_recurring":
-                return messageSource.getMessage("join.error.notRecurring", null, locale);
-            case "series_started":
-                return messageSource.getMessage("join.error.seriesStarted", null, locale);
-            case "series_closed":
-                return messageSource.getMessage("join.error.seriesClosed", null, locale);
-            case "series_already_joined":
-                return messageSource.getMessage("join.error.seriesAlreadyJoined", null, locale);
-            case "series_already_pending":
-                return messageSource.getMessage("join.error.seriesAlreadyPending", null, locale);
-            case "series_full":
-                return messageSource.getMessage("join.error.seriesFull", null, locale);
-            case "not_found":
-            default:
-                return messageSource.getMessage("join.error.notFound", null, locale);
-        }
-    }
-
-    private String inviteErrorMessage(
-            final String code, final Locale locale) { // TODO: same obs as reservationErrorMessage
+    private String joinErrorMessage(final String code, final Locale locale) {
         if (code == null) {
             return null;
         }
-        switch (code) {
-            case "closed":
-                return messageSource.getMessage("invite.error.closed", null, locale);
-            case "started":
-                return messageSource.getMessage("invite.error.started", null, locale);
-            case "no_invitation":
-                return messageSource.getMessage("invite.error.noInvitation", null, locale);
-            case "is_host":
-                return messageSource.getMessage("invite.error.isHost", null, locale);
-            case "not_found":
-            default:
-                return messageSource.getMessage("invite.error.notFound", null, locale);
-        }
+        return messageSource.getMessage("join.error." + code, null, locale);
     }
 
-    private String hostActionNotice(
-            final String hostAction,
-            final Locale locale) { // TODO: same obs as reservationErrorMessage
-        if ("updated".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.updated", null, locale);
+    private String inviteErrorMessage(final String code, final Locale locale) {
+        if (code == null) {
+            return null;
         }
-        if ("cancelled".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.cancelled", null, locale);
+        return messageSource.getMessage("invite.error." + code, null, locale);
+    }
+
+    private String hostActionNotice(final String hostAction, final Locale locale) {
+        if (hostAction == null) {
+            return null;
         }
-        if ("seriesUpdated".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.seriesUpdated", null, locale);
-        }
-        if ("seriesCancelled".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("host.action.seriesCancelled", null, locale);
-        }
-        if ("participantRemoved".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.participants.removed", null, locale);
-        }
-        if ("requestApproved".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.requests.approved", null, locale);
-        }
-        if ("requestRejected".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.requests.rejected", null, locale);
-        }
-        if ("inviteSent".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.invites.sent", null, locale);
-        }
-        if ("seriesInviteSent".equalsIgnoreCase(hostAction)) {
-            return messageSource.getMessage("event.host.invites.seriesSent", null, locale);
-        }
-        return null;
+        return messageSource.getMessage("host.action." + hostAction, null, locale);
     }
 
     private static boolean isRequestHostAction(

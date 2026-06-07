@@ -40,6 +40,8 @@
 			<spring:message var="recurrenceEndOccurrenceCount" code="host.form.recurrence.endMode.occurrenceCount" />
 			<spring:message var="recurrenceEndModePlaceholder" code="host.form.recurrence.endMode.placeholder" />
 			<spring:message var="recurrenceFrequencyPlaceholder" code="host.form.recurrence.frequency.placeholder" />
+			<c:set var="selectedVisibility" value="${createEventForm.visibility.dbValue}" />
+			<c:set var="selectedJoinPolicy" value="${createEventForm.joinPolicy.dbValue}" />
 			<c:url var="resolvedFormAction" value="${formAction}" />
 
 			<main class="page-shell">
@@ -63,10 +65,11 @@
 						novalidate="novalidate">
 						<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 						<c:if test="${not empty formError}">
-							<p class="field__error">
+							<p class="field__error create-form__global-error">
 								<c:out value="${formError}" />
 							</p>
 						</c:if>
+						<div class="create-form__column">
 						<!-- basics -->
 						<article class="panel form-card">
 							<span class="detail-label">
@@ -120,138 +123,6 @@
 								</label>
 							</div>
 						</article>
-						<!-- logistis-->
-						<article class="panel form-card">
-							<span class="detail-label">
-								<spring:message code="host.section.logistics" />
-							</span>
-							<h2 class="form-card__title">
-								<spring:message code="host.section.logistics.subtitle" />
-							</h2>
-							<div class="create-stack">
-								<label class="field" for="match-address">
-									<span class="field__label">
-										<spring:message code="host.form.location" />
-									</span>
-									<form:input path="address" id="match-address"
-										cssClass="field__control" required="required"
-										placeholder="${locationPlaceholder}" />
-									<form:errors path="address" cssClass="field__error"
-										element="span" />
-								</label>
-								<form:hidden path="latitude" id="match-location-latitude" />
-								<form:hidden path="longitude" id="match-location-longitude" />
-								<form:errors path="latitude" cssClass="field__error" element="span" />
-								<form:errors path="longitude" cssClass="field__error" element="span" />
-								<c:if test="${mapPickerEnabled}">
-									<c:url var="appRootUrl" value="/" />
-									<c:set var="contextAwareMapTileUrlTemplate"
-										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
-									<section
-										class="location-picker"
-										data-location-picker="true"
-										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
-										data-attribution="${mapAttribution}"
-										data-default-latitude="${mapDefaultLatitude}"
-										data-default-longitude="${mapDefaultLongitude}"
-										data-default-zoom="${mapDefaultZoom}">
-										<div class="location-picker__header">
-											<div>
-												<span class="field__label"><spring:message code="host.form.location.map" /></span>
-											</div>
-											<div class="location-picker__actions">
-												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
-													<spring:message code="host.form.location.zoomOut" />
-												</button>
-												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
-													<spring:message code="host.form.location.zoomIn" />
-												</button>
-												<button type="button" class="btn btn--secondary btn--sm" data-location-current="true">
-													<spring:message code="host.form.location.current" />
-												</button>
-												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
-													<spring:message code="host.form.location.clear" />
-												</button>
-											</div>
-										</div>
-										<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
-										<c:if test="${not empty mapAttribution}">
-											<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
-										</c:if>
-									</section>
-								</c:if>
-								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="match-date">
-										<span class="field__label">
-											<spring:message code="host.form.date" />
-										</span>
-										<form:input path="eventDate" id="match-date" type="date"
-											cssClass="field__control" required="required" />
-										<form:errors path="eventDate" cssClass="field__error"
-											element="span" />
-									</label>
-
-									<label class="field" for="match-time">
-										<span class="field__label">
-											<spring:message code="host.form.startTime" />
-										</span>
-										<form:input path="eventTime" id="match-time" type="time"
-											cssClass="field__control" required="required" />
-										<form:errors path="eventTime" cssClass="field__error"
-											element="span" />
-									</label>
-								</div>
-
-								<div class="field">
-									<span class="field__label">
-										<spring:message code="host.form.duration" />
-									</span>
-									<div class="duration-options" role="radiogroup"
-										aria-label="${durationLabel}">
-										<label class="chip duration-option"
-											data-duration-minutes="60">
-											<input type="radio" name="durationPresetUi" value="60"
-												class="duration-option__input" />
-												<span><c:out value="${durationOneHour}" /></span>
-										</label>
-										<label class="chip duration-option"
-											data-duration-minutes="90">
-											<input type="radio" name="durationPresetUi" value="90"
-												class="duration-option__input" />
-												<span><c:out value="${durationNinetyMinutes}" /></span>
-										</label>
-										<label class="chip duration-option"
-											data-duration-minutes="custom">
-											<input type="radio" name="durationPresetUi"
-												value="custom" class="duration-option__input" />
-												<span><c:out value="${durationCustom}" /></span>
-										</label>
-									</div>
-								</div>
-								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="match-end-date">
-										<span class="field__label">
-											<spring:message code="host.form.endDate" />
-										</span>
-										<form:input path="endDate" id="match-end-date" type="date"
-											cssClass="field__control" required="required" />
-										<form:errors path="endDate" cssClass="field__error"
-											element="span" />
-									</label>
-
-									<label class="field" for="match-end-time">
-										<span class="field__label">
-											<spring:message code="host.form.endTime" />
-										</span>
-										<form:input path="endTime" id="match-end-time" type="time"
-											cssClass="field__control" required="required" />
-										<form:errors path="endTime" cssClass="field__error"
-											element="span" />
-									</label>
-								</div>
-
-							</div>
-						</article>
 
 						<article class="panel form-card">
 							<span class="detail-label">
@@ -278,11 +149,11 @@
 												</span>
 											</div>
 											<input type="hidden" name="visibility"
-												value="${createEventForm.visibility}" />
+												value="${selectedVisibility}" />
 										</c:when>
 										<c:otherwise>
 											<ui:eventsFilterToggle id="match-visibility-toggle"
-												currentValue="${createEventForm.visibility}"
+												currentValue="${selectedVisibility}"
 												inputName="visibility" leftValue="public"
 												rightValue="private" leftLabel="${visibilityPublic}"
 												rightLabel="${visibilityPrivate}"
@@ -293,7 +164,8 @@
 									</c:choose>
 								</div>
 
-								<div class="field" id="join-policy-field">
+								<div class="field" id="join-policy-field"
+									<c:if test="${selectedVisibility eq 'private'}">style="display: none;"</c:if>>
 									<span class="field__label">
 										<spring:message code="host.form.joinPolicy" />
 									</span>
@@ -311,11 +183,11 @@
 												</span>
 											</div>
 											<input type="hidden" name="joinPolicy"
-												value="${createEventForm.joinPolicy}" />
+												value="${selectedJoinPolicy}" />
 										</c:when>
 										<c:otherwise>
 											<ui:eventsFilterToggle id="match-join-policy-toggle"
-												currentValue="${createEventForm.joinPolicy}"
+												currentValue="${selectedJoinPolicy}"
 												inputName="joinPolicy" leftValue="direct"
 												rightValue="approval_required"
 												leftLabel="${joinPolicyDirect}"
@@ -360,9 +232,9 @@
 							</div>
 						</article>
 
-						<c:if test="${not isEditMode}">
-							<article class="panel form-card">
-								<span class="detail-label">
+							<c:if test="${not isEditMode}">
+								<article class="panel form-card">
+									<span class="detail-label">
 									<spring:message code="host.section.recurrence" />
 								</span>
 								<h2 class="form-card__title">
@@ -499,9 +371,138 @@
 										</label>
 									</div>
 								</div>
-							</article>
-						</c:if>
+								</article>
+							</c:if>
+						</div>
+						<div class="create-form__column">
+						<!-- logistics -->
+						<article class="panel form-card">
+							<span class="detail-label">
+								<spring:message code="host.section.logistics" />
+							</span>
+							<h2 class="form-card__title">
+								<spring:message code="host.section.logistics.subtitle" />
+							</h2>
+							<div class="create-stack">
+								<label class="field" for="match-address">
+									<span class="field__label">
+										<spring:message code="host.form.location" />
+									</span>
+									<form:input path="address" id="match-address"
+										cssClass="field__control" required="required"
+										placeholder="${locationPlaceholder}" />
+									<form:errors path="address" cssClass="field__error"
+										element="span" />
+								</label>
+								<form:hidden path="latitude" id="match-location-latitude" />
+								<form:hidden path="longitude" id="match-location-longitude" />
+								<form:errors path="latitude" cssClass="field__error" element="span" />
+								<form:errors path="longitude" cssClass="field__error" element="span" />
+								<c:if test="${mapPickerEnabled}">
+									<c:url var="appRootUrl" value="/" />
+									<c:set var="contextAwareMapTileUrlTemplate"
+										value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
+									<section
+										class="location-picker"
+										data-location-picker="true"
+										data-tile-url-template="${contextAwareMapTileUrlTemplate}"
+										data-attribution="${mapAttribution}"
+										data-default-latitude="${mapDefaultLatitude}"
+										data-default-longitude="${mapDefaultLongitude}"
+										data-default-zoom="${mapDefaultZoom}">
+										<div class="location-picker__header">
+											<div>
+												<span class="field__label"><spring:message code="host.form.location.map" /></span>
+											</div>
+											<div class="location-picker__actions">
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-out="true">
+													<spring:message code="host.form.location.zoomOut" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-zoom-in="true">
+													<spring:message code="host.form.location.zoomIn" />
+												</button>
+												<button type="button" class="btn btn--ghost btn--sm" data-location-clear="true">
+													<spring:message code="host.form.location.clear" />
+												</button>
+											</div>
+										</div>
+										<div class="location-picker__map" data-location-map="true" aria-label="${locationMapAria}"></div>
+										<c:if test="${not empty mapAttribution}">
+											<p class="location-picker__attribution"><c:out value="${mapAttribution}" /></p>
+										</c:if>
+									</section>
+								</c:if>
+								<div class="form-card__grid form-card__grid--datetime">
+									<label class="field" for="match-date">
+										<span class="field__label">
+											<spring:message code="host.form.date" />
+										</span>
+										<form:input path="eventDate" id="match-date" type="date"
+											cssClass="field__control" required="required" />
+										<form:errors path="eventDate" cssClass="field__error"
+											element="span" />
+									</label>
 
+									<label class="field" for="match-time">
+										<span class="field__label">
+											<spring:message code="host.form.startTime" />
+										</span>
+										<form:input path="eventTime" id="match-time" type="time"
+											cssClass="field__control" required="required" />
+										<form:errors path="eventTime" cssClass="field__error"
+											element="span" />
+									</label>
+								</div>
+
+								<div class="field">
+									<span class="field__label">
+										<spring:message code="host.form.duration" />
+									</span>
+									<div class="duration-options" role="radiogroup"
+										aria-label="${durationLabel}">
+										<label class="chip duration-option"
+											data-duration-minutes="60">
+											<input type="radio" name="durationPresetUi" value="60"
+												class="duration-option__input" />
+												<span><c:out value="${durationOneHour}" /></span>
+										</label>
+										<label class="chip duration-option"
+											data-duration-minutes="90">
+											<input type="radio" name="durationPresetUi" value="90"
+												class="duration-option__input" />
+												<span><c:out value="${durationNinetyMinutes}" /></span>
+										</label>
+										<label class="chip duration-option"
+											data-duration-minutes="custom">
+											<input type="radio" name="durationPresetUi"
+												value="custom" class="duration-option__input" />
+												<span><c:out value="${durationCustom}" /></span>
+										</label>
+									</div>
+								</div>
+								<div class="form-card__grid form-card__grid--datetime">
+									<label class="field" for="match-end-date">
+										<span class="field__label">
+											<spring:message code="host.form.endDate" />
+										</span>
+										<form:input path="endDate" id="match-end-date" type="date"
+											cssClass="field__control" required="required" />
+										<form:errors path="endDate" cssClass="field__error"
+											element="span" />
+									</label>
+
+									<label class="field" for="match-end-time">
+										<span class="field__label">
+											<spring:message code="host.form.endTime" />
+										</span>
+										<form:input path="endTime" id="match-end-time" type="time"
+											cssClass="field__control" required="required" />
+										<form:errors path="endTime" cssClass="field__error"
+											element="span" />
+									</label>
+								</div>
+							</div>
+						</article>
 
 						<!-- image upload -->
 						<article class="panel upload-card">
@@ -524,7 +525,11 @@
 								<span class="field__label">
 									<spring:message code="host.form.bannerImage" />
 								</span>
-								<span class="upload-card__dropzone">
+								<span class="upload-card__dropzone" data-image-preview-container="true">
+									<span class="image-upload-preview image-upload-preview--banner"
+										data-image-preview="true" hidden="hidden" aria-hidden="true">
+										<img class="image-upload-preview__image" alt="" />
+									</span>
 									<span class="upload-card__dropzone-icon" aria-hidden="true">
 										<icon:photoFrame />
 									</span>
@@ -538,13 +543,18 @@
 									</span>
 									<form:input path="bannerImage" id="match-banner-image" type="file"
 										accept="image/png,image/jpeg,image/webp,image/gif"
-										cssClass="upload-card__file-input" />
+										cssClass="upload-card__file-input"
+										data-image-preview-input="true" />
 								</span>
+								<form:errors path="bannerImage"
+									cssClass="auth-notice auth-notice--error upload-card__error"
+									element="p" />
 							</label>
 						</article>
-						<div class="create-layout__actions">
-							<ui:button label="${submitLabel}" type="submit" id="${submitButtonId}"
-								size="lg" fullWidth="${true}" className="create-layout__submit" />
+						</div>
+							<div class="create-layout__actions">
+								<ui:button label="${submitLabel}" type="submit" id="${submitButtonId}"
+									size="lg" fullWidth="${true}" className="create-layout__submit" />
 						</div>
 					</form:form>
 				</section>

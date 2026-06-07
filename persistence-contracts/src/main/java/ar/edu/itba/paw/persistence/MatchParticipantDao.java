@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.time.Instant;
@@ -49,11 +50,15 @@ public interface MatchParticipantDao {
 
     boolean removeParticipant(Long matchId, User user);
 
+    int cancelFutureReservations(User user, Instant startsAfter);
+
     boolean cancelJoinRequest(Long matchId, User user);
 
     int cancelPendingRequests(Long matchId);
 
     List<Long> findPendingMatchIds(User user);
+
+    List<Match> findPendingRequestMatches(User user);
 
     // Invite-only flow
 
@@ -80,4 +85,6 @@ public interface MatchParticipantDao {
     List<User> findDeclinedInvitees(Long matchId);
 
     List<Long> findInvitedMatchIds(User user);
+
+    List<Match> findInvitedMatches(User user);
 }

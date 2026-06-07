@@ -133,6 +133,77 @@ public class ModerationReportJpaDaoTest {
     }
 
     @Test
+    public void findReportsByReporterAppliesSameFiltersToItemsAndTotalCount() {
+        moderationReportDao.createReport(
+                reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Match one");
+        moderationReportDao.createReport(
+                reporter, ReportTargetType.USER, admin.getId(), ReportReason.SPAM, "Match two");
+        moderationReportDao.createReport(
+                reporter2,
+                ReportTargetType.USER,
+                target.getId(),
+                ReportReason.SPAM,
+                "Different reporter");
+        moderationReportDao.createReport(
+                reporter,
+                ReportTargetType.MATCH,
+                99L,
+                ReportReason.INAPPROPRIATE_CONTENT,
+                "Different target type");
+        final ModerationReport resolved =
+                moderationReportDao.createReport(
+                        reporter,
+                        ReportTargetType.USER,
+                        100L,
+                        ReportReason.HARASSMENT,
+                        "Different status");
+        moderationReportDao.markUnderReview(resolved.getId(), admin, NOW);
+        moderationReportDao.resolveReport(
+                resolved.getId(),
+                admin,
+                ReportResolution.DISMISSED,
+                "No violation",
+                NOW,
+                ReportStatus.RESOLVED);
+
+        final PaginatedResult<ModerationReport> firstPage =
+                moderationReportDao.findReportsByReporter(
+                        reporter,
+                        List.of(ReportTargetType.USER),
+                        List.of(ReportStatus.PENDING),
+                        1,
+                        1);
+        final PaginatedResult<ModerationReport> secondPage =
+                moderationReportDao.findReportsByReporter(
+                        reporter,
+                        List.of(ReportTargetType.USER),
+                        List.of(ReportStatus.PENDING),
+                        2,
+                        1);
+
+        Assertions.assertEquals(2, firstPage.getTotalCount());
+        Assertions.assertEquals(2, secondPage.getTotalCount());
+        Assertions.assertEquals(1, firstPage.getItems().size());
+        Assertions.assertEquals(1, secondPage.getItems().size());
+        Assertions.assertEquals(2, firstPage.getTotalPages());
+        Assertions.assertFalse(secondPage.hasNext());
+        Assertions.assertEquals(
+                reporter.getId(), firstPage.getItems().get(0).getReporter().getId());
+        Assertions.assertEquals(ReportTargetType.USER, firstPage.getItems().get(0).getTargetType());
+        Assertions.assertEquals(ReportStatus.PENDING, firstPage.getItems().get(0).getStatus());
+        Assertions.assertEquals(
+                reporter.getId(), secondPage.getItems().get(0).getReporter().getId());
+        Assertions.assertEquals(
+                ReportTargetType.USER, secondPage.getItems().get(0).getTargetType());
+        Assertions.assertEquals(ReportStatus.PENDING, secondPage.getItems().get(0).getStatus());
+        Assertions.assertTrue(
+                List.of(
+                                firstPage.getItems().get(0).getDetails(),
+                                secondPage.getItems().get(0).getDetails())
+                        .containsAll(List.of("Match one", "Match two")));
+    }
+
+    @Test
     public void existsReportForTarget_trueWhenActiveReportExists() {
         moderationReportDao.createReport(
                 reporter, ReportTargetType.USER, target.getId(), ReportReason.SPAM, "Pending");

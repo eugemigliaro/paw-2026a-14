@@ -3,13 +3,12 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.ModerationTargetSummary;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
+import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -17,12 +16,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,6 +47,11 @@ public class UserModerationReportController {
             final ModerationService moderationService, final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
+    }
+
+    @ModelAttribute("reportAppealForm")
+    public ReportAppealForm reportAppealForm() {
+        return new ReportAppealForm();
     }
 
     @GetMapping
@@ -121,8 +128,7 @@ public class UserModerationReportController {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         if (report.getReporter() == null || !report.getReporter().getId().equals(user.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND); // TODO: shouldn't it be 403 instead?
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
@@ -149,26 +155,26 @@ public class UserModerationReportController {
     @PostMapping("/{reportId:\\d+}/appeal")
     public ModelAndView appealReport(
             @PathVariable("reportId") final Long reportId,
-            @RequestParam("appealReason") final String appealReason,
+            @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        String exceptionReason;
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            return new ModelAndView("redirect:/reports/mine/" + reportId);
+        }
 
         try {
-            moderationService.appealReport(reportId, appealReason);
+            moderationService.appealReport(reportId, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
-        } catch (
-                final ModerationReportNotFoundException
-                        exception) { // TODO: move message code to service (?) and catch generic
-            // exception here
-            exceptionReason = "report_not_found";
-        } catch (final ModerationAppealLimitException exception) {
-            exceptionReason = "appeal_limit";
-        } catch (final ModerationAppealRejectedException exception) {
-            exceptionReason = "appeal_rejected";
+        } catch (final ModerationException e) {
+            return new ModelAndView(
+                    "redirect:/reports/mine/" + reportId + "?error=" + e.getMessage());
         }
-        return new ModelAndView("redirect:/reports/mine/" + reportId + "?error=" + exceptionReason);
     }
 
     private Map<Long, ModerationTargetSummary> targetSummariesByReportId(

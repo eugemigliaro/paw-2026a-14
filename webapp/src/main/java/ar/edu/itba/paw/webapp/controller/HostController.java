@@ -5,6 +5,12 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchException;
+import ar.edu.itba.paw.models.exceptions.match.MatchNotRecurringException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -15,15 +21,6 @@ import ar.edu.itba.paw.services.CreateRecurrenceRequest;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
-import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateForbiddenException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotEditableException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotFoundException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.Duration;
@@ -133,11 +130,9 @@ public class HostController {
         try {
             final Match createdMatch = matchService.createMatch(request);
             return new ModelAndView("redirect:/matches/" + createdMatch.getId());
-        } catch (final IllegalArgumentException exception) {
-            // TODO: add specific exceptions for validation errors. Same as AuthController.
-            //  Move error codes to exceptions and add validation in the form to avoid calling
-            // service with invalid data.
-            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
+        } catch (final MatchException e) {
+            final String errorMessage = messageSource.getMessage(e.getMessage(), null, locale);
+            return hostFormView(createEventForm, errorMessage, locale, formConfig);
         }
     }
 
@@ -188,33 +183,16 @@ public class HostController {
 
         try {
             matchService.updateMatch(matchId, user, request);
-        } catch (final MatchUpdateNotFoundException
-                | MatchUpdateForbiddenException
-                        exception) { // TODO: shouldn't forbidden throw 403? These checks should be
-            // in security
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (
-                final MatchUpdateCapacityBelowConfirmedException
-                        exception) { // TODO: same as AuthController
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateCapacityAboveMaxException exception) {
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityAboveMax");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
-            bindingResult.rejectValue(
-                    "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateNotEditableException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("match.update.error.notEditable", null, locale),
-                    locale,
-                    formConfig);
+            redirectAttributes.addFlashAttribute("hostAction", "updated");
+            return new ModelAndView("redirect:/matches/" + matchId);
+        } catch (final MatchUpdateCapacityBelowConfirmedException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdateCapacityAboveMaxException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdatePendingRequestsExceedAvailableException e) {
+            bindingResult.rejectValue("joinPolicy", "match.update.error." + e.getMessage());
         }
-
-        redirectAttributes.addFlashAttribute("hostAction", "updated");
-        return new ModelAndView("redirect:/matches/" + matchId);
+        return hostFormView(createEventForm, null, locale, formConfig);
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
@@ -245,30 +223,16 @@ public class HostController {
 
         try {
             matchService.updateSeriesFromOccurrence(matchId, user, request);
-        } catch (final MatchUpdateNotFoundException
-                | MatchUpdateForbiddenException
-                | MatchUpdateNotRecurringException exception) { // TODO: same as updateEvent
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final MatchUpdateCapacityBelowConfirmedException exception) {
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateCapacityAboveMaxException exception) {
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityAboveMax");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
-            bindingResult.rejectValue(
-                    "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateNotEditableException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("match.update.error.notEditable", null, locale),
-                    locale,
-                    formConfig);
+            redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
+            return new ModelAndView("redirect:/matches/" + matchId);
+        } catch (final MatchUpdateCapacityBelowConfirmedException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdateCapacityAboveMaxException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdatePendingRequestsExceedAvailableException e) {
+            bindingResult.rejectValue("joinPolicy", "match.update.error." + e.getMessage());
         }
-
-        redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
-        return new ModelAndView("redirect:/matches/" + matchId);
+        return hostFormView(createEventForm, null, locale, formConfig);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/cancel")
@@ -276,13 +240,7 @@ public class HostController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        try {
-            matchService.cancelMatch(matchId, user);
-        } catch (
-                final MatchCancellationException
-                        exception) { // TODO: move to a global exception handler?
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+        matchService.cancelMatch(matchId, user);
         redirectAttributes.addFlashAttribute("hostAction", "cancelled");
         return new ModelAndView("redirect:/matches/" + matchId);
     }
@@ -295,7 +253,7 @@ public class HostController {
 
         try {
             matchService.cancelSeriesFromOccurrence(matchId, user);
-        } catch (final MatchCancellationException exception) {
+        } catch (final MatchNotRecurringException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         redirectAttributes.addFlashAttribute("hostAction", "seriesCancelled");
@@ -327,8 +285,12 @@ public class HostController {
         mav.addObject("mapDefaultLatitude", mapDefaultLatitude);
         mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
         mav.addObject("mapDefaultZoom", mapDefaultZoom);
-        mav.addObject("visibilityKey", "host.form.visibility." + form.getVisibility().getDbValue());
-        mav.addObject("joinPolicyKey", "host.form.joinPolicy." + form.getJoinPolicy().getDbValue());
+        final EventVisibility visibility =
+                form.getVisibility() == null ? EventVisibility.PUBLIC : form.getVisibility();
+        final EventJoinPolicy joinPolicy =
+                form.getJoinPolicy() == null ? EventJoinPolicy.INVITE_ONLY : form.getJoinPolicy();
+        mav.addObject("visibilityKey", "host.form.visibility." + visibility.getDbValue());
+        mav.addObject("joinPolicyKey", "host.form.joinPolicy." + joinPolicy.getDbValue());
         return mav;
     }
 
@@ -388,8 +350,8 @@ public class HostController {
         form.setLatitude(match.getLatitude());
         form.setLongitude(match.getLongitude());
         form.setSport(match.getSport());
-        form.setVisibility(match.getVisibility());
-        form.setJoinPolicy(match.getJoinPolicy());
+        form.setVisibility(formVisibility(match));
+        form.setJoinPolicy(formJoinPolicy(match));
         form.setEventDate(startsAt.toLocalDate());
         form.setEventTime(startsAt.toLocalTime());
         final OffsetDateTime endsAt = PlatformTime.toOffsetDateTime(resolveEndsAt(match));
@@ -398,6 +360,16 @@ public class HostController {
         form.setMaxPlayers(match.getMaxPlayers());
         form.setPricePerPlayer(match.getPricePerPlayer());
         return form;
+    }
+
+    private static EventVisibility formVisibility(final Match match) {
+        return match.getVisibility() == EventVisibility.INVITE_ONLY
+                ? EventVisibility.PRIVATE
+                : match.getVisibility();
+    }
+
+    private static EventJoinPolicy formJoinPolicy(final Match match) {
+        return match.getJoinPolicy() == null ? EventJoinPolicy.INVITE_ONLY : match.getJoinPolicy();
     }
 
     private UpdateMatchRequest toUpdateRequest(
@@ -442,7 +414,7 @@ public class HostController {
             final Long matchId, final User actingUser) {
         try {
             return matchService.findEditableRecurringMatchForHost(matchId, actingUser);
-        } catch (final MatchUpdateException exception) {
+        } catch (final MatchException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }
@@ -479,6 +451,11 @@ public class HostController {
             @Override
             public long getContentLength() {
                 return bannerImage.getSize();
+            }
+
+            @Override
+            public String getOriginalFilename() {
+                return bannerImage.getOriginalFilename();
             }
 
             @Override

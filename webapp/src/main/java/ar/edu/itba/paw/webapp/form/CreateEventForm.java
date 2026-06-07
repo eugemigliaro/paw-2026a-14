@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.webapp.validation.ValidCreateEventForm;
+import ar.edu.itba.paw.webapp.validation.ValidImage;
 import ar.edu.itba.paw.webapp.validation.ValidRecurrenceSelection;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -86,7 +87,7 @@ public class CreateEventForm {
             message = "{CreateEventForm.pricePerPlayer.DecimalMin}")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
 
-    private MultipartFile bannerImage;
+    @ValidImage private MultipartFile bannerImage;
 
     public String getTitle() {
         return title;

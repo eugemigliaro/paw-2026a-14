@@ -4,7 +4,7 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
@@ -20,11 +20,11 @@ public class RecurringMatchAsyncService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RecurringMatchAsyncService.class);
 
-    private final MatchDao matchDao;
+    private final MatchDataService matchDataService;
 
     @Autowired
-    public RecurringMatchAsyncService(final MatchDao matchDao) {
-        this.matchDao = matchDao;
+    public RecurringMatchAsyncService(final MatchDataService matchDataService) {
+        this.matchDataService = matchDataService;
     }
 
     @Async("matchRecurrenceTaskExecutor")
@@ -38,7 +38,7 @@ public class RecurringMatchAsyncService {
         try {
             for (int i = 0; i < occurrences.size(); i++) {
                 final OccurrenceWindowData occurrence = occurrences.get(i);
-                matchDao.createMatch(
+                matchDataService.createMatch(
                         request.getHost(),
                         request.getAddress(),
                         request.getTitle(),
