@@ -34,7 +34,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 9: Host controllers and mutating paths.
 - [x] Module 10: `SecurityConfig` route audit.
 - [x] Module 11: JSP and view model sweep.
-- [ ] Module 12: Final verification.
+- [x] Module 12: Final verification.
 
 Current review notes:
 
@@ -776,11 +776,33 @@ Expected remaining hits:
 
 Final acceptance criteria:
 
-- [ ] No controller owns resource authorization or business permission
+- [x] No controller owns resource authorization or business permission
   decisions.
-- [ ] Route-level rules remain centralized in `SecurityConfig`.
-- [ ] Service-layer tests cover allowed and denied paths for each moved rule.
-- [ ] `mvn test` passes.
+- [x] Route-level rules remain centralized in `SecurityConfig`.
+- [x] Service-layer tests cover allowed and denied paths for each moved rule.
+- [x] `mvn test` passes.
+
+Implemented in Module 12:
+
+- Ran the final authorization audit search. No `isMatchVisibleToUser` hit
+  remains, and no ordinary controller or domain service reads authorities
+  directly.
+- Classified the remaining `SecurityContextHolder`, `CurrentAuthenticatedUser`,
+  `getAuthorities`, and `ROLE_ADMIN_MOD` hits as approved security or
+  authentication infrastructure:
+  `services.security.SecurityServiceImpl`,
+  `webapp.security.CurrentAuthenticatedUser`,
+  `SecurityControllerUtils`, `VerificationController`,
+  `BannedAccountAuthorizationFilter`,
+  `AuthenticatedLocalePersistenceInterceptor`, and `SecurityAuthorities`.
+- Classified the remaining `UserRole.ADMIN_MOD` hit in
+  `AdminBootstrapServiceImpl` as configured admin account provisioning, not a
+  runtime authorization decision.
+- Classified the remaining `currentUser.getId().equals(...)` hits in
+  `EventCardViewModelUtils` as presentation-only relationship badges already
+  documented in Module 11. They do not expose mutating actions, and write/read
+  authorization remains enforced by service methods and `SecurityConfig`.
+- Re-ran formatting and the full Maven test suite after the final audit.
 
 ## Suggested Execution Order
 
