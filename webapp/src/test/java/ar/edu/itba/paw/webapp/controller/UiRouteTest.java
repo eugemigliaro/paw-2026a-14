@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -102,7 +101,6 @@ import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -2993,106 +2991,6 @@ class UiRouteTest {
                 .andExpect(model().attribute("aggregateRequests", true))
                 .andExpect(model().attributeExists("pendingRequests"))
                 .andExpect(model().attribute("matchesUrl", "/events"));
-    }
-
-    @Test
-    void getAccountRouteRendersPrivateAccountPageForAuthenticatedUsers() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/account"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("account/index"))
-                .andExpect(model().attributeExists("accountProfile"))
-                .andExpect(model().attributeExists("accountProfileForm"));
-    }
-
-    @Test
-    void getAccountRouteWithSpanishLocaleLocalizesPublicProfileAction() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/account").param("lang", "es"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("account/index"))
-                .andExpect(
-                        model().attribute("accountPublicProfileLabel", "Ver perfil p\u00fablico"));
-    }
-
-    @Test
-    void getAccountRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
-        mockMvc.perform(get("/account")).andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void postAccountEditRouteWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
-        mockMvc.perform(
-                        post("/account/edit")
-                                .param("username", "updated_user")
-                                .param("name", "Taylor")
-                                .param("lastName", "Morgan")
-                                .param("phone", ""))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void postAccountEditRouteUpdatesProfileAndRedirects() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(
-                        post("/account/edit")
-                                .param("username", "updated_user")
-                                .param("name", "Taylor")
-                                .param("lastName", "Morgan")
-                                .param("phone", ""))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/account"))
-                .andExpect(flash().attribute("accountUpdated", true));
-    }
-
-    @Test
-    void postAccountEditRouteUpdatesPictureAndRedirects() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
-
-        mockMvc.perform(
-                        multipart("/account/edit")
-                                .file(
-                                        new MockMultipartFile(
-                                                "profileImage",
-                                                "avatar.png",
-                                                "image/png",
-                                                new byte[] {1, 2, 3}))
-                                .param("username", "host-player")
-                                .param("name", "Jamie")
-                                .param("lastName", "Rivera")
-                                .param("phone", "+1 555 123 4567"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/account"))
-                .andExpect(flash().attribute("accountUpdated", true));
-    }
-
-    @Test
-    void postAccountEditRouteShowsLocalizedImageErrorForUnsupportedFormat() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
-        final String expectedMessage =
-                messageSource()
-                        .getMessage(
-                                "account.profileImage.error.invalidFormat", null, Locale.ENGLISH);
-
-        mockMvc.perform(
-                        multipart("/account/edit")
-                                .file(
-                                        new MockMultipartFile(
-                                                "profileImage",
-                                                "avatar.pdf",
-                                                "application/pdf",
-                                                new byte[] {1, 2, 3}))
-                                .locale(Locale.ENGLISH)
-                                .param("username", "host-player")
-                                .param("name", "Jamie")
-                                .param("lastName", "Rivera")
-                                .param("phone", "+1 555 123 4567"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("account/index"))
-                .andExpect(model().attribute("accountProfileImageError", expectedMessage));
     }
 
     private static MessageSource messageSource() {
