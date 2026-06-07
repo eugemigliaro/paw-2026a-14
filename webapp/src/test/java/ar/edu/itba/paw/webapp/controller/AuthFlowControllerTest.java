@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
@@ -16,10 +19,12 @@ import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.webapp.security.SecurityAuthorities;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -249,6 +254,41 @@ class AuthFlowControllerTest {
                 .andExpect(view().name("verification/confirm"))
                 .andExpect(model().attributeExists("preview"))
                 .andReturn();
+    }
+
+    @Test
+    void postAccountVerificationAuthenticatesAdminModWithMappedAuthorities() throws Exception {
+        final UserAccount account =
+                new UserAccount(
+                        10L,
+                        "admin@test.com",
+                        "admin",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "{bcrypt}hash",
+                        UserRole.ADMIN_MOD,
+                        Instant.parse("2026-04-10T18:00:00Z"),
+                        UserLanguages.DEFAULT_LANGUAGE);
+        Mockito.when(accountAuthService.confirmVerification("account-token"))
+                .thenReturn(new VerificationConfirmationResult(account, "Verified"));
+
+        mockMvc.perform(post("/verifications/account-token/confirm"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+
+        Assertions.assertTrue(
+                SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                        .anyMatch(
+                                authority ->
+                                        SecurityAuthorities.ADMIN_MOD.equals(
+                                                authority.getAuthority())));
+        Assertions.assertTrue(
+                SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                        .anyMatch(
+                                authority ->
+                                        SecurityAuthorities.USER.equals(authority.getAuthority())));
     }
 
     @Test

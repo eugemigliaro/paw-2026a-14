@@ -29,7 +29,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 4: Match detail action state.
 - [x] Module 5: Tournament detail permissions.
 - [x] Module 6: Tournament bracket permissions.
-- [ ] Module 7: Centralize admin/mod role checks.
+- [x] Module 7: Centralize admin/mod role checks.
 - [ ] Module 8: Public profile, reviews, and report affordances.
 - [ ] Module 9: Host controllers and mutating paths.
 - [ ] Module 10: `SecurityConfig` route audit.
@@ -549,11 +549,26 @@ Target shape:
 
 Acceptance criteria:
 
-- [ ] No ordinary controller or service directly reads authorities.
-- [ ] Direct `SecurityContextHolder` usage outside approved infrastructure is
+- [x] No ordinary controller or service directly reads authorities.
+- [x] Direct `SecurityContextHolder` usage outside approved infrastructure is
   removed or explicitly documented as authentication infrastructure.
-- [ ] Tests cover admin/mod ownership override paths.
-- [ ] Tests cover non-admin users failing the same ownership override paths.
+- [x] Tests cover admin/mod ownership override paths.
+- [x] Tests cover non-admin users failing the same ownership override paths.
+
+Implemented in Module 7:
+
+- Added `SecurityAuthorities` as the shared web-layer role-to-authority mapper.
+- Reused the shared mapper from `AccountAuthenticationProvider` and the account
+  verification authentication flow.
+- Confirmed remaining direct security-context or authority hits are limited to
+  approved authentication/security infrastructure: `SecurityServiceImpl`,
+  `CurrentAuthenticatedUser`, `SecurityControllerUtils`,
+  `VerificationController`, and `AccountAuthenticationProvider`. The
+  `AdminBootstrapServiceImpl` hit assigns the configured bootstrap admin role
+  and is not an authorization check.
+- Existing service tests cover admin/mod override and non-admin denial paths for
+  tournament/match ownership rules; verification-flow coverage now asserts the
+  shared admin/mod authority mapping.
 
 ## Module 8: Public Profile, Reviews, And Report Affordances
 

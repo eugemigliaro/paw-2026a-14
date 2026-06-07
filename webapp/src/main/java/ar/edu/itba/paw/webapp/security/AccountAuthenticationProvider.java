@@ -1,9 +1,7 @@
 package ar.edu.itba.paw.webapp.security;
 
 import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
-import java.util.List;
 import java.util.Locale;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -12,8 +10,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class AccountAuthenticationProvider implements AuthenticationProvider {
@@ -70,7 +66,9 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
         }
 
         return new UsernamePasswordAuthenticationToken(
-                new AuthenticatedUserPrincipal(account), null, authoritiesFor(account.getRole()));
+                new AuthenticatedUserPrincipal(account),
+                null,
+                SecurityAuthorities.forRole(account.getRole()));
     }
 
     @Override
@@ -85,14 +83,5 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
                             "auth.invalid_credentials", null, LocaleContextHolder.getLocale()));
         }
         return email.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private static List<GrantedAuthority> authoritiesFor(final UserRole role) {
-        if (role != null && role.isAdmin()) {
-            return List.of(
-                    new SimpleGrantedAuthority("ROLE_ADMIN_MOD"),
-                    new SimpleGrantedAuthority("ROLE_USER"));
-        }
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 }

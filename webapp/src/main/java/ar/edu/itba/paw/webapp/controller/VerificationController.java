@@ -1,23 +1,20 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.security.SecurityAuthorities;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -92,17 +89,8 @@ public class VerificationController {
                 new UsernamePasswordAuthenticationToken(
                         new AuthenticatedUserPrincipal(account),
                         null,
-                        authoritiesFor(account.getRole())));
+                        SecurityAuthorities.forRole(account.getRole())));
         SecurityContextHolder.setContext(securityContext);
         securityContextRepository.saveContext(securityContext, request, response);
-    }
-
-    private static List<GrantedAuthority> authoritiesFor(final UserRole role) {
-        if (role != null && role.isAdmin()) {
-            return List.of(
-                    new SimpleGrantedAuthority("ROLE_ADMIN_MOD"),
-                    new SimpleGrantedAuthority("ROLE_USER"));
-        }
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 }
