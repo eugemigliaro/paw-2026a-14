@@ -75,11 +75,16 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("data-image-preview-container=\"true\""));
         assertTrue(hostCreateMatch.contains("data-image-preview-input=\"true\""));
         assertTrue(hostCreateMatch.contains("accept=\"image/*\""));
+        assertTrue(hostCreateMatch.contains("path=\"bannerImage\""));
+        assertTrue(hostCreateMatch.contains("auth-notice auth-notice--error upload-card__error"));
         assertTrue(hostCreateMatch.contains("image-upload-preview--banner"));
         assertTrue(hostTournamentCreate.contains("id=\"tournament-banner-image\""));
         assertTrue(hostTournamentCreate.contains("data-image-preview-container=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-image-preview-input=\"true\""));
         assertTrue(hostTournamentCreate.contains("accept=\"image/*\""));
+        assertTrue(hostTournamentCreate.contains("path=\"bannerImage\""));
+        assertTrue(
+                hostTournamentCreate.contains("auth-notice auth-notice--error upload-card__error"));
         assertTrue(hostTournamentCreate.contains("image-upload-preview--banner"));
         assertTrue(script.contains("URL.createObjectURL"));
         assertTrue(script.contains("URL.revokeObjectURL"));
@@ -88,6 +93,31 @@ class ViewTemplateAssetsTest {
         assertTrue(authCss.contains("border-radius: 999px"));
         assertTrue(hostCreateCss.contains(".image-upload-preview--banner"));
         assertTrue(hostCreateCss.contains("border-radius: 12px"));
+    }
+
+    @Test
+    void hostBannerImageValidationMessagesAreLocalized() throws IOException {
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertEquals(
+                "Please upload a JPG, PNG, WEBP, or GIF image.",
+                english.getProperty("host.form.bannerImage.error.invalidFormat"));
+        assertEquals(
+                "Sub\u00ed una imagen en formato JPG, PNG, WEBP o GIF.",
+                spanish.getProperty("host.form.bannerImage.error.invalidFormat"));
+        assertEquals(
+                "The uploaded image is empty.",
+                english.getProperty("host.form.bannerImage.error.empty"));
+        assertEquals(
+                "La imagen subida est\u00e1 vac\u00eda.",
+                spanish.getProperty("host.form.bannerImage.error.empty"));
+        assertEquals(
+                "The uploaded image must be 5 MB or smaller.",
+                english.getProperty("host.form.bannerImage.error.tooLarge"));
+        assertEquals(
+                "La imagen subida debe pesar 5 MB o menos.",
+                spanish.getProperty("host.form.bannerImage.error.tooLarge"));
     }
 
     @Test

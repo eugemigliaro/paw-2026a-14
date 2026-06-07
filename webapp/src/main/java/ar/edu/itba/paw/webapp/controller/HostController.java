@@ -15,6 +15,9 @@ import ar.edu.itba.paw.services.CreateRecurrenceRequest;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
+import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
@@ -133,6 +136,15 @@ public class HostController {
         try {
             final Match createdMatch = matchService.createMatch(request);
             return new ModelAndView("redirect:/matches/" + createdMatch.getId());
+        } catch (final UnsupportedImageFormatException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final EmptyImageFileException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final ImageTooLargeException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
+            return hostFormView(createEventForm, null, locale, formConfig);
         } catch (final IllegalArgumentException exception) {
             // TODO: add specific exceptions for validation errors. Same as AuthController.
             //  Move error codes to exceptions and add validation in the form to avoid calling
@@ -205,6 +217,15 @@ public class HostController {
             bindingResult.rejectValue(
                     "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
             return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final UnsupportedImageFormatException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final EmptyImageFileException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final ImageTooLargeException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
+            return hostFormView(createEventForm, null, locale, formConfig);
         } catch (final MatchUpdateNotEditableException exception) {
             return hostFormView(
                     createEventForm,
@@ -258,6 +279,15 @@ public class HostController {
         } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
             bindingResult.rejectValue(
                     "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final UnsupportedImageFormatException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final EmptyImageFileException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
+            return hostFormView(createEventForm, null, locale, formConfig);
+        } catch (final ImageTooLargeException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
             return hostFormView(createEventForm, null, locale, formConfig);
         } catch (final MatchUpdateNotEditableException exception) {
             return hostFormView(
@@ -475,6 +505,10 @@ public class HostController {
                 form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
                         : null);
+    }
+
+    private static void rejectBannerImage(final BindingResult bindingResult, final String code) {
+        bindingResult.rejectValue("bannerImage", code);
     }
 
     private ImageUpload bannerUpload(

@@ -218,6 +218,10 @@
 	display: block;
 }
 
+.upload-card__error {
+	margin-top: 0.9rem;
+}
+
 .location-picker {
 	background: #f8faf8;
 	border: 1px solid rgba(0, 100, 90, 0.14);

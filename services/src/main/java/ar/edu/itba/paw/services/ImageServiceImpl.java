@@ -159,6 +159,9 @@ public class ImageServiceImpl implements ImageService {
     }
 
     private static String detectContentType(final byte[] content) {
+        if (content == null || content.length == 0) {
+            throw new UnsupportedImageFormatException("Unsupported image format");
+        }
         if (hasPrefix(content, new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF})) {
             return "image/jpeg";
         }
@@ -177,7 +180,8 @@ public class ImageServiceImpl implements ImageService {
     }
 
     private static boolean isWebp(final byte[] content) {
-        return content.length >= 12
+        return content != null
+                && content.length >= 12
                 && content[0] == 0x52
                 && content[1] == 0x49
                 && content[2] == 0x46

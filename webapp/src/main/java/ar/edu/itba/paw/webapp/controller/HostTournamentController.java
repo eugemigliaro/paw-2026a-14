@@ -19,6 +19,9 @@ import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.UpdateTournamentRequest;
+import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
+import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketAlreadyGeneratedException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketForbiddenException;
@@ -192,6 +195,15 @@ public class HostTournamentController {
         try {
             final Tournament createdTournament = tournamentService.createTournament(user, request);
             return seeOther("/tournaments/" + createdTournament.getId());
+        } catch (final UnsupportedImageFormatException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
+            return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
+        } catch (final EmptyImageFileException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
+            return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
+        } catch (final ImageTooLargeException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
+            return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
         } catch (final TournamentLifecycleException exception) {
             applyServiceError(exception, bindingResult, locale);
             return createFormView(createTournamentForm, null, locale, createFormConfig(locale));
@@ -263,6 +275,15 @@ public class HostTournamentController {
                     request); // TODO: check if it's editable before calling service
         } catch (final TournamentLifecycleForbiddenException exception) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        } catch (final UnsupportedImageFormatException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
+            return createFormView(createTournamentForm, null, locale, formConfig);
+        } catch (final EmptyImageFileException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
+            return createFormView(createTournamentForm, null, locale, formConfig);
+        } catch (final ImageTooLargeException exception) {
+            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
+            return createFormView(createTournamentForm, null, locale, formConfig);
         } catch (final TournamentLifecycleException exception) {
             applyServiceError(exception, bindingResult, locale);
             return createFormView(createTournamentForm, null, locale, formConfig);
@@ -758,6 +779,10 @@ public class HostTournamentController {
                     "CreateTournamentForm.global",
                     messageSource.getMessage(code, null, code, locale));
         }
+    }
+
+    private static void rejectBannerImage(final BindingResult bindingResult, final String code) {
+        bindingResult.rejectValue("bannerImage", code);
     }
 
     private static String lifecycleErrorCode(final TournamentLifecycleException exception) {

@@ -546,6 +546,9 @@
 										cssClass="upload-card__file-input"
 										data-image-preview-input="true" />
 								</span>
+								<form:errors path="bannerImage"
+									cssClass="auth-notice auth-notice--error upload-card__error"
+									element="p" />
 							</label>
 						</article>
 						</div>
