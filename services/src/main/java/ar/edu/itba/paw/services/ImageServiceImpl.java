@@ -116,7 +116,10 @@ public class ImageServiceImpl implements ImageService {
             return;
         }
         final int extensionSeparator = filename.lastIndexOf('.');
-        if (extensionSeparator < 0 || extensionSeparator == filename.length() - 1) {
+        if (extensionSeparator < 0) {
+            return;
+        }
+        if (extensionSeparator == filename.length() - 1) {
             throw new UnsupportedImageFormatException("Unsupported image format");
         }
         final String extension =

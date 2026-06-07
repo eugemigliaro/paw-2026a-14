@@ -87,7 +87,78 @@ public class ImageServiceImplTest {
     @Test
     public void testResolveImageMetadataRejectsUnsupportedFilenameExtension() {
         final byte[] content = pngContent();
-        final ImageUpload upload = imageUpload("image/png", "avatar.txt", content);
+        final ImageUpload upload = imageUpload("image/png", "image.exe", content);
+
+        Assertions.assertThrows(
+                UnsupportedImageFormatException.class,
+                () -> imageService.resolveImageMetadata(upload));
+    }
+
+    @Test
+    public void testResolveImageMetadataRejectsTrailingDotFilename() {
+        final byte[] content = pngContent();
+        final ImageUpload upload = imageUpload("image/png", "image.", content);
+
+        Assertions.assertThrows(
+                UnsupportedImageFormatException.class,
+                () -> imageService.resolveImageMetadata(upload));
+    }
+
+    @Test
+    public void testResolveImageMetadataAcceptsValidImagesWithExtensionlessFilename()
+            throws Exception {
+        final byte[] png = pngContent();
+        final byte[] jpeg = jpegContent();
+        final byte[] gif = gifContent();
+        final byte[] webp = webpContent();
+        Mockito.when(
+                        imageDao.create(
+                                Mockito.eq("image/png"),
+                                Mockito.eq((long) png.length),
+                                Mockito.any()))
+                .thenReturn(50L);
+        Mockito.when(
+                        imageDao.create(
+                                Mockito.eq("image/jpeg"),
+                                Mockito.eq((long) jpeg.length),
+                                Mockito.any()))
+                .thenReturn(51L);
+        Mockito.when(
+                        imageDao.create(
+                                Mockito.eq("image/gif"),
+                                Mockito.eq((long) gif.length),
+                                Mockito.any()))
+                .thenReturn(52L);
+        Mockito.when(
+                        imageDao.create(
+                                Mockito.eq("image/webp"),
+                                Mockito.eq((long) webp.length),
+                                Mockito.any()))
+                .thenReturn(53L);
+
+        final ImageMetadata pngMetadata =
+                imageService.resolveImageMetadata(imageUpload("image/png", "blob", png));
+        final ImageMetadata jpegMetadata =
+                imageService.resolveImageMetadata(imageUpload("image/jpeg", "blob", jpeg));
+        final ImageMetadata gifMetadata =
+                imageService.resolveImageMetadata(imageUpload("image/gif", "blob", gif));
+        final ImageMetadata webpMetadata =
+                imageService.resolveImageMetadata(imageUpload("image/webp", "blob", webp));
+
+        Assertions.assertEquals("image/png", pngMetadata.getContentType());
+        Assertions.assertEquals(png.length, pngMetadata.getContentLength());
+        Assertions.assertEquals("image/jpeg", jpegMetadata.getContentType());
+        Assertions.assertEquals(jpeg.length, jpegMetadata.getContentLength());
+        Assertions.assertEquals("image/gif", gifMetadata.getContentType());
+        Assertions.assertEquals(gif.length, gifMetadata.getContentLength());
+        Assertions.assertEquals("image/webp", webpMetadata.getContentType());
+        Assertions.assertEquals(webp.length, webpMetadata.getContentLength());
+    }
+
+    @Test
+    public void testResolveImageMetadataRejectsInvalidContentWithExtensionlessFilename() {
+        final byte[] content = new byte[] {1, 2, 3};
+        final ImageUpload upload = imageUpload("image/png", "blob", content);
 
         Assertions.assertThrows(
                 UnsupportedImageFormatException.class,
@@ -129,6 +200,14 @@ public class ImageServiceImplTest {
 
     private static byte[] jpegContent() {
         return new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x00};
+    }
+
+    private static byte[] gifContent() {
+        return new byte[] {0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00};
+    }
+
+    private static byte[] webpContent() {
+        return new byte[] {0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50};
     }
 
     private static ImageUpload imageUpload(
