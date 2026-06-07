@@ -4,22 +4,23 @@ import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealLimitException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationAppealRejectedException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
+import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -35,6 +36,11 @@ public class UserBanAppealController {
             final ModerationService moderationService, final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
+    }
+
+    @ModelAttribute("reportAppealForm")
+    public ReportAppealForm reportAppealForm() {
+        return new ReportAppealForm();
     }
 
     @GetMapping
@@ -79,28 +85,29 @@ public class UserBanAppealController {
     @PostMapping("/appeal")
     public ModelAndView appealBan(
             @AuthenticatedUser final User user,
-            @RequestParam("appealReason") final String appealReason,
+            @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
-        String exceptionReason;
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            return new ModelAndView("redirect:/account/ban");
+        }
+
         try {
-            moderationService.appealReport(activeBan.getModerationReport().getId(), appealReason);
+            moderationService.appealReport(
+                    activeBan.getModerationReport().getId(), reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
-        } catch (
-                final ModerationReportNotFoundException
-                        exception) { // TODO: move message code to service (?) and catch generic
-            // exception here
-            exceptionReason = "report_not_found";
-        } catch (final ModerationAppealLimitException exception) {
-            exceptionReason = "appeal_limit";
-        } catch (final ModerationAppealRejectedException exception) {
-            exceptionReason = "appeal_rejected";
+        } catch (final ModerationException e) {
+            return new ModelAndView("redirect:/account/ban?error=" + e.getMessage());
         }
-        return new ModelAndView("redirect:/account/ban?error=" + exceptionReason);
     }
 }

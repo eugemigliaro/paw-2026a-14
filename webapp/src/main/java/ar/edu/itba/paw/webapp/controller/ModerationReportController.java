@@ -7,19 +7,12 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationDuplicateReportException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationInvalidReportException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportErrorException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportFailedException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportLimitException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationSelfReportException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationValueTooLongException;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
@@ -28,7 +21,6 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportReviewViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportUserViewModel;
 import java.math.BigDecimal;
 import java.util.Locale;
-import java.util.function.Supplier;
 import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,6 +210,10 @@ public class ModerationReportController {
                         .findByUsername(username)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
+        if (reportedUser.getId().equals(user.getId())) {
+            errors.reject("moderation.report.error.self");
+        }
+
         if (errors.hasErrors()) {
             LOGGER.warn(
                     "Report submission failed validation for user={} targetUser={} reason={} errors={}",
@@ -241,16 +237,11 @@ public class ModerationReportController {
                     form.getReason(),
                     form.getDetails());
             return redirectToReportUser(username, null, "sent", redirectAttributes);
-        } catch (final ModerationException exception) {
-            return handleModerationException(
-                    exception,
-                    errors,
-                    () ->
-                            showUserReportPage(
-                                    username, null, null, form, new ExtendedModelMap(), locale),
-                    () ->
-                            redirectToReportUser(
-                                    username, moderationReportErrorCode(exception), null));
+        } catch (final ModerationException e) {
+            final String errorMsg = "moderation.report.error." + e.getMessage();
+            errors.reject(errorMsg);
+            return showUserReportPage(username, null, null, form, new ExtendedModelMap(), locale)
+                    .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
         }
     }
 
@@ -290,16 +281,11 @@ public class ModerationReportController {
                     form.getReason(),
                     form.getDetails());
             return redirectToReportReview(review.getId(), null, "sent", redirectAttributes);
-        } catch (final ModerationException exception) {
-            return handleModerationException(
-                    exception,
-                    errors,
-                    () ->
-                            showReviewReportPage(
-                                    reviewId, null, null, form, new ExtendedModelMap(), locale),
-                    () ->
-                            redirectToReportReview(
-                                    review.getId(), moderationReportErrorCode(exception), null));
+        } catch (final ModerationException e) {
+            final String errorMsg = "moderation.report.error." + e.getMessage();
+            errors.reject(errorMsg);
+            return showReviewReportPage(reviewId, null, null, form, new ExtendedModelMap(), locale)
+                    .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
         }
     }
 
@@ -339,16 +325,11 @@ public class ModerationReportController {
                     form.getReason(),
                     form.getDetails());
             return redirectToReportMatch(match.getId(), null, "sent", redirectAttributes);
-        } catch (final ModerationException exception) {
-            return handleModerationException(
-                    exception,
-                    errors,
-                    () ->
-                            showMatchReportPage(
-                                    matchId, null, null, form, new ExtendedModelMap(), locale),
-                    () ->
-                            redirectToReportMatch(
-                                    match.getId(), moderationReportErrorCode(exception), null));
+        } catch (final ModerationException e) {
+            final String errorMsg = "moderation.report.error." + e.getMessage();
+            errors.reject(errorMsg);
+            return showMatchReportPage(matchId, null, null, form, new ExtendedModelMap(), locale)
+                    .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
         }
     }
 
@@ -372,7 +353,11 @@ public class ModerationReportController {
                 "reportErrorMessage",
                 reportErrorCode == null
                         ? null
-                        : moderationReportErrorMessage(reportErrorCode, locale));
+                        : messageOrDefault(
+                                "moderation.report.error." + reportErrorCode,
+                                null,
+                                "We could not submit the report.",
+                                locale));
         return mav;
     }
 
@@ -455,80 +440,6 @@ public class ModerationReportController {
             return new ModelAndView("redirect:/reports/matches/" + matchId);
         }
         return redirectToReportMatch(matchId, errorCode, null);
-    }
-
-    private ModelAndView handleModerationException(
-            final ModerationException exception,
-            final BindingResult errors,
-            final Supplier<ModelAndView> errorViewSupplier,
-            final Supplier<ModelAndView> redirectSupplier) {
-        if (exception instanceof ModerationDuplicateReportException) {
-            errors.rejectValue("reason", "moderation.report.error.duplicate");
-        } else if (exception instanceof ModerationReportLimitException) {
-            errors.reject("moderation.report.error.limit");
-        } else if (exception instanceof ModerationInvalidReportException) {
-            errors.reject("moderation.report.error.invalid");
-        } else if (exception instanceof ModerationSelfReportException) {
-            errors.reject("moderation.report.error.self");
-        } else if (exception instanceof ModerationReportFailedException
-                || exception instanceof ModerationReportErrorException) {
-            errors.reject("moderation.report.error.generic");
-        } else if (exception instanceof ModerationValueTooLongException) {
-            errors.rejectValue("details", "Size.reportForm.details");
-        } else {
-            return redirectSupplier.get();
-        }
-        return errorViewSupplier
-                .get()
-                .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
-    }
-
-    private static String moderationReportErrorCode(final ModerationException exception) {
-        return switch (exception) {
-            case ModerationDuplicateReportException ignored -> "duplicate_report";
-            case ModerationReportLimitException ignored -> "report_limit";
-            case ModerationInvalidReportException ignored -> "invalid_report";
-            case ModerationSelfReportException ignored -> "self_report";
-            case ModerationValueTooLongException ignored -> "value_too_long";
-            case ModerationReportFailedException ignored -> "report_failed";
-            default -> "report_error";
-        };
-    }
-
-    private String moderationReportErrorMessage(final String code, final Locale locale) {
-        switch (code) {
-            case "duplicate_report":
-                return messageOrDefault(
-                        "moderation.report.error.duplicate",
-                        null,
-                        "You already have an active report for this target.",
-                        locale);
-            case "report_limit":
-                return messageOrDefault(
-                        "moderation.report.error.limit",
-                        null,
-                        "You reached the active report limit.",
-                        locale);
-            case "invalid_report":
-                return messageOrDefault(
-                        "moderation.report.error.invalid",
-                        null,
-                        "This report request is invalid.",
-                        locale);
-            case "report_failed":
-            case "report_error":
-                return messageOrDefault(
-                        "moderation.report.error.generic",
-                        null,
-                        "We could not submit the report.",
-                        locale);
-            default:
-                return messageOrDefault(
-                        "moderation.report.error.generic",
-                        null,
-                        "We could not submit the report.",
-                        locale);
-        }
     }
 
     private String priceLabel(final BigDecimal pricePerPlayer, final Locale locale) {

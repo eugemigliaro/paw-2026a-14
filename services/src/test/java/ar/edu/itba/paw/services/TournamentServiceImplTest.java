@@ -4,11 +4,12 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
@@ -236,7 +237,7 @@ public class TournamentServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentLifecycleForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () -> tournamentService.update(10L, UserUtils.getUser(2L), validUpdateRequest()));
     }
 

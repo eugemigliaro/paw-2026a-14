@@ -5,12 +5,14 @@ import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentNotFoundException;
+import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
@@ -54,13 +56,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowSoloSignup()) {
-            throw new TournamentRegistrationSoloSignupDisabledException(
-                    "Solo signup is disabled for this tournament");
+            throw new TournamentRegistrationSoloSignupDisabledException();
         }
 
         if (tournamentTeamDataService.findUserTeam(tournamentId, user.getId()).isPresent()) {
-            throw new TournamentRegistrationAlreadyOnTeamException(
-                    "User is already on a team in this tournament");
+            throw new TournamentRegistrationAlreadyOnTeamException();
         }
 
         final Optional<TournamentSoloEntry> existing =
@@ -71,14 +71,12 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 return soloEntry;
             }
             if (TournamentSoloEntryStatus.ASSIGNED == soloEntry.getStatus()) {
-                throw new TournamentRegistrationAlreadyAssignedException(
-                        "User is already assigned to a team in this tournament");
+                throw new TournamentRegistrationAlreadyAssignedException();
             }
         }
 
         if (isSoloPoolFull(tournament)) {
-            throw new TournamentRegistrationSoloPoolFullException(
-                    "Solo pool is full for this tournament");
+            throw new TournamentRegistrationSoloPoolFullException();
         }
 
         if (existing.isEmpty()) {
@@ -105,10 +103,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 tournamentSoloEntryDao
                         .findByTournamentAndUser(tournamentId, user.getId())
                         .filter(entry -> TournamentSoloEntryStatus.IN_POOL == entry.getStatus())
-                        .orElseThrow(
-                                () ->
-                                        new TournamentRegistrationNotInSoloPoolException(
-                                                "User is not in the solo pool for this tournament"));
+                        .orElseThrow(() -> new TournamentRegistrationNotInSoloPoolException());
 
         soloEntry.setStatus(TournamentSoloEntryStatus.LEFT);
         soloEntry.setAssignedTeam(null);
@@ -191,8 +186,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
         final int finalTeamCount = existingTeamCount + soloTeamCount;
         if (finalTeamCount < 2) {
-            throw new TournamentRegistrationUnderCapacityException(
-                    "Tournament does not have enough teams to start");
+            throw new TournamentRegistrationUnderCapacityException();
         }
 
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
@@ -226,17 +220,13 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
-                .orElseThrow(
-                        () ->
-                                new TournamentRegistrationTournamentNotFoundException(
-                                        "Tournament not found"));
+                .orElseThrow(() -> new TournamentNotFoundException());
     }
 
     private void requireRegistrationOpen(final Tournament tournament) {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()
                 || !isRegistrationOpenNow(tournament)) {
-            throw new TournamentRegistrationNotOpenException(
-                    "Registration is not open for this tournament");
+            throw new TournamentRegistrationNotOpenException();
         }
     }
 
@@ -252,8 +242,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
         if (!canMutate(tournament, actingUser)) {
-            throw new TournamentRegistrationForbiddenException(
-                    "You are not allowed to modify this tournament");
+            throw new TournamentForbiddenActionException();
         }
     }
 
@@ -278,8 +267,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateUser(final User user) {
         if (user == null || user.getId() == null) {
-            throw new TournamentRegistrationInvalidUserException(
-                    "User must be authenticated to perform this action");
+            throw new IllegalArgumentException("exception.user.notNull");
         }
     }
 

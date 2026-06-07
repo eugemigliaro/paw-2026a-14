@@ -5,6 +5,8 @@ import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
@@ -12,7 +14,6 @@ import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -343,7 +344,7 @@ public class TournamentRegistrationServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentRegistrationForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () -> registrationService.closeRegistration(10L, UserUtils.getUser(2L)));
     }
 

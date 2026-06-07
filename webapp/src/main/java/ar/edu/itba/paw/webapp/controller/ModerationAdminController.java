@@ -7,14 +7,13 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
@@ -200,12 +199,8 @@ public class ModerationAdminController {
             @PathVariable("reportId") final Long reportId,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        try {
-            moderationService.markReportUnderReview(reportId, user);
-            return redirectToReports("reviewed", redirectAttributes);
-        } catch (final ModerationException ex) {
-            return redirectToReportsError("report_not_found");
-        }
+        moderationService.markReportUnderReview(reportId, user);
+        return redirectToReports("reviewed", redirectAttributes);
     }
 
     @PostMapping("/{reportId:\\d+}/dismiss")
@@ -265,19 +260,15 @@ public class ModerationAdminController {
         if (bindingResult.hasErrors()) {
             return reportDetailWithErrors(reportId, locale, form, bindingResult);
         }
-        try {
-            return resolveReport(
-                    user,
-                    reportId,
-                    ReportResolution.USER_BANNED,
-                    "banned",
-                    form.getResolutionDetails(),
-                    form.getBanDays(),
-                    redirectAttributes,
-                    locale);
-        } catch (final ModerationException ex) {
-            return redirectToReportsError(reportsErrorCode(ex));
-        }
+        return resolveReport(
+                user,
+                reportId,
+                ReportResolution.USER_BANNED,
+                "banned",
+                form.getResolutionDetails(),
+                form.getBanDays(),
+                redirectAttributes,
+                locale);
     }
 
     @PostMapping("/{reportId:\\d+}/finalize-appeal")
@@ -299,8 +290,8 @@ public class ModerationAdminController {
                             ? "appeal_upheld"
                             : "appeal_lifted";
             return redirectToReports(action, redirectAttributes);
-        } catch (final ModerationException ex) {
-            return redirectToReportsError(reportsErrorCode(ex));
+        } catch (final ModerationException e) {
+            return redirectToReportsError(e.getMessage());
         }
     }
 
@@ -313,23 +304,17 @@ public class ModerationAdminController {
             final int banDurationDays,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        // TODO: get this as a parameter. Controller should have a controller advice that injects
-        // the user
         try {
-            final ModerationReport report =
-                    moderationService.resolveReport(
-                            reportId,
-                            currentUser,
-                            resolution,
-                            resolutionDetails,
-                            ReportStatus.RESOLVED,
-                            banDurationDays);
-            if (report == null) {
-                return redirectToReportsError("report_not_found");
-            }
+            moderationService.resolveReport(
+                    reportId,
+                    currentUser,
+                    resolution,
+                    resolutionDetails,
+                    ReportStatus.RESOLVED,
+                    banDurationDays);
             return redirectToReports(actionCode, redirectAttributes);
-        } catch (final ModerationException ex) {
-            return redirectToReportsError(reportsErrorCode(ex));
+        } catch (final ModerationException e) {
+            return redirectToReportsError(e.getMessage());
         }
     }
 
@@ -337,13 +322,6 @@ public class ModerationAdminController {
             final String actionCode, final RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("action", actionCode);
         return new ModelAndView("redirect:/admin/reports");
-    }
-
-    private static String reportsErrorCode(final ModerationException exception) {
-        if (exception instanceof ModerationReportNotFoundException) {
-            return "report_not_found";
-        }
-        return "action_failed";
     }
 
     private ModelAndView redirectToReportsError(final String errorCode) {

@@ -5,6 +5,12 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchException;
+import ar.edu.itba.paw.models.exceptions.match.MatchNotRecurringException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -15,18 +21,6 @@ import ar.edu.itba.paw.services.CreateRecurrenceRequest;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
-import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
-import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateForbiddenException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotEditableException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotFoundException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.Duration;
@@ -136,20 +130,9 @@ public class HostController {
         try {
             final Match createdMatch = matchService.createMatch(request);
             return new ModelAndView("redirect:/matches/" + createdMatch.getId());
-        } catch (final UnsupportedImageFormatException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final EmptyImageFileException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final ImageTooLargeException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final IllegalArgumentException exception) {
-            // TODO: add specific exceptions for validation errors. Same as AuthController.
-            //  Move error codes to exceptions and add validation in the form to avoid calling
-            // service with invalid data.
-            return hostFormView(createEventForm, exception.getMessage(), locale, formConfig);
+        } catch (final MatchException e) {
+            final String errorMessage = messageSource.getMessage(e.getMessage(), null, locale);
+            return hostFormView(createEventForm, errorMessage, locale, formConfig);
         }
     }
 
@@ -200,42 +183,16 @@ public class HostController {
 
         try {
             matchService.updateMatch(matchId, user, request);
-        } catch (final MatchUpdateNotFoundException
-                | MatchUpdateForbiddenException
-                        exception) { // TODO: shouldn't forbidden throw 403? These checks should be
-            // in security
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (
-                final MatchUpdateCapacityBelowConfirmedException
-                        exception) { // TODO: same as AuthController
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateCapacityAboveMaxException exception) {
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityAboveMax");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
-            bindingResult.rejectValue(
-                    "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final UnsupportedImageFormatException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final EmptyImageFileException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final ImageTooLargeException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateNotEditableException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("match.update.error.notEditable", null, locale),
-                    locale,
-                    formConfig);
+            redirectAttributes.addFlashAttribute("hostAction", "updated");
+            return new ModelAndView("redirect:/matches/" + matchId);
+        } catch (final MatchUpdateCapacityBelowConfirmedException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdateCapacityAboveMaxException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdatePendingRequestsExceedAvailableException e) {
+            bindingResult.rejectValue("joinPolicy", "match.update.error." + e.getMessage());
         }
-
-        redirectAttributes.addFlashAttribute("hostAction", "updated");
-        return new ModelAndView("redirect:/matches/" + matchId);
+        return hostFormView(createEventForm, null, locale, formConfig);
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/series/edit")
@@ -266,39 +223,16 @@ public class HostController {
 
         try {
             matchService.updateSeriesFromOccurrence(matchId, user, request);
-        } catch (final MatchUpdateNotFoundException
-                | MatchUpdateForbiddenException
-                | MatchUpdateNotRecurringException exception) { // TODO: same as updateEvent
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        } catch (final MatchUpdateCapacityBelowConfirmedException exception) {
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityBelowConfirmed");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateCapacityAboveMaxException exception) {
-            bindingResult.rejectValue("maxPlayers", "match.update.error.capacityAboveMax");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdatePendingRequestsExceedAvailableException exception) {
-            bindingResult.rejectValue(
-                    "joinPolicy", "match.update.error.pendingRequestsExceedAvailable");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final UnsupportedImageFormatException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.invalidFormat");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final EmptyImageFileException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.empty");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final ImageTooLargeException exception) {
-            rejectBannerImage(bindingResult, "host.form.bannerImage.error.tooLarge");
-            return hostFormView(createEventForm, null, locale, formConfig);
-        } catch (final MatchUpdateNotEditableException exception) {
-            return hostFormView(
-                    createEventForm,
-                    messageSource.getMessage("match.update.error.notEditable", null, locale),
-                    locale,
-                    formConfig);
+            redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
+            return new ModelAndView("redirect:/matches/" + matchId);
+        } catch (final MatchUpdateCapacityBelowConfirmedException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdateCapacityAboveMaxException e) {
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
+        } catch (final MatchUpdatePendingRequestsExceedAvailableException e) {
+            bindingResult.rejectValue("joinPolicy", "match.update.error." + e.getMessage());
         }
-
-        redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
-        return new ModelAndView("redirect:/matches/" + matchId);
+        return hostFormView(createEventForm, null, locale, formConfig);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/cancel")
@@ -306,13 +240,7 @@ public class HostController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        try {
-            matchService.cancelMatch(matchId, user);
-        } catch (
-                final MatchCancellationException
-                        exception) { // TODO: move to a global exception handler?
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+        matchService.cancelMatch(matchId, user);
         redirectAttributes.addFlashAttribute("hostAction", "cancelled");
         return new ModelAndView("redirect:/matches/" + matchId);
     }
@@ -325,7 +253,7 @@ public class HostController {
 
         try {
             matchService.cancelSeriesFromOccurrence(matchId, user);
-        } catch (final MatchCancellationException exception) {
+        } catch (final MatchNotRecurringException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         redirectAttributes.addFlashAttribute("hostAction", "seriesCancelled");
@@ -486,7 +414,7 @@ public class HostController {
             final Long matchId, final User actingUser) {
         try {
             return matchService.findEditableRecurringMatchForHost(matchId, actingUser);
-        } catch (final MatchUpdateException exception) {
+        } catch (final MatchException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }
@@ -505,10 +433,6 @@ public class HostController {
                 form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
                         : null);
-    }
-
-    private static void rejectBannerImage(final BindingResult bindingResult, final String code) {
-        bindingResult.rejectValue("bannerImage", code);
     }
 
     private ImageUpload bannerUpload(

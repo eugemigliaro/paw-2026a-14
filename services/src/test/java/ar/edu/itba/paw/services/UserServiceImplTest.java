@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.services.exceptions.registration.AccountRegistrationException;
+import ar.edu.itba.paw.models.exceptions.registration.AccountRegistrationException;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -15,7 +15,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceImplTest {
@@ -24,7 +23,6 @@ public class UserServiceImplTest {
 
     @Mock private UserDataService userDataService;
     @Mock private ImageService imageService;
-    @Mock private MessageSource messageSource;
 
     @Test
     public void testFindByIdWhenUserExists() {
@@ -122,13 +120,6 @@ public class UserServiceImplTest {
                 new User(3L, "other@test.com", "new_user", "Other", "User", null, null, null);
         Mockito.when(userDataService.findByUsername("new_user"))
                 .thenReturn(Optional.of(conflictingUser));
-        Mockito.when(
-                        messageSource.getMessage(
-                                Mockito.anyString(),
-                                Mockito.isNull(),
-                                Mockito.any(),
-                                Mockito.any()))
-                .thenAnswer(invocation -> invocation.getArgument(0, String.class));
 
         Assertions.assertThrows(
                 AccountRegistrationException.class,

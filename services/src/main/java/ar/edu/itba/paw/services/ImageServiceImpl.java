@@ -1,10 +1,11 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
+import ar.edu.itba.paw.models.exceptions.imageUpload.EmptyImageFileException;
+import ar.edu.itba.paw.models.exceptions.imageUpload.ImageTooLargeException;
+import ar.edu.itba.paw.models.exceptions.imageUpload.ImageUploadException;
+import ar.edu.itba.paw.models.exceptions.imageUpload.UnsupportedImageFormatException;
 import ar.edu.itba.paw.persistence.ImageDao;
-import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -80,7 +81,7 @@ public class ImageServiceImpl implements ImageService {
             return storeAndReturnMetadata(
                     image.getContentType(), image.getContentLength(), image.getContentStream());
         } catch (final IOException exception) {
-            throw new IllegalStateException("Unable to store tournament banner image", exception);
+            throw new ImageUploadException("exception.imageUpload.unavailable");
         }
     }
 
@@ -98,16 +99,16 @@ public class ImageServiceImpl implements ImageService {
     private static void validateContentType(final String contentType) {
         final String normalized = normalizeContentType(contentType);
         if (normalized.isBlank() || !ALLOWED_CONTENT_TYPES.contains(normalized)) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
     }
 
     private static void validateContentLength(final long contentLength) {
         if (contentLength <= 0) {
-            throw new EmptyImageFileException("Uploaded file is empty");
+            throw new EmptyImageFileException();
         }
         if (contentLength > MAX_IMAGE_SIZE_BYTES) {
-            throw new ImageTooLargeException("Uploaded file is too large");
+            throw new ImageTooLargeException();
         }
     }
 
@@ -120,12 +121,12 @@ public class ImageServiceImpl implements ImageService {
             return;
         }
         if (extensionSeparator == filename.length() - 1) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
         final String extension =
                 filename.substring(extensionSeparator + 1).toLowerCase(Locale.ROOT);
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
     }
 
@@ -140,7 +141,7 @@ public class ImageServiceImpl implements ImageService {
         while ((readBytes = contentStream.read(buffer)) != -1) {
             totalBytes += readBytes;
             if (totalBytes > MAX_IMAGE_SIZE_BYTES) {
-                throw new ImageTooLargeException("Uploaded file is too large");
+                throw new ImageTooLargeException();
             }
             output.write(buffer, 0, readBytes);
         }
@@ -150,24 +151,24 @@ public class ImageServiceImpl implements ImageService {
     private static void validateContentMatchesType(
             final String normalizedContentType, final byte[] content) {
         if (content == null || content.length == 0) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
         if (normalizedContentType == null || normalizedContentType.isBlank()) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
         if (!ALLOWED_CONTENT_TYPES.contains(normalizedContentType)) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
 
         final String detectedContentType = detectContentType(content);
         if (detectedContentType.isBlank() || !normalizedContentType.equals(detectedContentType)) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
     }
 
     private static String detectContentType(final byte[] content) {
         if (content == null || content.length == 0) {
-            throw new UnsupportedImageFormatException("Unsupported image format");
+            throw new UnsupportedImageFormatException();
         }
         if (hasPrefix(content, new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF})) {
             return "image/jpeg";

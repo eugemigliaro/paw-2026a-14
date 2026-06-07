@@ -8,6 +8,9 @@ import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserSportRating;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateInvalidScheduleException;
+import ar.edu.itba.paw.models.exceptions.tournament.*;
+import ar.edu.itba.paw.models.exceptions.tournamentBracket.*;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
@@ -15,7 +18,6 @@ import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -288,7 +290,7 @@ public class TournamentBracketServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentBracketForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () -> bracketService.generateBracket(10L, UserUtils.getUser(2L)));
     }
 
@@ -318,7 +320,7 @@ public class TournamentBracketServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentBracketForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () -> bracketService.publishBracket(10L, UserUtils.getUser(2L), List.of()));
     }
 
@@ -365,7 +367,7 @@ public class TournamentBracketServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentBracketForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () ->
                         bracketService.declareWinner(
                                 10L,
@@ -540,7 +542,7 @@ public class TournamentBracketServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentBracketForbiddenException.class,
+                TournamentForbiddenActionException.class,
                 () -> bracketService.getBracket(10L, null));
     }
 
@@ -698,7 +700,7 @@ public class TournamentBracketServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                TournamentBracketInvalidScheduleException.class,
+                MatchUpdateInvalidScheduleException.class,
                 () ->
                         bracketService.publishBracket(
                                 10L,

@@ -5,6 +5,8 @@ import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationReportNotFoundException;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.ReportReason;
@@ -13,7 +15,6 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
@@ -331,7 +332,7 @@ public class ModerationServiceImplTest {
                 .thenReturn(false);
 
         Assertions.assertThrows(
-                ModerationException.class,
+                ModerationReportNotFoundException.class,
                 () -> moderationService.markReportUnderReview(77L, UserUtils.getUser(99L)));
     }
 

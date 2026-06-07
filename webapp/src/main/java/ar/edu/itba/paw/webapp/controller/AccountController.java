@@ -1,16 +1,9 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.imageUpload.ImageUploadException;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
-import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
@@ -64,10 +57,15 @@ public class AccountController {
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        String imageError = null;
+
+        final User existingUsername =
+                userService.findByUsername(accountProfileForm.getUsername()).orElse(null);
+        if (existingUsername != null && !existingUsername.getId().equals(user.getId())) {
+            bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
+        }
 
         if (bindingResult.hasErrors()) {
-            return accountView(user, locale, false, accountProfileForm, imageError);
+            return accountView(user, locale, false, accountProfileForm, null);
         }
 
         try {
@@ -82,48 +80,9 @@ public class AccountController {
             SecurityControllerUtils.refreshAuthentication(updatedUser);
             redirectAttributes.addFlashAttribute("accountUpdated", true);
             return new ModelAndView("redirect:/account");
-        } catch (
-                final UsernameTakenException
-                        exception) { // TODO: these checks should be in AccountProfileForm. Do not
-            // call updateProfile with invalid data.
-            bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
-            return accountView(user, locale, false, accountProfileForm, imageError);
-        } catch (final UsernameInvalidException exception) {
-            bindingResult.rejectValue("username", "auth.registration.error.usernameInvalid");
-            return accountView(user, locale, false, accountProfileForm, imageError);
-        } catch (final NameInvalidException exception) {
-            bindingResult.rejectValue("name", "auth.registration.error.nameInvalid");
-            return accountView(user, locale, false, accountProfileForm, imageError);
-        } catch (final LastNameInvalidException exception) {
-            bindingResult.rejectValue("lastName", "auth.registration.error.lastNameInvalid");
-            return accountView(user, locale, false, accountProfileForm, imageError);
-        } catch (final PhoneInvalidException exception) {
-            bindingResult.rejectValue("phone", "auth.registration.error.phoneInvalid");
-            return accountView(user, locale, false, accountProfileForm, imageError);
-        } catch (final UnsupportedImageFormatException e) {
-            imageError =
-                    msg(
-                            "account.profileImage.error.invalidFormat",
-                            "Please upload a JPG, PNG, WEBP, or GIF image.",
-                            locale);
-        } catch (final EmptyImageFileException e) {
-            imageError =
-                    msg("account.profileImage.error.empty", "The uploaded image is empty.", locale);
-        } catch (final ImageTooLargeException e) {
-            imageError =
-                    msg(
-                            "account.profileImage.error.tooLarge",
-                            "The uploaded image must be 5 MB or smaller.",
-                            locale);
-        } catch (final IOException | IllegalArgumentException e) {
-            imageError =
-                    msg(
-                            "account.profileImage.error.unavailable",
-                            "We could not process the uploaded image. Please try again.",
-                            locale);
+        } catch (final IOException e) {
+            throw new ImageUploadException("account.profileImage.error.uploadFailed");
         }
-
-        return accountView(user, locale, false, accountProfileForm, imageError);
     }
 
     private ModelAndView accountView(
@@ -230,9 +189,5 @@ public class AccountController {
                 return profileImage.getInputStream();
             }
         };
-    }
-
-    private String msg(final String code, final String fallback, final Locale locale) {
-        return messageSource.getMessage(code, null, fallback, locale);
     }
 }

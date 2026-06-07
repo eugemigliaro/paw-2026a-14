@@ -3,36 +3,33 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchClosedException;
+import ar.edu.itba.paw.models.exceptions.match.MatchForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.match.MatchFullException;
+import ar.edu.itba.paw.models.exceptions.match.MatchNotFoundException;
+import ar.edu.itba.paw.models.exceptions.match.MatchNotRecurringException;
+import ar.edu.itba.paw.models.exceptions.match.MatchSeriesClosedException;
+import ar.edu.itba.paw.models.exceptions.match.MatchSeriesFullException;
+import ar.edu.itba.paw.models.exceptions.match.MatchSeriesStartedException;
+import ar.edu.itba.paw.models.exceptions.match.MatchStartedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyInvitedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyPendingException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationIsHostException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNoInvitationException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNoPendingRequestException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotCancellableException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotInviteOnlyException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotParticipantException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyCoveredException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyInvitedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
+import ar.edu.itba.paw.models.exceptions.user.UserNotFoundException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationAlreadyInvitedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationAlreadyPendingException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationClosedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationForbiddenException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationFullException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationInvalidUserException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationIsHostException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNoInvitationException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNoPendingRequestException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotCancellableException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotFoundException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotInviteOnlyException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotParticipantException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotRecurringException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyCoveredException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyInvitedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesClosedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesFullException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesStartedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationStartedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationUnauthenticatedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationUserNotFoundException;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
@@ -95,46 +92,40 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoin(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         if (user == null) {
-            throw new MatchParticipationUnauthenticatedException(
-                    "You must be logged in to request to join a recurring event.");
+            throw new IllegalArgumentException("exception.user.notNull");
         }
 
         if (isHost(match, user.getId())) {
-            throw new MatchParticipationIsHostException(
-                    "Hosts cannot request to join their own event.");
+            throw new MatchParticipationIsHostException();
         }
 
         if (!EventStatus.OPEN.equals(match.getStatus())) {
-            throw new MatchParticipationClosedException("The event is not open for join requests.");
+            throw new MatchClosedException();
         }
 
         if (match.getVisibility() != EventVisibility.PUBLIC
                 || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
-            throw new MatchParticipationNotInviteOnlyException(
-                    "This event does not require approval to join.");
+            throw new MatchParticipationNotInviteOnlyException();
         }
 
         if (!match.getStartsAt().isAfter(Instant.now(clock))) {
-            throw new MatchParticipationStartedException("The event has already started.");
+            throw new MatchStartedException();
         }
 
         if (matchParticipantDataService.hasActiveReservation(matchId, user)) {
-            throw new MatchParticipationAlreadyJoinedException(
-                    "You are already a confirmed participant.");
+            throw new MatchParticipationAlreadyJoinedException();
         }
 
         if (matchParticipantDataService.hasPendingRequest(matchId, user)) {
-            throw new MatchParticipationAlreadyPendingException(
-                    "You already have a pending join request for this event.");
+            throw new MatchParticipationAlreadyPendingException();
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
-            throw new MatchParticipationFullException("The event is already full.");
+            throw new MatchFullException();
         }
 
         if (!matchParticipantDataService.createJoinRequest(matchId, user)) {
-            throw new MatchParticipationAlreadyPendingException(
-                    "You already have a pending join request for this event.");
+            throw new MatchParticipationAlreadyPendingException();
         }
 
         matchNotificationService.notifyHostJoinRequestReceived(match, user);
@@ -145,18 +136,15 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoinSeries(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         if (user == null) {
-            throw new MatchParticipationUnauthenticatedException(
-                    "You must be logged in to request to join a recurring event.");
+            throw new IllegalArgumentException("exception.user.notNull");
         }
 
         if (isHost(match, user.getId())) {
-            throw new MatchParticipationIsHostException(
-                    "Hosts cannot request to join their own recurring event series.");
+            throw new MatchParticipationIsHostException();
         }
 
         if (!match.isRecurringOccurrence()) {
-            throw new MatchParticipationNotRecurringException(
-                    "The event is not a recurring event.");
+            throw new MatchNotRecurringException();
         }
 
         final List<Match> occurrences =
@@ -177,10 +165,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                         pendingFutureRequestMatchIds,
                         now);
         if (matchParticipantDataService.hasPendingSeriesRequest(match.getSeries().getId(), user)) {
-            throw buildSeriesJoinRequestFailure(evaluation.asPending());
+            seriesJoinRequestFailure(evaluation.asPending());
         }
         if (evaluation.requestableOccurrenceCount() == 0) {
-            throw buildSeriesJoinRequestFailure(evaluation);
+            seriesJoinRequestFailure(evaluation);
         }
 
         final Long requestMatchId =
@@ -201,7 +189,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                                             .findPendingFutureRequestMatchIdsForSeries(
                                                     match.getSeries().getId(), user, currentNow)),
                             currentNow);
-            throw buildSeriesJoinRequestFailure(currentEvaluation);
+            seriesJoinRequestFailure(currentEvaluation);
         }
 
         matchNotificationService.notifyHostJoinRequestReceived(match, user);
@@ -211,13 +199,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Transactional
     public void cancelJoinRequest(final Long matchId, final User user) {
         if (!matchParticipantDataService.hasPendingRequest(matchId, user)) {
-            throw new MatchParticipationNoPendingRequestException(
-                    "No pending join request found for this event.");
+            throw new MatchParticipationNoPendingRequestException();
         }
 
         if (!matchParticipantDataService.cancelJoinRequest(matchId, user)) {
-            throw new MatchParticipationNoPendingRequestException(
-                    "No pending join request found for this event.");
+            throw new MatchParticipationNoPendingRequestException();
         }
     }
 
@@ -264,25 +250,22 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     matchParticipantDataService.approveSeriesJoinRequest(
                             match.getSeries().getId(), targetUser, Instant.now(clock));
             if (approvedRows <= 0) {
-                throw new MatchParticipationFullException(
-                        "The event is full; cannot approve more participants.");
+                throw new MatchFullException();
             }
             matchNotificationService.notifyPlayerRequestApproved(match, targetUser);
             return;
         }
 
         if (!EventStatus.OPEN.equals(match.getStatus())) {
-            throw new MatchParticipationClosedException("The event is not open.");
+            throw new MatchClosedException();
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
-            throw new MatchParticipationFullException(
-                    "The event is full; cannot approve more participants.");
+            throw new MatchFullException();
         }
 
         if (!matchParticipantDataService.approveRequest(matchId, targetUser)) {
-            throw new MatchParticipationNoPendingRequestException(
-                    "No pending join request found for the specified user.");
+            throw new MatchParticipationNoPendingRequestException();
         }
 
         matchNotificationService.notifyPlayerRequestApproved(match, targetUser);
@@ -298,8 +281,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         requireApprovalBasedMatch(match);
 
         if (!matchParticipantDataService.rejectRequest(matchId, targetUser)) {
-            throw new MatchParticipationNoPendingRequestException(
-                    "No pending join request found for the specified user.");
+            throw new MatchParticipationNoPendingRequestException();
         }
 
         matchNotificationService.notifyPlayerRequestRejected(match, targetUser);
@@ -320,8 +302,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         requireHost(match, host.getId());
 
         if (!matchParticipantDataService.removeParticipant(matchId, targetUser)) {
-            throw new MatchParticipationNotParticipantException(
-                    "The specified user is not a confirmed participant of this event.");
+            throw new MatchParticipationNotParticipantException();
         }
 
         matchNotificationService.notifyPlayerRemovedByHost(match, targetUser);
@@ -357,7 +338,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     public List<Match> findPendingRequestMatches(final User user) {
         if (user == null) {
-            throw new MatchParticipationInvalidUserException("User must be specified");
+            throw new IllegalArgumentException("exception.user.notNull");
         }
         return matchParticipantDataService.findPendingRequestMatches(user);
     }
@@ -381,16 +362,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         requireHost(match, host.getId());
 
         final User target =
-                userService
-                        .findByEmail(email)
-                        .orElseThrow(
-                                () ->
-                                        new MatchParticipationUserNotFoundException(
-                                                "No user found with that email address."));
+                userService.findByEmail(email).orElseThrow(() -> new UserNotFoundException());
 
         if (isHost(match, target.getId())) {
-            throw new MatchParticipationIsHostException(
-                    "The host user cannot be invited to their own match.");
+            throw new MatchParticipationIsHostException();
         }
 
         requireInvitableMatch(match);
@@ -407,21 +382,19 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Long matchId = match.getId();
         nonNullUser(target);
         if (matchParticipantDataService.hasActiveReservation(matchId, target)) {
-            throw new MatchParticipationAlreadyJoinedException(
-                    "That user is already a confirmed participant.");
+            throw new MatchParticipationAlreadyJoinedException();
         }
 
         if (matchParticipantDataService.hasInvitation(matchId, target)) {
-            throw new MatchParticipationAlreadyInvitedException(
-                    "That user already has a pending invitation.");
+            throw new MatchParticipationAlreadyInvitedException();
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
-            throw new MatchParticipationFullException("The event is already full.");
+            throw new MatchFullException();
         }
 
         if (!matchParticipantDataService.inviteUser(matchId, target)) {
-            throw new MatchParticipationAlreadyInvitedException("Could not send the invitation.");
+            throw new MatchParticipationAlreadyInvitedException();
         }
 
         dispatchMatchInvitation(target, match);
@@ -433,7 +406,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final SeriesInvitationEvaluation evaluation =
                 evaluateSeriesInvitationTargets(occurrences, target);
         if (evaluation.invitableOccurrenceCount() == 0) {
-            throw buildSeriesInvitationFailure(evaluation);
+            seriesInvitationFailure(evaluation);
         }
 
         int invitedCount = 0;
@@ -444,8 +417,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         }
 
         if (invitedCount == 0) {
-            throw new MatchParticipationSeriesAlreadyCoveredException(
-                    "That user is already invited or participating in this series.");
+            throw new MatchParticipationSeriesAlreadyCoveredException();
         }
 
         dispatchSeriesInvitation(target, match, invitedCount);
@@ -459,13 +431,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Instant now = Instant.now(clock);
 
         if (isHost(match, user.getId())) {
-            throw new MatchParticipationIsHostException(
-                    "The host cannot accept an invitation to their own event.");
+            throw new MatchParticipationIsHostException();
         }
 
         if (!matchParticipantDataService.hasInvitation(matchId, user)) {
-            throw new MatchParticipationNoInvitationException(
-                    "No pending invitation found for this event.");
+            throw new MatchParticipationNoInvitationException();
         }
 
         if (match.isRecurringOccurrence()
@@ -474,24 +444,22 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     matchParticipantDataService.acceptSeriesInvite(
                             match.getSeries().getId(), user, now);
             if (acceptedRows <= 0) {
-                throw new MatchParticipationNoInvitationException(
-                        "No pending invitation found for this series.");
+                throw new MatchParticipationNoInvitationException();
             }
             matchNotificationService.notifyHostInviteAccepted(match, user);
             return;
         }
 
         if (!EventStatus.OPEN.equals(match.getStatus())) {
-            throw new MatchParticipationClosedException("The event is not open.");
+            throw new MatchClosedException();
         }
 
         if (!match.getStartsAt().isAfter(now)) {
-            throw new MatchParticipationStartedException("The event has already started.");
+            throw new MatchStartedException();
         }
 
         if (!matchParticipantDataService.acceptInvite(matchId, user)) {
-            throw new MatchParticipationNoInvitationException(
-                    "No pending invitation found for this event.");
+            throw new MatchParticipationNoInvitationException();
         }
 
         matchNotificationService.notifyHostInviteAccepted(match, user);
@@ -504,8 +472,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(user);
 
         if (!matchParticipantDataService.hasInvitation(matchId, user)) {
-            throw new MatchParticipationNoInvitationException(
-                    "No pending invitation found for this event.");
+            throw new MatchParticipationNoInvitationException();
         }
 
         if (match.isRecurringOccurrence()
@@ -514,16 +481,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                     matchParticipantDataService.declineSeriesInvite(
                             match.getSeries().getId(), user);
             if (declinedRows <= 0) {
-                throw new MatchParticipationNoInvitationException(
-                        "No pending invitation found for this series.");
+                throw new MatchParticipationNoInvitationException();
             }
             matchNotificationService.notifyHostInviteDeclined(match, user);
             return;
         }
 
         if (!matchParticipantDataService.declineInvite(matchId, user)) {
-            throw new MatchParticipationNoInvitationException(
-                    "No pending invitation found for this event.");
+            throw new MatchParticipationNoInvitationException();
         }
 
         matchNotificationService.notifyHostInviteDeclined(match, user);
@@ -568,16 +533,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     // -------------------------------------------------------------------------
 
     private Match requireMatch(final Long matchId) {
-        return matchDataService
-                .findById(matchId)
-                .orElseThrow(
-                        () -> new MatchParticipationNotFoundException("The event does not exist."));
+        return matchDataService.findById(matchId).orElseThrow(() -> new MatchNotFoundException());
     }
 
     private void requireHost(final Match match, final Long userId) {
         if (!isHost(match, userId)) {
-            throw new MatchParticipationForbiddenException(
-                    "Only the host can perform this action.");
+            throw new MatchForbiddenActionException();
         }
     }
 
@@ -587,7 +548,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     private static void requireInvitableMatch(final Match match) {
         if (!EventStatus.OPEN.equals(match.getStatus())) {
-            throw new MatchParticipationClosedException("The event is not open.");
+            throw new MatchClosedException();
         }
 
         requireInviteOnlyMatch(match);
@@ -596,16 +557,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private static void requireInviteOnlyMatch(final Match match) {
         if (match.getVisibility() != EventVisibility.PRIVATE
                 || match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
-            throw new MatchParticipationNotInviteOnlyException(
-                    "Invitations are only supported for private invite-only events.");
+            throw new MatchParticipationNotInviteOnlyException();
         }
     }
 
     private static void requireApprovalBasedMatch(final Match match) {
         if (match.getVisibility() != EventVisibility.PUBLIC
                 || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
-            throw new MatchParticipationNotInviteOnlyException(
-                    "This action is only supported for public events that require approval to join.");
+            throw new MatchParticipationNotInviteOnlyException();
         }
     }
 
@@ -622,22 +581,19 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(user);
 
         if (!match.getStartsAt().isAfter(Instant.now(clock))) {
-            throw new MatchParticipationStartedException("The event has already started.");
+            throw new MatchStartedException();
         }
 
         if (!EventStatus.OPEN.equals(match.getStatus())) {
-            throw new MatchParticipationNotCancellableException(
-                    "This reservation can no longer be cancelled.");
+            throw new MatchParticipationNotCancellableException();
         }
 
         if (!matchParticipantDataService.hasActiveReservation(match.getId(), user)) {
-            throw new MatchParticipationNotJoinedException(
-                    "This account does not have an active reservation.");
+            throw new MatchParticipationNotJoinedException();
         }
 
         if (!matchParticipantDataService.removeParticipant(match.getId(), user)) {
-            throw new MatchParticipationNotCancellableException(
-                    "This reservation can no longer be cancelled.");
+            throw new MatchParticipationNotCancellableException();
         }
 
         if (isHost(match, user.getId())) {
@@ -774,75 +730,60 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     private static void nonNullUser(final User user) {
         if (user == null) {
-            throw new MatchParticipationInvalidUserException("User must be specified.");
+            throw new IllegalArgumentException("exception.user.notNull");
         }
     }
 
-    private static MatchParticipationException buildSeriesJoinRequestFailure(
-            final SeriesJoinRequestEvaluation evaluation) {
+    private static void seriesJoinRequestFailure(final SeriesJoinRequestEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
-            return new MatchParticipationSeriesStartedException(
-                    "There are no upcoming dates left in this recurring event.");
+            throw new MatchSeriesStartedException();
         }
 
         if (evaluation.futureOpenApprovalOccurrenceCount() == 0) {
-            return new MatchParticipationSeriesClosedException(
-                    "The upcoming recurring dates are not open.");
+            throw new MatchSeriesClosedException();
         }
 
         if (evaluation.joined()) {
-            return new MatchParticipationSeriesAlreadyJoinedException(
-                    "You are already confirmed for the future recurring dates.");
+            throw new MatchParticipationSeriesAlreadyJoinedException();
         }
 
         if (evaluation.pending()) {
-            return new MatchParticipationSeriesAlreadyPendingException(
-                    "You already have pending join requests for the future recurring dates.");
+            throw new MatchParticipationSeriesAlreadyPendingException();
         }
 
         if (evaluation.fullOccurrenceCount() > 0) {
-            return new MatchParticipationSeriesFullException(
-                    "The available future recurring dates are full.");
+            throw new MatchSeriesFullException();
         }
 
-        return new MatchParticipationSeriesClosedException(
-                "The upcoming recurring dates are not open.");
+        throw new MatchSeriesClosedException();
     }
 
-    private static MatchParticipationException buildSeriesInvitationFailure(
-            final SeriesInvitationEvaluation evaluation) {
+    private static void seriesInvitationFailure(final SeriesInvitationEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
-            return new MatchParticipationSeriesStartedException(
-                    "There are no upcoming dates left in this series.");
+            throw new MatchSeriesStartedException();
         }
 
         if (evaluation.futureOpenInviteOnlyOccurrenceCount() == 0) {
-            return new MatchParticipationSeriesClosedException(
-                    "The upcoming dates in this series are not open.");
+            throw new MatchSeriesClosedException();
         }
 
         if (evaluation.joined()) {
-            return new MatchParticipationSeriesAlreadyJoinedException(
-                    "That user is already participating in every available date in this series.");
+            throw new MatchParticipationSeriesAlreadyJoinedException();
         }
 
         if (evaluation.invited()) {
-            return new MatchParticipationSeriesAlreadyInvitedException(
-                    "That user is already invited to every available date in this series.");
+            throw new MatchParticipationSeriesAlreadyInvitedException();
         }
 
         if (evaluation.covered()) {
-            return new MatchParticipationSeriesAlreadyCoveredException(
-                    "That user is already invited or participating in this series.");
+            throw new MatchParticipationSeriesAlreadyCoveredException();
         }
 
         if (evaluation.fullOccurrenceCount() > 0) {
-            return new MatchParticipationSeriesFullException(
-                    "The available dates in this series are full.");
+            throw new MatchSeriesFullException();
         }
 
-        return new MatchParticipationSeriesClosedException(
-                "The upcoming dates in this series are not open.");
+        throw new MatchSeriesClosedException();
     }
 
     private record SeriesJoinRequestEvaluation(
