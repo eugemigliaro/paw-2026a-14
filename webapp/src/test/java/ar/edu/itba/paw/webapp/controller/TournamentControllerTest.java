@@ -42,6 +42,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -431,6 +432,66 @@ class TournamentControllerTest {
                         model().attribute(
                                         "matchDatesSetupPath",
                                         Matchers.is("/host/tournaments/77/bracket/setup")));
+    }
+
+    @Test
+    void adminModBracketBeforePublishIncludesMatchDateSetupAction() throws Exception {
+        // 1. Arrange
+        final User adminMod = UserUtils.getUser(99L);
+        AuthenticationUtils.authenticateUser(adminMod, "{bcrypt}hash", UserRole.ADMIN_MOD, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.BRACKET_SETUP);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(
+                        tournamentService.getManagementPermissions(
+                                Mockito.eq(tournament), Mockito.eq(adminMod)))
+                .thenReturn(
+                        new TournamentManagementPermissions(
+                                false, false, true, true, false, true, false));
+        Mockito.when(tournamentBracketService.getBracket(77L, adminMod))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament, List.of(), List.of(match), null, match));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tournaments/bracket"))
+                .andExpect(
+                        model().attribute(
+                                        "matchDatesSetupPath",
+                                        Matchers.is("/host/tournaments/77/bracket/setup")));
+    }
+
+    @Test
+    void bracketMatchRecordActionUsesServiceReadState() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        final Tournament tournament = tournament(77L, TournamentStatus.IN_PROGRESS);
+        final TournamentMatch match = bracketMatch(10L, tournament);
+        Mockito.when(tournamentBracketService.getBracket(77L, host))
+                .thenReturn(
+                        new TournamentBracketView(
+                                tournament,
+                                List.of(match.getTeamA(), match.getTeamB()),
+                                List.of(match),
+                                null,
+                                match,
+                                List.of(),
+                                Map.of(match.getId(), true)));
+
+        // 2. Exercise + 3. Assert
+        final var mvcResult =
+                mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("tournaments/bracket"))
+                        .andReturn();
+        final TournamentBracketViewModel bracketPage =
+                (TournamentBracketViewModel)
+                        mvcResult.getModelAndView().getModel().get("bracketPage");
+
+        Assertions.assertTrue(bracketPage.isCanManageResults());
+        Assertions.assertTrue(
+                bracketPage.getRounds().get(0).getMatches().get(0).isCanRecordResult());
     }
 
     @Test

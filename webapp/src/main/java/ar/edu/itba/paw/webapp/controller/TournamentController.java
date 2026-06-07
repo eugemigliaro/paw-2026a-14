@@ -187,7 +187,7 @@ public class TournamentController {
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
                 "matchDatesSetupPath",
-                managementPermissions.canDefineMatchDates()
+                managementPermissions.canManageBracket()
                         ? "/host/tournaments/" + tournamentId + "/bracket/setup"
                         : null);
         mav.addObject(
@@ -653,9 +653,10 @@ public class TournamentController {
                                                                                                 .getWinnerTeam()),
                                                                                 entry.getKey()
                                                                                         == totalRounds,
-                                                                                canManageResults
-                                                                                        && canRecordResult(
-                                                                                                match),
+                                                                                bracketView
+                                                                                        .isResultRecordable(
+                                                                                                match
+                                                                                                        .getId()),
                                                                                 matchScheduleLabel(
                                                                                         match,
                                                                                         locale),
@@ -773,12 +774,6 @@ public class TournamentController {
 
     private static Long teamId(final TournamentTeam team) {
         return team == null ? null : team.getId();
-    }
-
-    private static boolean canRecordResult(final TournamentMatch match) {
-        return match.getTeamA() != null
-                && match.getTeamB() != null
-                && match.getWinnerTeam() == null;
     }
 
     private static boolean isWinner(final TournamentTeam team, final TournamentTeam winner) {

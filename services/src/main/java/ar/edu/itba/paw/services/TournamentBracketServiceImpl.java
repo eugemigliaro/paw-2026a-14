@@ -220,7 +220,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 matches,
                 viewerTeam,
                 focusedMatch(matches, viewerTeam),
-                tournamentTeamDao.findMembersByTournament(tournamentId));
+                tournamentTeamDao.findMembersByTournament(tournamentId),
+                resultRecordableByMatchId(tournament, viewer, matches));
     }
 
     @Override
@@ -438,6 +439,27 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         }
         return TournamentStatus.BRACKET_SETUP == tournament.getStatus()
                 && canMutate(tournament, viewer);
+    }
+
+    private Map<Long, Boolean> resultRecordableByMatchId(
+            final Tournament tournament, final User viewer, final List<TournamentMatch> matches) {
+        final boolean canManageResults =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus()
+                        && canMutate(tournament, viewer);
+        final Map<Long, Boolean> result = new HashMap<>();
+        for (final TournamentMatch match : matches) {
+            if (match == null || match.getId() == null) {
+                continue;
+            }
+            result.put(match.getId(), canManageResults && isResultRecordable(match));
+        }
+        return result;
+    }
+
+    private boolean isResultRecordable(final TournamentMatch match) {
+        return match.getTeamA() != null
+                && match.getTeamB() != null
+                && match.getWinnerTeam() == null;
     }
 
     private void requireBracketSetup(final Tournament tournament) {

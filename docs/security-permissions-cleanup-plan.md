@@ -28,7 +28,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 3: Match detail visibility.
 - [x] Module 4: Match detail action state.
 - [x] Module 5: Tournament detail permissions.
-- [ ] Module 6: Tournament bracket permissions.
+- [x] Module 6: Tournament bracket permissions.
 - [ ] Module 7: Centralize admin/mod role checks.
 - [ ] Module 8: Public profile, reviews, and report affordances.
 - [ ] Module 9: Host controllers and mutating paths.
@@ -490,10 +490,26 @@ Tests to add or update:
 
 Acceptance criteria:
 
-- [ ] Bracket POST service method remains the final enforcement point.
-- [ ] Bracket JSP receives display state without controller-owned authorization.
-- [ ] Controller no longer calls `canDefineMatchDates`, `canRecordResult`, or
+- [x] Bracket POST service method remains the final enforcement point.
+- [x] Bracket JSP receives display state without controller-owned authorization.
+- [x] Controller no longer calls `canDefineMatchDates`, `canRecordResult`, or
   `isAdminMod`.
+
+Implemented in Module 6:
+
+- Extended `TournamentBracketView` with service-computed per-match
+  result-recording display state.
+- Moved result-recording row eligibility out of `TournamentController`; the
+  controller now maps `TournamentBracketView.isResultRecordable(matchId)` into
+  the JSP-facing bracket match view model.
+- Kept `TournamentBracketService.declareWinner` as the final enforcement point
+  for result mutation, including host/admin ownership, lifecycle state,
+  incomplete matches, and already-decided matches.
+- Added bracket service tests for host/admin setup read access, unrelated-user
+  pre-public denial, host/admin/unrelated result affordances, incomplete
+  matches, and already-decided matches.
+- Added controller coverage for admin/mod setup controls and service-provided
+  match result affordance state.
 
 ## Module 7: Centralize Admin/Mod Role Checks
 
