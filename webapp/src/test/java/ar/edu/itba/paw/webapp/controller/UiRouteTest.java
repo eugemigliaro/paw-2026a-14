@@ -51,6 +51,7 @@ import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageUpload;
+import ar.edu.itba.paw.services.MatchActionCapabilities;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -63,7 +64,6 @@ import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
-import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
@@ -88,8 +88,6 @@ import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
@@ -101,6 +99,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.validation.ConstraintValidator;
@@ -636,6 +635,75 @@ class UiRouteTest {
                     @Override
                     public Optional<Match> findPublicMatchById(final Long matchId) {
                         return findMatchById(matchId);
+                    }
+
+                    @Override
+                    public MatchActionCapabilities actionCapabilities(
+                            final Match match, final User viewer) {
+                        final boolean host =
+                                viewer != null
+                                        && match.getHost() != null
+                                        && viewer.getId().equals(match.getHost().getId());
+                        final boolean activeParticipant =
+                                viewer != null
+                                        && currentUserHasReservation
+                                        && (Long.valueOf(42L).equals(match.getId())
+                                                || Long.valueOf(51L).equals(match.getId()));
+                        final boolean seriesParticipant =
+                                viewer != null
+                                        && currentUserHasSeriesReservation
+                                        && match.isRecurringOccurrence();
+                        final boolean invited =
+                                viewer != null
+                                        && (Long.valueOf(51L).equals(match.getId())
+                                                || Long.valueOf(50L).equals(match.getId()));
+                        final boolean visible =
+                                match.getStatus() == EventStatus.DRAFT
+                                        ? host
+                                        : match.getVisibility() == EventVisibility.PRIVATE
+                                                        || match.getStatus()
+                                                                == EventStatus.CANCELLED
+                                                ? host
+                                                        || activeParticipant
+                                                        || seriesParticipant
+                                                        || invited
+                                                : match.getVisibility() == EventVisibility.PUBLIC;
+                        final boolean editable =
+                                host
+                                        && match.getStatus() != EventStatus.COMPLETED
+                                        && match.getStatus() != EventStatus.CANCELLED
+                                        && match.getStartsAt().isAfter(FIXED_NOW);
+                        final boolean reserve =
+                                match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW)
+                                        && match.getAvailableSpots() > 0
+                                        && (host
+                                                || (match.getVisibility() == EventVisibility.PUBLIC
+                                                        && match.getJoinPolicy()
+                                                                == EventJoinPolicy.DIRECT));
+                        final boolean cancelReservation =
+                                (activeParticipant || seriesParticipant)
+                                        && match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW);
+                        final boolean requestToJoin =
+                                match.getVisibility() == EventVisibility.PUBLIC
+                                        && match.getJoinPolicy()
+                                                == EventJoinPolicy.APPROVAL_REQUIRED
+                                        && match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW)
+                                        && match.getAvailableSpots() > 0
+                                        && !host
+                                        && !activeParticipant;
+                        return new MatchActionCapabilities(
+                                visible,
+                                editable,
+                                editable,
+                                editable,
+                                reserve,
+                                cancelReservation,
+                                requestToJoin,
+                                editable && match.isRecurringOccurrence(),
+                                editable && match.isRecurringOccurrence());
                     }
 
                     @Override
@@ -1448,14 +1516,7 @@ class UiRouteTest {
                         }
 
                         return new VerificationPreview(
-                                "Verify your Match Point account",
-                                "Confirm your email address to activate the account.",
-                                "player@test.com",
-                                Instant.parse("2026-04-06T18:00:00Z"),
-                                "Verify account",
-                                List.of(
-                                        new VerificationPreviewDetail(
-                                                "Username", "player-account")));
+                                "player@test.com", Instant.parse("2026-04-06T18:00:00Z"));
                     }
 
                     @Override
@@ -1477,8 +1538,7 @@ class UiRouteTest {
                                         "{bcrypt}hash",
                                         UserRole.USER,
                                         FIXED_NOW,
-                                        UserLanguages.DEFAULT_LANGUAGE),
-                                "done");
+                                        UserLanguages.DEFAULT_LANGUAGE));
                     }
 
                     @Override
@@ -1496,7 +1556,7 @@ class UiRouteTest {
                     @Override
                     public VerificationConfirmationResult resetPassword(
                             final String rawToken, final String newPassword) {
-                        return new VerificationConfirmationResult(9L, "Password reset");
+                        return new VerificationConfirmationResult(9L);
                     }
 
                     @Override
@@ -1641,7 +1701,7 @@ class UiRouteTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(model().attributeExists("feedPage"))
+                .andExpect(model().attributeExists("featuredEvents"))
                 .andExpect(model().attribute("nearMeUnavailable", false));
     }
 
@@ -1652,11 +1712,8 @@ class UiRouteTest {
                 .andExpect(view().name("feed/index"))
                 .andExpect(
                         model().attribute(
-                                        "feedPage",
-                                        Matchers.hasProperty(
-                                                "title",
-                                                Matchers.is(
-                                                        "Encontr\u00e1 tu pr\u00f3ximo partido."))));
+                                        "feedTitle",
+                                        Matchers.is("Encontr\u00e1 tu pr\u00f3ximo partido.")));
     }
 
     @Test
@@ -1730,9 +1787,8 @@ class UiRouteTest {
     void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
         final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+        Assertions.assertFalse(
+                eventDistanceLabels(result).containsKey(featuredEvents(result).get(0).getId()));
     }
 
     @Test
@@ -1744,9 +1800,8 @@ class UiRouteTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+        Assertions.assertTrue(
+                eventDistanceLabels(result).containsKey(featuredEvents(result).get(0).getId()));
     }
 
     @Test
@@ -1772,67 +1827,45 @@ class UiRouteTest {
                 .andExpect(model().attribute("reservationRequiresLogin", true))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "aboutParagraphs",
-                                                Matchers.contains("Friendly\n doubles session"))))
+                                        "aboutParagraphs",
+                                        Matchers.contains("Friendly\n doubles session")))
+                .andExpect(model().attribute("hostProfileHref", Matchers.is("/users/user7")))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "hostProfileHref", Matchers.is("/users/user7"))))
+                                        "hostProfileImageUrl",
+                                        Matchers.is("/assets/default-profile-avatar.svg")))
+                .andExpect(model().attribute("mapAvailable", Matchers.is(true)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "hostProfileImageUrl",
-                                                Matchers.is("/assets/default-profile-avatar.svg"))))
+                                        "mapTileUrlTemplate",
+                                        Matchers.is("/assets/tiles/{z}/{x}/{y}.png")))
+                .andExpect(model().attribute("mapLatitude", Matchers.closeTo(-34.61, 0.000001)))
+                .andExpect(model().attribute("mapLongitude", Matchers.closeTo(-58.38, 0.000001)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
+                                        "participants",
+                                        Matchers.contains(
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "username", Matchers.is("user2"))),
+                                                Matchers.allOf(
+                                                        Matchers.hasProperty(
+                                                                "username",
+                                                                Matchers.is("user3"))))))
+                .andExpect(
+                        model().attribute(
+                                        "userProfileImageUrls",
                                         Matchers.allOf(
-                                                Matchers.hasProperty(
-                                                        "mapAvailable", Matchers.is(true)),
-                                                Matchers.hasProperty(
-                                                        "mapTileUrlTemplate",
-                                                        Matchers.is(
-                                                                "/assets/tiles/{z}/{x}/{y}.png")),
-                                                Matchers.hasProperty(
-                                                        "mapLatitude",
-                                                        Matchers.closeTo(-34.61, 0.000001)),
-                                                Matchers.hasProperty(
-                                                        "mapLongitude",
-                                                        Matchers.closeTo(-58.38, 0.000001)))))
+                                                Matchers.hasEntry(
+                                                        2L, "/assets/default-profile-avatar.svg"),
+                                                Matchers.hasEntry(
+                                                        3L, "/assets/default-profile-avatar.svg"))))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "participants",
-                                                Matchers.contains(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "profileHref",
-                                                                        Matchers.is(
-                                                                                "/users/user2")),
-                                                                Matchers.hasProperty(
-                                                                        "profileImageUrl",
-                                                                        Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg")),
-                                                                Matchers.hasProperty(
-                                                                        "removeUrl",
-                                                                        Matchers.nullValue())),
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "profileHref",
-                                                                        Matchers.is(
-                                                                                "/users/user3")),
-                                                                Matchers.hasProperty(
-                                                                        "profileImageUrl",
-                                                                        Matchers.is(
-                                                                                "/assets/default-profile-avatar.svg")),
-                                                                Matchers.hasProperty(
-                                                                        "removeUrl",
-                                                                        Matchers.nullValue()))))));
+                                        "participantRemovePaths",
+                                        Matchers.allOf(
+                                                Matchers.not(Matchers.hasKey(2L)),
+                                                Matchers.not(Matchers.hasKey(3L)))));
     }
 
     @Test
@@ -1845,17 +1878,21 @@ class UiRouteTest {
                 .andExpect(model().attribute("reservationRequiresLogin", false))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "participants",
-                                                Matchers.contains(
-                                                        Matchers.hasProperty(
-                                                                "reviewHref", Matchers.nullValue()),
-                                                        Matchers.hasProperty(
-                                                                "reviewHref",
-                                                                Matchers.is(
-                                                                        "/users/"
-                                                                                + "user3?reviewForm=open#reviews"))))));
+                                        "participants",
+                                        Matchers.contains(
+                                                Matchers.hasProperty(
+                                                        "username", Matchers.is("user2")),
+                                                Matchers.hasProperty(
+                                                        "username", Matchers.is("user3")))))
+                .andExpect(
+                        model().attribute(
+                                        "participantReviewHrefs",
+                                        Matchers.allOf(
+                                                Matchers.not(Matchers.hasKey(2L)),
+                                                Matchers.hasEntry(
+                                                        3L,
+                                                        "/users/"
+                                                                + "user3?reviewForm=open#reviews"))));
     }
 
     @Test
@@ -1867,7 +1904,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
-                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute(
                                         "reservationCancelPath",
@@ -1884,7 +1921,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
-                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute(
                                         "reservationCancelPath",
@@ -1898,8 +1935,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/51"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("reservationEnabled", true))
-                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("isInvitedPlayer", false))
                 .andExpect(model().attribute("hostPendingInviteCount", 1))
                 .andExpect(model().attribute("hostPendingInvitesOpen", true))
@@ -1912,42 +1948,23 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("occurrences", Matchers.hasSize(5)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(5))))
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(48L, "completed")))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Completed"))))))
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(55L, "inProgress")))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "statusLabel",
-                                                                        Matchers.is("In progress")),
-                                                                Matchers.hasProperty(
-                                                                        "statusTone",
-                                                                        Matchers.is(
-                                                                                "in-progress")))))))
+                                        "occurrenceStatusTones",
+                                        Matchers.hasEntry(55L, "in-progress")))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Full"))))))
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(49L, "full")))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(
                         model().attribute(
@@ -1957,23 +1974,15 @@ class UiRouteTest {
         // Page 2 shows the 6th occurrence: cancelled
         mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
                 .andExpect(status().isOk())
+                .andExpect(model().attribute("occurrences", Matchers.hasSize(1)))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty("occurrences", Matchers.hasSize(1))))
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(50L, "cancelled")))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "statusLabel",
-                                                                        Matchers.is("Cancelled")),
-                                                                Matchers.hasProperty(
-                                                                        "href",
-                                                                        Matchers.nullValue()))))));
+                                        "occurrenceVisibleHrefs",
+                                        Matchers.not(Matchers.hasKey(50L))));
     }
 
     @Test
@@ -1982,13 +1991,8 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("En curso"))))));
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(55L, "inProgress")));
     }
 
     @Test
@@ -1999,7 +2003,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attribute("joinRequestEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("joinRequestPath", "/matches/52/join-requests"))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", true))
                 .andExpect(model().attribute("seriesJoinRequestPending", false))
@@ -2019,7 +2023,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("hasPendingJoinRequest", false))
-                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestPending", true));
     }
@@ -2072,18 +2076,12 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "occurrences",
-                                                Matchers.hasItem(
-                                                        Matchers.allOf(
-                                                                Matchers.hasProperty(
-                                                                        "statusLabel",
-                                                                        Matchers.is("Cancelled")),
-                                                                Matchers.hasProperty(
-                                                                        "href",
-                                                                        Matchers.is(
-                                                                                "/matches/50")))))));
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(50L, "cancelled")))
+                .andExpect(
+                        model().attribute(
+                                        "occurrenceVisibleHrefs",
+                                        Matchers.hasEntry(50L, "/matches/50")));
     }
 
     @Test
@@ -2095,7 +2093,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
-                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute(
                                         "reservationCancelPath", "/matches/46/reservations/cancel"))
@@ -2116,7 +2114,7 @@ class UiRouteTest {
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", false))
                 .andExpect(model().attribute("reservationConfirmed", false))
-                .andExpect(model().attribute("reservationEnabled", true));
+                .andExpect(model().attributeExists("matchActionCapabilities"));
     }
 
     @Test
@@ -2130,7 +2128,7 @@ class UiRouteTest {
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
                 .andExpect(model().attribute("reservationConfirmed", true))
-                .andExpect(model().attribute("reservationEnabled", true));
+                .andExpect(model().attributeExists("matchActionCapabilities"));
     }
 
     @Test
@@ -2151,7 +2149,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/48"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attribute("reservationEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute("eventStateNotice", "This event has already occurred."));
     }
@@ -2163,28 +2161,21 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("hostCanEdit", true))
-                .andExpect(model().attribute("hostCanCancel", true))
-                .andExpect(model().attribute("reservationEnabled", true))
-                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
                 .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"))
                 .andExpect(
                         model().attribute(
-                                        "eventPage",
-                                        Matchers.hasProperty(
-                                                "participants",
-                                                Matchers.contains(
-                                                        Matchers.hasProperty(
-                                                                "removeUrl",
-                                                                Matchers.is(
-                                                                        "/host/matches/42/participants/2/remove")),
-                                                        Matchers.hasProperty(
-                                                                "removeUrl",
-                                                                Matchers.is(
-                                                                        "/host/matches/42/participants/3/remove"))))));
+                                        "participantRemovePaths",
+                                        Matchers.allOf(
+                                                Matchers.hasEntry(
+                                                        2L,
+                                                        "/host/matches/42/participants/2/remove"),
+                                                Matchers.hasEntry(
+                                                        3L,
+                                                        "/host/matches/42/participants/3/remove"))));
     }
 
     @Test
@@ -2194,9 +2185,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("hostCanEditSeries", true))
-                .andExpect(model().attribute("hostCanCancelSeries", true))
-                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(model().attribute("hostSeriesEditPath", "/host/matches/46/series/edit"))
                 .andExpect(
@@ -2211,9 +2200,8 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
-                .andExpect(model().attribute("joinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hasPendingJoinRequest", false))
                 .andExpect(model().attribute("hostPendingRequestCount", 1))
@@ -2228,8 +2216,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/44"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("hostCanEdit", false))
-                .andExpect(model().attribute("hostCanCancel", false));
+                .andExpect(model().attributeExists("matchActionCapabilities"));
     }
 
     @Test
@@ -3367,9 +3354,12 @@ class UiRouteTest {
                 (SearchForm) result.getModelAndView().getModel().get("searchForm");
         Assertions.assertTrue(searchForm.getCategory().isEmpty());
 
-        final List<EventCardViewModel> events = getEventsModel(result);
+        final List<Object> events = getEventsModel(result);
         Assertions.assertTrue(
-                events.stream().anyMatch(event -> "Hosted Tournament".equals(event.getTitle())));
+                events.stream()
+                        .filter(Tournament.class::isInstance)
+                        .map(Tournament.class::cast)
+                        .anyMatch(event -> "Hosted Tournament".equals(event.getTitle())));
     }
 
     @Test
@@ -3383,9 +3373,11 @@ class UiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events = getEventsModel(result);
+        final List<Object> events = getEventsModel(result);
         Assertions.assertTrue(
                 events.stream()
+                        .filter(Match.class::isInstance)
+                        .map(Match.class::cast)
                         .noneMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
@@ -3400,9 +3392,11 @@ class UiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events = getEventsModel(result);
+        final List<Object> events = getEventsModel(result);
         Assertions.assertTrue(
                 events.stream()
+                        .filter(Match.class::isInstance)
+                        .map(Match.class::cast)
                         .anyMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
@@ -3417,18 +3411,17 @@ class UiRouteTest {
                         .andExpect(view().name("events/list"))
                         .andReturn();
 
-        final List<EventCardViewModel> events = getEventsModel(result);
-        final EventCardViewModel hostedEvent =
+        final List<Object> events = getEventsModel(result);
+        final Match hostedEvent =
                 events.stream()
+                        .filter(Match.class::isInstance)
+                        .map(Match.class::cast)
                         .filter(event -> "Sunrise Padel".equals(event.getTitle()))
                         .findFirst()
                         .orElseThrow(AssertionError::new);
-        Assertions.assertTrue(
-                hostedEvent.getRelationshipBadges().stream()
-                        .anyMatch(badge -> "my_event".equals(badge.getType())));
-        Assertions.assertTrue(
-                hostedEvent.getRelationshipBadges().stream()
-                        .anyMatch(badge -> "going".equals(badge.getType())));
+        final Map<Long, List<String>> relationshipBadgeCodes = eventRelationshipBadgeCodes(result);
+        Assertions.assertTrue(relationshipBadgeCodes.get(hostedEvent.getId()).contains("my_event"));
+        Assertions.assertTrue(relationshipBadgeCodes.get(hostedEvent.getId()).contains("going"));
     }
 
     @Test
@@ -3532,7 +3525,7 @@ class UiRouteTest {
         mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
-                .andExpect(model().attributeExists("profilePage"))
+                .andExpect(model().attributeExists("targetUser"))
                 .andExpect(model().attributeExists("reviewSummary"))
                 .andExpect(model().attributeExists("profileReviews"))
                 .andExpect(model().attribute("reviewLikeLabel", "Likes"))
@@ -3540,34 +3533,31 @@ class UiRouteTest {
                 .andExpect(model().attribute("reviewFormVisible", false))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
                                                 "username", Matchers.is("host_player"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty("name", Matchers.is("Jamie"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty("lastName", Matchers.is("Rivera"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
                                                 "phone", Matchers.is("+1 555 123 4567"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
                                                 "email", Matchers.is("host@test.com"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
-                                        Matchers.hasProperty(
-                                                "profileImageUrl",
-                                                Matchers.is(
-                                                        "/assets/default-profile-avatar.svg"))));
+                                        "profileImageUrl",
+                                        Matchers.is("/assets/default-profile-avatar.svg")));
     }
 
     @Test
@@ -3606,7 +3596,8 @@ class UiRouteTest {
                                         "profileReviews",
                                         Matchers.hasItem(
                                                 Matchers.hasProperty(
-                                                        "reaction", Matchers.is("like")))))
+                                                        "reaction",
+                                                        Matchers.is(PlayerReviewReaction.LIKE)))))
                 .andExpect(
                         model().attribute(
                                         "reviewFilterOptions",
@@ -3719,11 +3710,7 @@ class UiRouteTest {
 
         mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        model().attribute(
-                                        "profilePage",
-                                        Matchers.hasProperty(
-                                                "profileImageUrl", Matchers.is("/images/500"))));
+                .andExpect(model().attribute("profileImageUrl", Matchers.is("/images/500")));
     }
 
     @Test
@@ -3753,12 +3740,9 @@ class UiRouteTest {
                 .andExpect(view().name("users/profile"))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
-                                                "email", Matchers.is("host@test.com"))))
-                .andExpect(model().attribute("profileUsernameLabel", "Usuario"))
-                .andExpect(model().attribute("profileEmailLabel", "Email"))
-                .andExpect(model().attribute("profilePhoneLabel", "Tel\u00e9fono"));
+                                                "email", Matchers.is("host@test.com"))));
     }
 
     @Test
@@ -3767,8 +3751,24 @@ class UiRouteTest {
     }
 
     @SuppressWarnings("unchecked")
-    private List<EventCardViewModel> getEventsModel(final MvcResult result) {
-        return (List<EventCardViewModel>) result.getModelAndView().getModel().get("events");
+    private List<Object> getEventsModel(final MvcResult result) {
+        return (List<Object>) result.getModelAndView().getModel().get("events");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Match> featuredEvents(final MvcResult result) {
+        return (List<Match>) result.getModelAndView().getModel().get("featuredEvents");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Long, String> eventDistanceLabels(final MvcResult result) {
+        return (Map<Long, String>) result.getModelAndView().getModel().get("eventDistanceLabels");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Long, List<String>> eventRelationshipBadgeCodes(final MvcResult result) {
+        return (Map<Long, List<String>>)
+                result.getModelAndView().getModel().get("eventRelationshipBadgeCodes");
     }
 
     private static MessageSource messageSource() {

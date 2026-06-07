@@ -28,9 +28,13 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -40,6 +44,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Transactional(readOnly = true)
 public class MatchServiceImpl implements MatchService {
 
+    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_PLAYERS_PER_MATCH = 1000;
@@ -642,6 +647,49 @@ public class MatchServiceImpl implements MatchService {
                 && startsAt.isAfter(Instant.now(clock));
     }
 
+    private boolean hasEventStarted(final Match match) {
+        return match.getStartsAt() != null && !match.getStartsAt().isAfter(Instant.now(clock));
+    }
+
+    private static boolean isHost(final Match match, final User viewer) {
+        return viewer != null
+                && viewer.getId() != null
+                && match.getHost() != null
+                && viewer.getId().equals(match.getHost().getId());
+    }
+
+    private boolean canMutate(final Match match, final User actingUser) {
+        return isHost(match, actingUser) || isAdminMod();
+    }
+
+    private static boolean isVisibleToViewer(
+            final Match match,
+            final boolean hostViewer,
+            final boolean manager,
+            final boolean activeParticipant,
+            final boolean invitedViewer) {
+        if (EventStatus.DRAFT == match.getStatus()) {
+            return manager;
+        }
+        if (match.getVisibility() == EventVisibility.PRIVATE
+                || EventStatus.CANCELLED == match.getStatus()) {
+            return hostViewer || manager || activeParticipant || invitedViewer;
+        }
+        return match.getVisibility() == EventVisibility.PUBLIC;
+    }
+
+    private boolean isAdminMod() {
+        final Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .filter(Objects::nonNull)
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(ADMIN_MOD_AUTHORITY::equals);
+    }
+
     @Override
     public Optional<Match> findMatchById(final Long matchId) {
         return matchDataService.findById(matchId);
@@ -650,6 +698,58 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public Optional<Match> findPublicMatchById(final Long matchId) {
         return matchDataService.findPublicMatchById(matchId);
+    }
+
+    @Override
+    public MatchActionCapabilities actionCapabilities(final Match match, final User viewer) {
+        if (match == null || match.getId() == null) {
+            return new MatchActionCapabilities(
+                    false, false, false, false, false, false, false, false, false);
+        }
+
+        final boolean hostViewer = isHost(match, viewer);
+        final boolean manager = canMutate(match, viewer);
+        final boolean activeParticipant =
+                viewer != null
+                        && matchParticipantDataService.hasActiveReservation(match.getId(), viewer);
+        final boolean invitedViewer =
+                viewer != null && matchParticipantDataService.hasInvitation(match.getId(), viewer);
+        final boolean visible =
+                isVisibleToViewer(match, hostViewer, manager, activeParticipant, invitedViewer);
+        final boolean editable = manager && isEditableMatch(match);
+        final boolean reservable =
+                EventStatus.OPEN == match.getStatus()
+                        && !hasEventStarted(match)
+                        && match.getAvailableSpots() > 0
+                        && (hostViewer
+                                || (match.getVisibility() == EventVisibility.PUBLIC
+                                        && match.getJoinPolicy() == EventJoinPolicy.DIRECT));
+        final boolean cancellableReservation =
+                activeParticipant
+                        && EventStatus.OPEN == match.getStatus()
+                        && !hasEventStarted(match);
+        final boolean requestable =
+                EventVisibility.PUBLIC == match.getVisibility()
+                        && EventJoinPolicy.APPROVAL_REQUIRED == match.getJoinPolicy()
+                        && EventStatus.OPEN == match.getStatus()
+                        && !hasEventStarted(match)
+                        && match.getAvailableSpots() > 0
+                        && !hostViewer
+                        && !activeParticipant
+                        && (viewer == null
+                                || !matchParticipantDataService.hasPendingRequest(
+                                        match.getId(), viewer));
+
+        return new MatchActionCapabilities(
+                visible,
+                editable,
+                editable,
+                editable,
+                reservable,
+                cancellableReservation,
+                requestable,
+                editable && match.isRecurringOccurrence(),
+                editable && match.isRecurringOccurrence());
     }
 
     @Override

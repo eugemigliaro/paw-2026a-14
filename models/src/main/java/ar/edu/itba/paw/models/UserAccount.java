@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import ar.edu.itba.paw.models.converters.UserRoleConverter;
 import ar.edu.itba.paw.models.types.UserRole;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -167,6 +168,10 @@ public class UserAccount {
         return emailVerifiedAt;
     }
 
+    public OffsetDateTime getEmailVerifiedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(emailVerifiedAt);
+    }
+
     public String getPreferredLanguage() {
         return preferredLanguage;
     }
@@ -175,8 +180,16 @@ public class UserAccount {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public void setUsername(final String username) {

@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.converters.EmailActionTypeConverter;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -122,16 +123,32 @@ public class EmailActionRequest {
         return expiresAt;
     }
 
+    public OffsetDateTime getExpiresAtDateTime() {
+        return PlatformTime.toOffsetDateTime(expiresAt);
+    }
+
     public Instant getConsumedAt() {
         return consumedAt;
+    }
+
+    public OffsetDateTime getConsumedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(consumedAt);
     }
 
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public void setUser(final User user) {

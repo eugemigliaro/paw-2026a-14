@@ -9,7 +9,6 @@ import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.exceptions.playerReview.PlayerReviewException;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
-import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
@@ -20,9 +19,6 @@ import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PublicProfilePageViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SportRatingViewModel;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -100,15 +96,8 @@ public class PublicProfileController {
                         new Object[] {targetUser.getUsername()},
                         "Match Point | " + targetUser.getUsername(),
                         resolvedLocale));
-        mav.addObject(
-                "profilePage",
-                new PublicProfilePageViewModel(
-                        targetUser.getUsername(),
-                        targetUser.getName(),
-                        targetUser.getLastName(),
-                        targetUser.getEmail(),
-                        targetUser.getPhone(),
-                        ImageUrlHelper.profileUrlFor(targetUser)));
+        mav.addObject("targetUser", targetUser);
+        mav.addObject("profileImageUrl", ImageUrlHelper.profileUrlFor(targetUser));
         addReviewModel(mav, targetUser, user, reviewForm, reviewFilter, reviewPage, resolvedLocale);
         mav.addObject(
                 "profileImageAlt",
@@ -117,28 +106,11 @@ public class PublicProfileController {
                         new Object[] {targetUser.getUsername()},
                         targetUser.getUsername() + " profile picture",
                         resolvedLocale));
-        mav.addObject(
-                "profileUsernameLabel",
-                messageSource.getMessage(
-                        "profile.public.username", null, "Username", resolvedLocale));
-        mav.addObject(
-                "profileFullNameLabel",
-                messageSource.getMessage("profile.public.fullName", null, "Name", resolvedLocale));
-        mav.addObject(
-                "profileEmailLabel",
-                messageSource.getMessage("profile.public.email", null, "Email", resolvedLocale));
-        mav.addObject(
-                "profilePhoneLabel",
-                messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
         final boolean reportUserCanSubmit =
                 user != null && !user.getId().equals(targetUser.getId());
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
         final Optional<UserBan> activeBan = moderationService.findActiveBan(targetUser);
         mav.addObject("profileBanned", activeBan.isPresent());
-        mav.addObject(
-                "profileBannedLabel",
-                messageSource.getMessage(
-                        "profile.public.banned", null, "Temporarily banned", resolvedLocale));
         activeBan.ifPresent(
                 ban -> {
                     mav.addObject(
@@ -149,12 +121,8 @@ public class PublicProfileController {
                 });
         if (user != null && user.getId().equals(targetUser.getId())) {
             mav.addObject("profileEditHref", "/account");
-            mav.addObject(
-                    "profileEditLabel",
-                    messageSource.getMessage(
-                            "profile.public.edit", null, "Edit profile", resolvedLocale));
         }
-        addRatingsModel(mav, targetUser, resolvedLocale);
+        addRatingsModel(mav, targetUser);
         return mav;
     }
 
@@ -197,28 +165,12 @@ public class PublicProfileController {
         }
     }
 
-    private void addRatingsModel(final ModelAndView mav, final User user, final Locale locale) {
-        final List<SportRatingViewModel> ratings =
+    private void addRatingsModel(final ModelAndView mav, final User user) {
+        final List<UserSportRating> ratings =
                 userSportRatingService.findRatingsForUser(user).stream()
                         .sorted(Comparator.comparingInt(UserSportRating::getElo).reversed())
-                        .map(
-                                r ->
-                                        new SportRatingViewModel(
-                                                messageSource.getMessage(
-                                                        "sport." + r.getSport().getDbValue(),
-                                                        null,
-                                                        r.getSport().getDisplayName(),
-                                                        locale),
-                                                r.getElo()))
                         .toList();
         mav.addObject("profileRatings", ratings);
-        mav.addObject(
-                "profileRatingsTitle",
-                messageSource.getMessage("profile.ratings.title", null, "Sport ratings", locale));
-        mav.addObject(
-                "profileRatingsEmpty",
-                messageSource.getMessage(
-                        "profile.ratings.empty", null, "No sport ratings yet.", locale));
     }
 
     private void addReviewModel(
@@ -233,10 +185,6 @@ public class PublicProfileController {
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
                         targetUser, reviewFilter, reviewPage, REVIEW_PAGE_SIZE);
-        final List<PlayerReviewViewModel> reviews =
-                reviewResult.getItems().stream()
-                        .map(review -> toReviewViewModel(review, locale))
-                        .toList();
         final Optional<PlayerReview> viewerReview =
                 currentUser == null
                         ? Optional.empty()
@@ -263,7 +211,7 @@ public class PublicProfileController {
                         "profile.reviews.dislike",
                         "profile.reviews.dislikes",
                         locale));
-        mav.addObject("profileReviews", reviews);
+        mav.addObject("profileReviews", reviewResult.getItems());
         mav.addObject("reviewFilterOptions", reviewFilterOptions(targetUser, reviewFilter, locale));
         mav.addObject("selectedReviewFilter", reviewFilter.getQueryValue());
         mav.addObject("reviewTotalPages", reviewResult.getTotalPages());
@@ -400,53 +348,12 @@ public class PublicProfileController {
         return builder.fragment("reviews").build().toUriString();
     }
 
-    private PlayerReviewViewModel toReviewViewModel(
-            final PlayerReview review, final Locale locale) {
-        final User reviewer = review.getReviewer();
-        final String reviewerUsername =
-                reviewer == null || reviewer.getUsername() == null
-                        ? messageSource.getMessage(
-                                "profile.reviews.unknownReviewer", null, "Unknown player", locale)
-                        : reviewer.getUsername();
-        final String reviewerProfileHref =
-                reviewer == null
-                                || reviewer.getUsername() == null
-                                || reviewer.getUsername().isBlank()
-                        ? null
-                        : "/users/" + reviewer.getUsername();
-        return new PlayerReviewViewModel(
-                review.getId(),
-                reviewerUsername,
-                reviewerProfileHref,
-                review.getReaction().getDbValue(),
-                reactionLabel(review.getReaction(), locale),
-                review.getComment(),
-                updatedAtLabel(review, locale));
-    }
-
-    private String reactionLabel(final PlayerReviewReaction reaction, final Locale locale) {
-        return messageSource.getMessage(
-                "profile.reviews.reaction." + reaction.getDbValue(),
-                null,
-                reaction.getDbValue(),
-                locale);
-    }
-
     private String reviewCountLabel(
             final long count,
             final String singularCode,
             final String pluralCode,
             final Locale locale) {
         return messageSource.getMessage(count == 1L ? singularCode : pluralCode, null, locale);
-    }
-
-    private String updatedAtLabel(final PlayerReview review, final Locale locale) {
-        if (review.getUpdatedAt() == null) {
-            return "";
-        }
-        return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-                .withLocale(locale == null ? Locale.ENGLISH : locale)
-                .format(review.getUpdatedAt().atZone(PlatformTime.ZONE));
     }
 
     private User findUserByUsernameOrThrow(final String username) {

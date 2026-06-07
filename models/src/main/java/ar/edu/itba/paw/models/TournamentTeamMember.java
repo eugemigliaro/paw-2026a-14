@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.models;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -82,6 +83,10 @@ public class TournamentTeamMember {
 
     public Instant getJoinedAt() {
         return joinedAt;
+    }
+
+    public OffsetDateTime getJoinedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(joinedAt);
     }
 
     public Long getVersion() {

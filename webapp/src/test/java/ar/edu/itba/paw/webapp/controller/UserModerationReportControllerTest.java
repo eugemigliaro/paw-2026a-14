@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -13,6 +14,7 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.ModerationTargetSummary;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
@@ -70,10 +72,15 @@ class UserModerationReportControllerTest {
                         moderationService.findReportsByReporter(
                                 UserUtils.getUser(7L), List.of(), List.of(), 1, 4))
                 .thenReturn(new PaginatedResult<>(List.of(sampleReport()), 1, 1, 4));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.MATCH, 42L))
+                .thenReturn(
+                        new ModerationTargetSummary(
+                                ReportTargetType.MATCH, 42L, "Friday football", true));
 
         mockMvc.perform(get("/reports/mine"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("reports/mine/list"));
+                .andExpect(view().name("reports/mine/list"))
+                .andExpect(model().attributeExists("targetSummaries"));
     }
 
     @Test
@@ -87,6 +94,10 @@ class UserModerationReportControllerTest {
                                 1,
                                 4))
                 .thenReturn(new PaginatedResult<>(List.of(sampleReport()), 1, 1, 4));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.MATCH, 42L))
+                .thenReturn(
+                        new ModerationTargetSummary(
+                                ReportTargetType.MATCH, 42L, "Friday football", true));
 
         mockMvc.perform(
                         get("/reports/mine")

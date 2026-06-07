@@ -22,13 +22,13 @@
 				<ui:returnButton href="${detailHref}" />
 				<header class="page-heading tournament-bracket-page__heading">
 					<div>
-						<h1 class="page-heading__title"><c:out value="${bracketPage.title}" /></h1>
-						<span class="tournament-status tournament-status--${bracketPage.statusTone}">
-							<c:out value="${bracketPage.statusLabel}" />
+						<h1 class="page-heading__title"><c:out value="${bracketTournament.title}" /></h1>
+						<span class="tournament-status tournament-status--${fn:replace(bracketTournament.status.dbValue, '_', '-')}">
+							<spring:message code="tournament.status.${bracketTournament.status.dbValue}" />
 						</span>
 						<p class="page-heading__description">
 							<c:choose>
-								<c:when test="${bracketPage.generated}">
+								<c:when test="${bracketGenerated}">
 									<spring:message code="tournament.bracket.setup.description.generated" />
 								</c:when>
 								<c:otherwise>
@@ -53,12 +53,25 @@
 							</tr>
 						</thead>
 						<tbody>
-							<c:forEach var="teamRoster" items="${bracketPage.teamRosters}">
+							<c:forEach var="team" items="${bracketTeams}">
 								<tr>
-									<td><c:out value="${teamRoster.teamName}" /></td>
 									<td>
 										<c:choose>
-											<c:when test="${teamRoster.hasMembers}"><c:out value="${teamRoster.membersLabel}" /></c:when>
+											<c:when test="${not empty team.name}">
+												<c:out value="${team.name}" />
+											</c:when>
+											<c:otherwise>
+												<spring:message code="tournament.team.solo.name" arguments="${bracketTeamDisplayNumbers[team.id]}" />
+											</c:otherwise>
+										</c:choose>
+									</td>
+									<td>
+										<c:choose>
+											<c:when test="${not empty bracketMembersByTeamId[team.id]}">
+												<c:forEach var="memberUsername" items="${bracketMembersByTeamId[team.id]}" varStatus="memberStatus">
+													<c:if test="${not memberStatus.first}">, </c:if><c:out value="${memberUsername}" />
+												</c:forEach>
+											</c:when>
 											<c:otherwise><c:out value="${rosterEmptyLabel}" /></c:otherwise>
 										</c:choose>
 									</td>
@@ -68,7 +81,7 @@
 					</table>
 				</section>
 
-				<c:if test="${not bracketPage.generated}">
+				<c:if test="${not bracketGenerated}">
 					<spring:message var="generateLabel" code="tournament.bracket.generate" />
 					<spring:message var="generatingLabel" code="tournament.bracket.generating" />
 					<article class="panel form-card tournament-setup-card">
@@ -113,8 +126,8 @@
 				</c:if>
 
 				<c:choose>
-					<c:when test="${bracketPage.generated}">
-						<c:if test="${bracketPage.publishable}">
+					<c:when test="${bracketGenerated}">
+						<c:if test="${bracketPublishable}">
 							<spring:message var="publishLabel" code="tournament.bracket.publish" />
 							<spring:message var="publishingLabel" code="tournament.bracket.publishing" />
 							<form method="post" action="${publishAction}" class="tournament-schedule-form" data-submit-guard="true" data-submit-loading-label="${publishingLabel}">
@@ -164,26 +177,70 @@
 							</form>
 						</c:if>
 
-						<c:if test="${not bracketPage.publishable}">
+						<c:if test="${not bracketPublishable}">
 							<spring:message var="bracketGridLabel" code="tournament.bracket.grid.label" />
 							<section class="panel tournament-bracket-shell" aria-label="${bracketGridLabel}">
 								<section class="tournament-bracket-grid" aria-label="${bracketGridLabel}">
-									<c:forEach var="round" items="${bracketPage.rounds}">
+									<c:forEach var="round" items="${bracketMatchesByRound}">
 										<section class="tournament-bracket-round">
-											<h2 class="tournament-bracket-round__title"><c:out value="${round.label}" /></h2>
+											<h2 class="tournament-bracket-round__title">
+												<c:choose>
+													<c:when test="${round.key == bracketRoundCount}">
+														<spring:message code="tournament.bracket.round.final" />
+													</c:when>
+													<c:otherwise>
+														<spring:message code="tournament.bracket.round.number" arguments="${round.key}" />
+													</c:otherwise>
+												</c:choose>
+											</h2>
 											<div class="tournament-bracket-round__matches">
-												<c:forEach var="match" items="${round.matches}">
+												<c:forEach var="match" items="${round.value}">
 													<article class="tournament-bracket-match">
 														<div class="tournament-bracket-match__header">
-															<p class="tournament-bracket-match__label"><c:out value="${match.label}" /></p>
-															<span class="tournament-bracket-match__round"><c:out value="${round.label}" /></span>
+															<p class="tournament-bracket-match__label">
+																<spring:message code="tournament.bracket.match.label" arguments="${match.matchIndex + 1}" />
+															</p>
+															<span class="tournament-bracket-match__round">
+																<c:choose>
+																	<c:when test="${round.key == bracketRoundCount}">
+																		<spring:message code="tournament.bracket.round.final" />
+																	</c:when>
+																	<c:otherwise>
+																		<spring:message code="tournament.bracket.round.number" arguments="${round.key}" />
+																	</c:otherwise>
+																</c:choose>
+															</span>
 														</div>
 														<div class="tournament-bracket-match__teams">
-															<span><c:out value="${match.teamA}" /></span>
-															<span><c:out value="${match.teamB}" /></span>
+															<span>
+																<c:choose>
+																	<c:when test="${empty match.teamA}">
+																		<spring:message code="tournament.bracket.team.tbd" />
+																	</c:when>
+																	<c:when test="${not empty match.teamA.name}">
+																		<c:out value="${match.teamA.name}" />
+																	</c:when>
+																	<c:otherwise>
+																		<spring:message code="tournament.team.solo.name" arguments="${bracketTeamDisplayNumbers[match.teamA.id]}" />
+																	</c:otherwise>
+																</c:choose>
+															</span>
+															<span>
+																<c:choose>
+																	<c:when test="${empty match.teamB}">
+																		<spring:message code="tournament.bracket.team.tbd" />
+																	</c:when>
+																	<c:when test="${not empty match.teamB.name}">
+																		<c:out value="${match.teamB.name}" />
+																	</c:when>
+																	<c:otherwise>
+																		<spring:message code="tournament.team.solo.name" arguments="${bracketTeamDisplayNumbers[match.teamB.id]}" />
+																	</c:otherwise>
+																</c:choose>
+															</span>
 														</div>
-														<span class="tournament-bracket-match__status tournament-bracket-match__status--${match.statusKey}">
-															<c:out value="${match.statusLabel}" />
+														<span class="tournament-bracket-match__status tournament-bracket-match__status--${fn:replace(match.status.dbValue, '_', '-')}">
+															<spring:message code="tournament.match.status.${match.status.dbValue}" />
 														</span>
 													</article>
 												</c:forEach>

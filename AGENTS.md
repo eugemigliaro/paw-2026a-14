@@ -221,7 +221,24 @@ When changing or adding behavior in `webapp`, `services`, or `persistence`:
 - prefer stable identifiers and business outcomes (`matchId`, `userId`, status transitions)
 - keep test logging console-based via `logback-test.xml`
 
-## 12. Do Not Repeat TP1 Mistakes
+## 12. Date And Time Display
+
+How date/time values are stored, converted, and rendered is documented in
+`./docs/datetime.md`. The webapp runs on JSTL 1.2, whose `<fmt:formatDate>` cannot
+format `java.time` types, so date/time display follows a specific convention.
+
+When showing or accepting date/time in `webapp`:
+
+- render in JSP with the `tf:date` / `tf:dateTime` EL functions
+  (`uri="http://paw.itba.edu.ar/tags/time-functions"`, in `functions.tld`) applied to
+  the model's `...DateTime` (`OffsetDateTime`) getters, wrapped in `<c:out>`
+- never use `<fmt:formatDate>` / `<fmt:parseDate>` on `java.time` values
+- keep all zone conversion inside `PlatformTime`; do not convert timestamps in
+  controllers for views/forms — use the `...DateTime` getter
+- format non-JSP surfaces (emails, flash, metadata) in Java via `ViewFormatUtils`
+  with the recipient/active locale; never a fixed locale or hardcoded pattern
+
+## 13. Do Not Repeat TP1 Mistakes
 
 The TP1 correction PDF exposed repeated class-wide failure patterns. This section is not a fix backlog; it constrains future work. Do not add new violations, and when touching nearby legacy code, clean up the violation if the cleanup is small and safe.
 

@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -186,6 +187,10 @@ public class ModerationReport {
         return reviewedAt;
     }
 
+    public OffsetDateTime getReviewedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(reviewedAt);
+    }
+
     public String getAppealReason() {
         return appealReason;
     }
@@ -196,6 +201,10 @@ public class ModerationReport {
 
     public Instant getAppealedAt() {
         return appealedAt;
+    }
+
+    public OffsetDateTime getAppealedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(appealedAt);
     }
 
     public AppealDecision getAppealDecision() {
@@ -210,12 +219,24 @@ public class ModerationReport {
         return appealResolvedAt;
     }
 
+    public OffsetDateTime getAppealResolvedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(appealResolvedAt);
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public void setStatus(final ReportStatus status) {
