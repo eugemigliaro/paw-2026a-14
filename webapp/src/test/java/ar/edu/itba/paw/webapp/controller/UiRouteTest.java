@@ -48,7 +48,6 @@ import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
-import ar.edu.itba.paw.services.VerificationPreviewDetail;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationForbiddenException;
@@ -1530,14 +1529,7 @@ class UiRouteTest {
                         }
 
                         return new VerificationPreview(
-                                "Verify your Match Point account",
-                                "Confirm your email address to activate the account.",
-                                "player@test.com",
-                                Instant.parse("2026-04-06T18:00:00Z"),
-                                "Verify account",
-                                List.of(
-                                        new VerificationPreviewDetail(
-                                                "Username", "player-account")));
+                                "player@test.com", Instant.parse("2026-04-06T18:00:00Z"));
                     }
 
                     @Override

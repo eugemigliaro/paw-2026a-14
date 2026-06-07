@@ -21,7 +21,6 @@ import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailu
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import javax.validation.ConstraintValidator;
@@ -248,12 +247,7 @@ class AuthFlowControllerTest {
         Mockito.when(accountAuthService.getVerificationPreview("account-token"))
                 .thenReturn(
                         new VerificationPreview(
-                                "Verify your account",
-                                "Confirm your email address.",
-                                "player@test.com",
-                                Instant.parse("2026-04-11T18:00:00Z"),
-                                "Verify account",
-                                List.of()));
+                                "player@test.com", Instant.parse("2026-04-11T18:00:00Z")));
 
         mockMvc.perform(get("/verifications/account-token"))
                 .andExpect(status().isOk())

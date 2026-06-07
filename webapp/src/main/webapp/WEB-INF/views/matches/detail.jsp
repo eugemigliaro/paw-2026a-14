@@ -15,6 +15,13 @@
 		<div class="app-shell">
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
+			<spring:message var="ctaLabel" code="event.booking.cta" />
+			<spring:message var="availabilityLabel" code="event.availability" arguments="${event.availableSpots},${event.maxPlayers}" />
+			<c:choose>
+				<c:when test="${empty event.pricePerPlayer}"><spring:message var="bookingPrice" code="price.tbd" /></c:when>
+				<c:when test="${event.pricePerPlayer == 0}"><spring:message var="bookingPrice" code="price.free" /></c:when>
+				<c:otherwise><spring:message var="bookingPrice" code="price.amount" arguments="${event.pricePerPlayer}" /></c:otherwise>
+			</c:choose>
 
 			<main class="page-shell page-shell--detail">
 				<section class="detail-top ${hostViewer ? 'detail-top--host-view' : ''}">

@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.controller;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.mediaClassFor;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
@@ -351,9 +350,6 @@ final class EventPageSupport {
                 "participantsEmptyState",
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale));
         mav.addObject("aboutParagraphs", buildAboutParagraphs(match, locale));
-        mav.addObject("bookingPrice", priceLabel(match.getPricePerPlayer(), locale, messageSource));
-        mav.addObject("availabilityLabel", buildAvailabilityLabel(match, locale));
-        mav.addObject("ctaLabel", messageSource.getMessage("event.booking.cta", null, locale));
         mav.addObject("nearbyEvents", List.of());
         mav.addObject("occurrences", seriesOccurrences);
         mav.addObject(
@@ -737,13 +733,6 @@ final class EventPageSupport {
         return match.getEndsAt() != null
                 && !match.getStartsAt().isAfter(now)
                 && match.getEndsAt().isAfter(now);
-    }
-
-    private String buildAvailabilityLabel(final Match match, final Locale locale) {
-        return messageSource.getMessage(
-                "event.availability",
-                new Object[] {match.getAvailableSpots(), match.getMaxPlayers()},
-                locale);
     }
 
     private String buildParticipantCountLabel(final int participantCount, final Locale locale) {

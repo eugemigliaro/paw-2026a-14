@@ -105,35 +105,20 @@ public final class UiViewModels {
     public static final class MatchListControlsViewModel {
         private final String cleanSearchAction;
         private final String searchAction;
-        private final String searchLabel;
         private final String searchQuery;
-        private final String searchPlaceholder;
-        private final String searchButtonLabel;
-        private final String sortLabel;
         private final List<SelectOptionViewModel> sortOptions;
-        private final String filterTitle;
         private final List<FilterGroupViewModel> filterGroups;
 
         public MatchListControlsViewModel(
                 final String cleanSearchAction,
                 final String searchAction,
-                final String searchLabel,
                 final String searchQuery,
-                final String searchPlaceholder,
-                final String searchButtonLabel,
-                final String sortLabel,
                 final List<SelectOptionViewModel> sortOptions,
-                final String filterTitle,
                 final List<FilterGroupViewModel> filterGroups) {
             this.cleanSearchAction = cleanSearchAction;
             this.searchAction = searchAction;
-            this.searchLabel = searchLabel;
             this.searchQuery = searchQuery;
-            this.searchPlaceholder = searchPlaceholder;
-            this.searchButtonLabel = searchButtonLabel;
-            this.sortLabel = sortLabel;
             this.sortOptions = sortOptions;
-            this.filterTitle = filterTitle;
             this.filterGroups = filterGroups;
         }
 
@@ -145,32 +130,12 @@ public final class UiViewModels {
             return searchAction;
         }
 
-        public String getSearchLabel() {
-            return searchLabel;
-        }
-
         public String getSearchQuery() {
             return searchQuery;
         }
 
-        public String getSearchPlaceholder() {
-            return searchPlaceholder;
-        }
-
-        public String getSearchButtonLabel() {
-            return searchButtonLabel;
-        }
-
-        public String getSortLabel() {
-            return sortLabel;
-        }
-
         public List<SelectOptionViewModel> getSortOptions() {
             return sortOptions;
-        }
-
-        public String getFilterTitle() {
-            return filterTitle;
         }
 
         public List<FilterGroupViewModel> getFilterGroups() {

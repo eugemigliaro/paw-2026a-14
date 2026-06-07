@@ -518,9 +518,10 @@
 									<ui:button label="${clearAllLabel}" href="${clearSearchHref}"
 										variant="primary" size="sm" className="filter-rail__clear" />
 
+									<spring:message var="sortByLabel" code="feed.sortBy" />
 									<ui:sortSelect
 										id="events-sort-select"
-										label="${listControls.sortLabel}"
+										label="${sortByLabel}"
 										ariaLabel="${sortAriaLabel}"
 										options="${listControls.sortOptions}" />
 								</div>

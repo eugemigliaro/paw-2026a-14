@@ -31,7 +31,6 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -148,13 +147,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final EmailActionRequest request =
                 getRequiredPendingRequest(
                         rawToken, EmailActionType.ACCOUNT_VERIFICATION, false, locale);
-        return new VerificationPreview(
-                message("verification.preview.account.title", locale),
-                message("verification.preview.account.summary", locale),
-                request.getEmail(),
-                request.getExpiresAt(),
-                message("verification.preview.account.confirm", locale),
-                List.of());
+        return new VerificationPreview(request.getEmail(), request.getExpiresAt());
     }
 
     @Override

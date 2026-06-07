@@ -322,17 +322,7 @@ final class MatchDashboardPageSupport {
                                 sort,
                                 messageSource.getMessage("feed.sort.spots", null, locale)));
 
-        return new MatchListControlsViewModel(
-                path,
-                path,
-                messageSource.getMessage("feed.aria.search", null, locale),
-                searchQuery,
-                messageSource.getMessage("feed.search.placeholder", null, locale),
-                messageSource.getMessage("feed.search.button", null, locale),
-                messageSource.getMessage("feed.sortBy", null, locale),
-                sortOptions,
-                messageSource.getMessage("filter.title", null, locale),
-                filterGroups);
+        return new MatchListControlsViewModel(path, path, searchQuery, sortOptions, filterGroups);
     }
 
     private static List<PaginationItemViewModel> buildPagination(
