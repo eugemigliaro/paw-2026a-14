@@ -590,8 +590,10 @@ class ViewTemplateAssetsTest {
 
         assertTrue(detailView.contains("aria-labelledby=\"pending-requests-title\""));
         assertTrue(detailView.contains("aria-labelledby=\"pending-invitations-title\""));
-        assertTrue(detailView.contains("<c:when test=\"${not empty req.profileHref}\">"));
-        assertTrue(detailView.contains("<c:when test=\"${not empty invite.profileHref}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<c:url var=\"requestProfileHref\" value=\"/users/${req.username}\" />"));
+        assertTrue(detailView.contains("value=\"/users/${invite.username}\""));
     }
 
     @Test
@@ -605,7 +607,9 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("feed-pagination"));
         assertTrue(detailView.contains("recurrenceHasPreviousPage"));
         assertTrue(detailView.contains("recurrenceHasNextPage"));
-        assertTrue(detailView.contains("<c:when test=\"${not empty occurrence.href}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<c:when test=\"${not empty occurrenceVisibleHrefs[occurrence.id]}\">"));
         assertTrue(detailView.contains("recurrence-schedule__text"));
         assertTrue(eventDetailCss.contains(".recurrence-schedule__text"));
         assertTrue(detailView.contains("code=\"event.recurrence.pagination.aria\""));

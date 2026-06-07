@@ -40,6 +40,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.MessageSource;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 public class MatchServiceImplTest {
@@ -60,6 +62,7 @@ public class MatchServiceImplTest {
 
     @BeforeEach
     public void setUp() {
+        SecurityContextHolder.clearContext();
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
                 Mockito.spy(
@@ -100,6 +103,203 @@ public class MatchServiceImplTest {
                         new RecurringMatchAsyncService(matchDao),
                         messageSource,
                         clock);
+    }
+
+    @Test
+    public void actionCapabilitiesForAnonymousPublicDirectOpenMatchAllowsViewingAndReservation() {
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, null);
+
+        Assertions.assertTrue(capabilities.isVisible());
+        Assertions.assertTrue(capabilities.isCanReserve());
+        Assertions.assertFalse(capabilities.isCanRequestToJoin());
+        Assertions.assertFalse(capabilities.isCanEdit());
+        Assertions.assertFalse(capabilities.isCanCancelReservation());
+    }
+
+    @Test
+    public void actionCapabilitiesForHostAllowsManagementActions() {
+        final User host = UserUtils.getUser(1L);
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, host);
+
+        Assertions.assertTrue(capabilities.isVisible());
+        Assertions.assertTrue(capabilities.isCanEdit());
+        Assertions.assertTrue(capabilities.isCanCancel());
+        Assertions.assertTrue(capabilities.isCanManageParticipants());
+        Assertions.assertTrue(capabilities.isCanReserve());
+    }
+
+    @Test
+    public void actionCapabilitiesForAdminAllowsManagementActionsAcrossOwnership() {
+        final User admin = UserUtils.getUser(99L);
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new TestingAuthenticationToken("admin", "password", "ROLE_ADMIN_MOD"));
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, admin);
+
+        Assertions.assertTrue(capabilities.isVisible());
+        Assertions.assertTrue(capabilities.isCanEdit());
+        Assertions.assertTrue(capabilities.isCanCancel());
+        Assertions.assertTrue(capabilities.isCanManageParticipants());
+    }
+
+    @Test
+    public void actionCapabilitiesForInvitedPrivateViewerAllowsViewingOnly() {
+        final User viewer = UserUtils.getUser(2L);
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+        Mockito.when(matchParticipantDao.hasInvitation(10L, viewer)).thenReturn(true);
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, viewer);
+
+        Assertions.assertTrue(capabilities.isVisible());
+        Assertions.assertFalse(capabilities.isCanEdit());
+        Assertions.assertFalse(capabilities.isCanReserve());
+        Assertions.assertFalse(capabilities.isCanRequestToJoin());
+    }
+
+    @Test
+    public void actionCapabilitiesForPrivateActiveParticipantAllowsViewingAndCancellation() {
+        final User viewer = UserUtils.getUser(2L);
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        1,
+                        null);
+        Mockito.when(matchParticipantDao.hasActiveReservation(10L, viewer)).thenReturn(true);
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, viewer);
+
+        Assertions.assertTrue(capabilities.isVisible());
+        Assertions.assertTrue(capabilities.isCanCancelReservation());
+        Assertions.assertFalse(capabilities.isCanReserve());
+        Assertions.assertFalse(capabilities.isCanEdit());
+    }
+
+    @Test
+    public void actionCapabilitiesForUnrelatedPrivateViewerDeniesVisibility() {
+        final User viewer = UserUtils.getUser(2L);
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, viewer);
+
+        Assertions.assertFalse(capabilities.isVisible());
+        Assertions.assertFalse(capabilities.isCanReserve());
+        Assertions.assertFalse(capabilities.isCanRequestToJoin());
+        Assertions.assertFalse(capabilities.isCanCancelReservation());
+    }
+
+    @Test
+    public void actionCapabilitiesForPublicApprovalMatchAllowsJoinRequest() {
+        final User viewer = UserUtils.getUser(2L);
+        final Match match =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+
+        final MatchActionCapabilities capabilities = matchService.actionCapabilities(match, viewer);
+
+        Assertions.assertTrue(capabilities.isVisible());
+        Assertions.assertTrue(capabilities.isCanRequestToJoin());
+        Assertions.assertFalse(capabilities.isCanReserve());
+    }
+
+    @Test
+    public void actionCapabilitiesForStartedFullOrClosedMatchDisablesActions() {
+        final User host = UserUtils.getUser(1L);
+        final Match started =
+                capabilityMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        FIXED_NOW.minusSeconds(60),
+                        0,
+                        null);
+        final Match full =
+                capabilityMatch(
+                        11L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        10,
+                        null);
+        final Match cancelled =
+                capabilityMatch(
+                        12L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.CANCELLED,
+                        FIXED_NOW.plusSeconds(3600),
+                        0,
+                        null);
+
+        final MatchActionCapabilities startedCapabilities =
+                matchService.actionCapabilities(started, host);
+        final MatchActionCapabilities fullCapabilities =
+                matchService.actionCapabilities(full, host);
+        final MatchActionCapabilities cancelledCapabilities =
+                matchService.actionCapabilities(cancelled, host);
+
+        Assertions.assertFalse(startedCapabilities.isCanEdit());
+        Assertions.assertFalse(startedCapabilities.isCanReserve());
+        Assertions.assertFalse(fullCapabilities.isCanReserve());
+        Assertions.assertFalse(cancelledCapabilities.isCanEdit());
+        Assertions.assertFalse(cancelledCapabilities.isCanReserve());
     }
 
     @Test
@@ -2559,6 +2759,40 @@ public class MatchServiceImplTest {
 
     private Match createTestMatch(final Long id, final String title, final String sport) {
         return createTestMatch(id, title, sport, "public", "direct");
+    }
+
+    private Match capabilityMatch(
+            final Long id,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final Instant startsAt,
+            final int participantCount,
+            final MatchSeries series) {
+        return new Match(
+                id,
+                Sport.PADEL,
+                UserUtils.getUser(1L),
+                "Test Address",
+                null,
+                null,
+                "Capability Match",
+                "Test Description",
+                startsAt,
+                startsAt.plusSeconds(3600),
+                10,
+                BigDecimal.ZERO,
+                visibility,
+                joinPolicy,
+                status,
+                participantCount,
+                null,
+                series,
+                series == null ? null : 1,
+                false,
+                null,
+                null,
+                null);
     }
 
     private Match createTestMatch(

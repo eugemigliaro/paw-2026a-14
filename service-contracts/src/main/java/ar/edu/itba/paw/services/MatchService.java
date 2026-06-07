@@ -20,6 +20,8 @@ public interface MatchService {
 
     Optional<Match> findPublicMatchById(Long matchId);
 
+    MatchActionCapabilities actionCapabilities(Match match, User viewer);
+
     Match findEditableMatchForHost(Long matchId, User actingUser);
 
     Match findEditableRecurringMatchForHost(Long matchId, User actingUser);

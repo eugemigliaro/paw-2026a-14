@@ -2,35 +2,29 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.mediaClassFor;
 import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.scheduleFormatter;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.services.MatchActionCapabilities;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.BookingDetailViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventOccurrenceViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.InviteParticipantViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ParticipantViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.context.MessageSource;
@@ -147,8 +141,10 @@ final class EventPageSupport {
                 matchService
                         .findMatchById(eventId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final MatchActionCapabilities matchActionCapabilities =
+                matchService.actionCapabilities(match, currentUser);
 
-        if (!isMatchVisibleToUser(match, currentUser)) {
+        if (!matchActionCapabilities.isVisible()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
@@ -172,7 +168,6 @@ final class EventPageSupport {
         final boolean isPrivateEvent = match.getVisibility() == EventVisibility.PRIVATE;
 
         final List<User> confirmedParticipants = matchService.findConfirmedParticipants(eventId);
-        final boolean hostCanManageParticipants = isHost && canHostManageParticipants(match);
         final List<User> pendingHostRequests =
                 isHost && isApprovalRequired
                         ? matchParticipationService.findPendingRequests(eventId, currentUser)
@@ -204,18 +199,29 @@ final class EventPageSupport {
         final boolean suppressReservationErrors =
                 hasPendingRequest || seriesJoinRequestState.pending();
         final ModelAndView mav = new ModelAndView("matches/detail");
+        mav.addObject("matchActionCapabilities", matchActionCapabilities);
         mav.addObject("isConfirmedParticipant", isConfirmedParticipant);
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         addRealEventPageAttributes(
-                mav,
-                match,
-                confirmedParticipants,
-                seriesOccurrences,
-                currentUser,
-                locale,
-                hostCanManageParticipants);
+                mav, match, confirmedParticipants, seriesOccurrences, currentUser, locale);
+        mav.addObject(
+                "userProfileImageUrls",
+                userProfileImageUrls(
+                        confirmedParticipants,
+                        pendingHostRequests,
+                        pendingHostInvites,
+                        declinedHostInvites));
+        mav.addObject(
+                "participantReviewHrefs",
+                participantReviewHrefs(confirmedParticipants, currentUser));
+        mav.addObject(
+                "participantRemovePaths",
+                participantRemovePaths(
+                        confirmedParticipants,
+                        eventId,
+                        matchActionCapabilities.isCanManageParticipants()));
         if (match.isRecurringOccurrence()) {
             mav.addObject("recurrenceHasPreviousPage", seriesOccurrencesPage.hasPrevious());
             mav.addObject("recurrenceHasNextPage", seriesOccurrencesPage.hasNext());
@@ -233,12 +239,8 @@ final class EventPageSupport {
                             p -> buildSeriesScheduleUrl(eventId, p)));
         }
 
-        mav.addObject("reservationEnabled", canReserveMatch(match, isHost));
         mav.addObject("reservationRequestPath", "/matches/" + eventId + "/reservations");
         mav.addObject("reservationCancelPath", "/matches/" + eventId + "/reservations/cancel");
-        mav.addObject(
-                "reservationCancellationEnabled",
-                isConfirmedParticipant && canCancelReservation(match));
         mav.addObject("reservationError", suppressReservationErrors ? null : reservationError);
         mav.addObject(
                 "reservationConfirmed",
@@ -266,9 +268,6 @@ final class EventPageSupport {
                 suppressReservationErrors ? null : seriesReservationError);
         mav.addObject("eventStateNotice", eventStateNotice(match, locale));
 
-        mav.addObject(
-                "joinRequestEnabled",
-                !isHost && canRequestToJoin(match) && !seriesJoinRequestState.pending());
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
         mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
         mav.addObject("seriesJoinRequestEnabled", seriesJoinRequestState.available());
@@ -294,14 +293,6 @@ final class EventPageSupport {
         mav.addObject("hostViewer", isHost);
         mav.addObject("isPrivateEvent", isPrivateEvent);
         mav.addObject("hostCanManage", isHost);
-        mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
-        mav.addObject("hostCanEdit", isHost && canHostEdit(match));
-        mav.addObject("hostCanCancel", isHost && canHostCancel(match));
-        mav.addObject(
-                "hostCanEditSeries", isHost && match.isRecurringOccurrence() && canHostEdit(match));
-        mav.addObject(
-                "hostCanCancelSeries",
-                isHost && match.isRecurringOccurrence() && canHostCancel(match));
         mav.addObject("hostEditPath", "/host/matches/" + eventId + "/edit");
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
@@ -309,16 +300,15 @@ final class EventPageSupport {
         mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
         mav.addObject("hostActionErrorNotice", hostActionError);
         mav.addObject("hostActionTarget", hostActionTarget);
-        mav.addObject(
-                "hostPendingRequests", toPendingRequestViewModels(pendingHostRequests, eventId));
+        mav.addObject("hostPendingRequests", pendingHostRequests);
         mav.addObject("hostPendingRequestCount", pendingHostRequests.size());
         mav.addObject(
                 "hostPendingRequestsOpen",
                 !pendingHostRequests.isEmpty()
                         || isRequestHostAction(hostAction)
                         || "requests".equalsIgnoreCase(hostActionTarget));
-        mav.addObject("hostPendingInvites", toInviteParticipantViewModels(pendingHostInvites));
-        mav.addObject("hostDeclinedInvites", toInviteParticipantViewModels(declinedHostInvites));
+        mav.addObject("hostPendingInvites", pendingHostInvites);
+        mav.addObject("hostDeclinedInvites", declinedHostInvites);
         mav.addObject("hostPendingInviteCount", pendingHostInvites.size());
         mav.addObject(
                 "hostPendingInvitesOpen",
@@ -338,15 +328,8 @@ final class EventPageSupport {
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
             final User currentUser,
-            final Locale locale,
-            final boolean includeHostParticipantActions) {
+            final Locale locale) {
         final User host = match.getHost();
-        final Set<Long> reviewableUserIds =
-                currentUser == null
-                        ? Set.of()
-                        : Optional.ofNullable(
-                                        playerReviewService.findReviewableUserIds(currentUser))
-                                .orElseGet(Set::of);
         mav.addObject("event", match);
         mav.addObject("eventMediaClass", mediaClassFor(match.getSport()));
         mav.addObject("eventBannerImageUrl", bannerUrlFor(match));
@@ -360,14 +343,7 @@ final class EventPageSupport {
                                 locale));
         mav.addObject("hostProfileHref", profileHrefFor(host));
         mav.addObject("hostProfileImageUrl", profileUrlFor(host));
-        mav.addObject(
-                "participants",
-                toParticipantViewModels(
-                        confirmedParticipants,
-                        match.getId(),
-                        currentUser,
-                        reviewableUserIds,
-                        includeHostParticipantActions));
+        mav.addObject("participants", confirmedParticipants);
         mav.addObject(
                 "participantCountLabel",
                 buildParticipantCountLabel(confirmedParticipants.size(), locale));
@@ -376,13 +352,16 @@ final class EventPageSupport {
                 messageSource.getMessage("event.detail.noPlayersHint", null, locale));
         mav.addObject("aboutParagraphs", buildAboutParagraphs(match, locale));
         mav.addObject("bookingPrice", priceLabel(match.getPricePerPlayer(), locale, messageSource));
-        mav.addObject("bookingDetails", buildBookingDetails(match, locale));
         mav.addObject("availabilityLabel", buildAvailabilityLabel(match, locale));
         mav.addObject("ctaLabel", messageSource.getMessage("event.booking.cta", null, locale));
         mav.addObject("nearbyEvents", List.of());
+        mav.addObject("occurrences", seriesOccurrences);
         mav.addObject(
-                "occurrences",
-                toOccurrenceViewModels(match, seriesOccurrences, currentUser, locale));
+                "occurrenceVisibleHrefs", occurrenceVisibleHrefs(seriesOccurrences, currentUser));
+        mav.addObject("occurrenceDisplayStateKeys", occurrenceDisplayStateKeys(seriesOccurrences));
+        mav.addObject("occurrenceStatusTones", occurrenceStatusTones(seriesOccurrences));
+        mav.addObject("occurrenceSpotsLabels", occurrenceSpotsLabels(seriesOccurrences, locale));
+        mav.addObject("occurrenceSpotsTones", occurrenceSpotsTones(seriesOccurrences));
         mav.addObject(
                 "mapAvailable",
                 mapPickerEnabled && !mapTileUrlTemplate.isBlank() && match.hasCoordinates());
@@ -420,135 +399,113 @@ final class EventPageSupport {
                 .strip();
     }
 
-    private List<BookingDetailViewModel> buildBookingDetails(
-            final Match match, final Locale locale) {
-        return List.of(
-                new BookingDetailViewModel(
-                        messageSource.getMessage("event.booking.date", null, locale),
-                        dateFormatter(locale)
-                                .format(match.getStartsAt().atZone(PlatformTime.ZONE))),
-                new BookingDetailViewModel(
-                        messageSource.getMessage("event.booking.time", null, locale),
-                        timeFormatter(locale).format(match.getStartsAt().atZone(PlatformTime.ZONE))
-                                + (match.getEndsAt() == null
-                                        ? ""
-                                        : " - "
-                                                + timeFormatter(locale)
-                                                        .format(
-                                                                match.getEndsAt()
-                                                                        .atZone(
-                                                                                PlatformTime
-                                                                                        .ZONE)))),
-                new BookingDetailViewModel(
-                        messageSource.getMessage("event.booking.venue", null, locale),
-                        match.getAddress()));
-    }
-
-    private List<ParticipantViewModel> toParticipantViewModels(
-            final List<User> confirmedParticipants,
-            final long matchId,
-            final User currentUser,
-            final Set<Long> reviewableUserIds,
-            final boolean includeHostParticipantActions) {
-        return confirmedParticipants.stream()
-                .map(
-                        participant ->
-                                new ParticipantViewModel(
-                                        participant.getUsername(),
-                                        avatarLabelForUsername(participant.getUsername()),
-                                        profileHrefFor(participant),
-                                        profileUrlFor(participant),
-                                        reviewHrefForParticipant(
-                                                participant, currentUser, reviewableUserIds),
-                                        includeHostParticipantActions && participant.getId() != null
-                                                ? "/host/matches/"
-                                                        + matchId
-                                                        + "/participants/"
-                                                        + participant.getId()
-                                                        + "/remove"
-                                                : null))
-                .toList();
-    }
-
-    private List<PendingRequestViewModel> toPendingRequestViewModels(
-            final List<User> users, final long matchId) {
-        return users.stream()
-                .map(
-                        user ->
-                                new PendingRequestViewModel(
-                                        user.getUsername(),
-                                        avatarLabelForUsername(user.getUsername()),
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/requests/"
-                                                + user.getId()
-                                                + "/approve",
-                                        "/host/matches/"
-                                                + matchId
-                                                + "/requests/"
-                                                + user.getId()
-                                                + "/reject",
-                                        profileHrefFor(user),
-                                        profileUrlFor(user),
-                                        null,
-                                        null,
-                                        false))
-                .toList();
-    }
-
-    private List<InviteParticipantViewModel> toInviteParticipantViewModels(final List<User> users) {
-        return users.stream()
-                .map(
-                        user ->
-                                new InviteParticipantViewModel(
-                                        user.getUsername(),
-                                        avatarLabelForUsername(user.getUsername()),
-                                        profileHrefFor(user),
-                                        profileUrlFor(user)))
-                .toList();
-    }
-
-    private String reviewHrefForParticipant(
-            final User participant, final User currentUser, final Set<Long> reviewableUserIds) {
-        if (currentUser == null
-                || participant.getId() == null
-                || !reviewableUserIds.contains(participant.getId())) {
-            return null;
-        }
-        return "/users/" + participant.getUsername() + "?reviewForm=open#reviews";
-    }
-
     private String profileHrefFor(final User user) {
         return user.getUsername() == null ? null : "/users/" + user.getUsername();
     }
 
-    private List<EventOccurrenceViewModel> toOccurrenceViewModels(
-            final Match currentMatch,
-            final List<Match> occurrences,
-            final User currentUser,
-            final Locale locale) {
-        return occurrences.stream()
-                .map(
-                        occurrence -> {
-                            final EventDisplayState state = eventDisplayState(occurrence);
-                            final String href =
-                                    isMatchVisibleToUser(occurrence, currentUser)
-                                            ? "/matches/" + occurrence.getId()
-                                            : null;
-                            return new EventOccurrenceViewModel(
-                                    href,
-                                    scheduleFormatter(locale)
-                                            .format(
-                                                    occurrence
-                                                            .getStartsAt()
-                                                            .atZone(PlatformTime.ZONE)),
-                                    eventStateLabel(state, locale),
-                                    state.tone(),
-                                    occurrence.getId().equals(currentMatch.getId()),
-                                    buildSpotsLabel(occurrence, state, locale),
-                                    buildSpotsTone(occurrence, state));
-                        })
-                .toList();
+    @SafeVarargs
+    private Map<Long, String> userProfileImageUrls(final List<User>... userGroups) {
+        final Map<Long, String> urls = new LinkedHashMap<>();
+        for (final List<User> users : userGroups) {
+            for (final User user : users) {
+                if (user.getId() != null) {
+                    urls.put(user.getId(), profileUrlFor(user));
+                }
+            }
+        }
+        return urls;
+    }
+
+    private Map<Long, String> participantReviewHrefs(
+            final List<User> participants, final User currentUser) {
+        final Set<Long> reviewableUserIds =
+                currentUser == null
+                        ? Set.of()
+                        : Optional.ofNullable(
+                                        playerReviewService.findReviewableUserIds(currentUser))
+                                .orElseGet(Set::of);
+        final Map<Long, String> hrefs = new LinkedHashMap<>();
+        for (final User participant : participants) {
+            if (participant.getId() != null
+                    && participant.getUsername() != null
+                    && reviewableUserIds.contains(participant.getId())) {
+                hrefs.put(
+                        participant.getId(),
+                        "/users/" + participant.getUsername() + "?reviewForm=open#reviews");
+            }
+        }
+        return hrefs;
+    }
+
+    private static Map<Long, String> participantRemovePaths(
+            final List<User> participants, final long matchId, final boolean includeActions) {
+        final Map<Long, String> paths = new LinkedHashMap<>();
+        if (!includeActions) {
+            return paths;
+        }
+        for (final User participant : participants) {
+            if (participant.getId() != null) {
+                paths.put(
+                        participant.getId(),
+                        "/host/matches/"
+                                + matchId
+                                + "/participants/"
+                                + participant.getId()
+                                + "/remove");
+            }
+        }
+        return paths;
+    }
+
+    private Map<Long, String> occurrenceVisibleHrefs(
+            final List<Match> occurrences, final User currentUser) {
+        final Map<Long, String> hrefs = new LinkedHashMap<>();
+        for (final Match occurrence : occurrences) {
+            if (occurrence.getId() != null
+                    && matchService.actionCapabilities(occurrence, currentUser).isVisible()) {
+                hrefs.put(occurrence.getId(), "/matches/" + occurrence.getId());
+            }
+        }
+        return hrefs;
+    }
+
+    private Map<Long, String> occurrenceDisplayStateKeys(final List<Match> occurrences) {
+        final Map<Long, String> keys = new LinkedHashMap<>();
+        for (final Match occurrence : occurrences) {
+            keys.put(occurrence.getId(), eventDisplayState(occurrence).key());
+        }
+        return keys;
+    }
+
+    private Map<Long, String> occurrenceStatusTones(final List<Match> occurrences) {
+        final Map<Long, String> tones = new LinkedHashMap<>();
+        for (final Match occurrence : occurrences) {
+            tones.put(occurrence.getId(), eventDisplayState(occurrence).tone());
+        }
+        return tones;
+    }
+
+    private Map<Long, String> occurrenceSpotsLabels(
+            final List<Match> occurrences, final Locale locale) {
+        final Map<Long, String> labels = new LinkedHashMap<>();
+        for (final Match occurrence : occurrences) {
+            final String label = buildSpotsLabel(occurrence, eventDisplayState(occurrence), locale);
+            if (label != null) {
+                labels.put(occurrence.getId(), label);
+            }
+        }
+        return labels;
+    }
+
+    private Map<Long, String> occurrenceSpotsTones(final List<Match> occurrences) {
+        final Map<Long, String> tones = new LinkedHashMap<>();
+        for (final Match occurrence : occurrences) {
+            final String tone = buildSpotsTone(occurrence, eventDisplayState(occurrence));
+            if (tone != null) {
+                tones.put(occurrence.getId(), tone);
+            }
+        }
+        return tones;
     }
 
     private SeriesReservationUiState buildSeriesReservationUiState(
@@ -722,10 +679,6 @@ final class EventPageSupport {
             return new EventDisplayState("full", "full");
         }
         return new EventDisplayState("open", "open");
-    }
-
-    private String eventStateLabel(final EventDisplayState state, final Locale locale) {
-        return messageSource.getMessage("match.status." + state.key(), null, locale);
     }
 
     private String buildSpotsLabel(
@@ -967,72 +920,6 @@ final class EventPageSupport {
         return currentUser != null
                 && match.getHost() != null
                 && currentUser.getId().equals(match.getHost().getId());
-    }
-
-    private boolean canHostEdit(final Match match) {
-        if (hasEventStarted(match)) {
-            return false;
-        }
-        return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
-    }
-
-    private boolean canHostCancel(final Match match) {
-        if (hasEventStarted(match)) {
-            return false;
-        }
-        return match.getStatus() != EventStatus.COMPLETED
-                && match.getStatus() != EventStatus.CANCELLED;
-    }
-
-    private boolean canHostManageParticipants(final Match match) {
-        return canHostEdit(match);
-    }
-
-    private boolean isMatchVisibleToUser(final Match match, final User currentUser) {
-        if (EventStatus.DRAFT
-                == match.getStatus()) { // TODO: remove (?) we do not manage 'draft' matches.
-            return isHost(match, currentUser);
-        }
-
-        if (match.getVisibility() == EventVisibility.PRIVATE
-                || EventStatus.CANCELLED == match.getStatus()) {
-            if (isHost(match, currentUser)) {
-                return true;
-            }
-            if (currentUser != null
-                    && matchReservationService.hasActiveReservation(match.getId(), currentUser)) {
-                return true;
-            }
-            if (currentUser != null
-                    && matchParticipationService.hasInvitation(match.getId(), currentUser)) {
-                return true;
-            }
-            return false;
-        }
-
-        return match.getVisibility() == EventVisibility.PUBLIC;
-    }
-
-    private boolean canReserveMatch(final Match match, final boolean isHostViewer) {
-        return EventStatus.OPEN == match.getStatus()
-                && (isHostViewer
-                        || (match.getVisibility() == EventVisibility.PUBLIC
-                                && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
-                && !hasEventStarted(match)
-                && match.getAvailableSpots() > 0;
-    }
-
-    private boolean canRequestToJoin(final Match match) {
-        return match.getVisibility() == EventVisibility.PUBLIC
-                && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
-                && EventStatus.OPEN == match.getStatus()
-                && !hasEventStarted(match)
-                && match.getAvailableSpots() > 0;
-    }
-
-    private boolean canCancelReservation(final Match match) {
-        return EventStatus.OPEN == match.getStatus() && !hasEventStarted(match);
     }
 
     private static final class SeriesReservationUiState {

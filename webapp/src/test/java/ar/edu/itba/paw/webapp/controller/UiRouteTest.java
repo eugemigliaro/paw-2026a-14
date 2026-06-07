@@ -35,6 +35,7 @@ import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.ImageUpload;
+import ar.edu.itba.paw.services.MatchActionCapabilities;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -638,6 +639,75 @@ class UiRouteTest {
                     @Override
                     public Optional<Match> findPublicMatchById(final Long matchId) {
                         return findMatchById(matchId);
+                    }
+
+                    @Override
+                    public MatchActionCapabilities actionCapabilities(
+                            final Match match, final User viewer) {
+                        final boolean host =
+                                viewer != null
+                                        && match.getHost() != null
+                                        && viewer.getId().equals(match.getHost().getId());
+                        final boolean activeParticipant =
+                                viewer != null
+                                        && currentUserHasReservation
+                                        && (Long.valueOf(42L).equals(match.getId())
+                                                || Long.valueOf(51L).equals(match.getId()));
+                        final boolean seriesParticipant =
+                                viewer != null
+                                        && currentUserHasSeriesReservation
+                                        && match.isRecurringOccurrence();
+                        final boolean invited =
+                                viewer != null
+                                        && (Long.valueOf(51L).equals(match.getId())
+                                                || Long.valueOf(50L).equals(match.getId()));
+                        final boolean visible =
+                                match.getStatus() == EventStatus.DRAFT
+                                        ? host
+                                        : match.getVisibility() == EventVisibility.PRIVATE
+                                                        || match.getStatus()
+                                                                == EventStatus.CANCELLED
+                                                ? host
+                                                        || activeParticipant
+                                                        || seriesParticipant
+                                                        || invited
+                                                : match.getVisibility() == EventVisibility.PUBLIC;
+                        final boolean editable =
+                                host
+                                        && match.getStatus() != EventStatus.COMPLETED
+                                        && match.getStatus() != EventStatus.CANCELLED
+                                        && match.getStartsAt().isAfter(FIXED_NOW);
+                        final boolean reserve =
+                                match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW)
+                                        && match.getAvailableSpots() > 0
+                                        && (host
+                                                || (match.getVisibility() == EventVisibility.PUBLIC
+                                                        && match.getJoinPolicy()
+                                                                == EventJoinPolicy.DIRECT));
+                        final boolean cancelReservation =
+                                (activeParticipant || seriesParticipant)
+                                        && match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW);
+                        final boolean requestToJoin =
+                                match.getVisibility() == EventVisibility.PUBLIC
+                                        && match.getJoinPolicy()
+                                                == EventJoinPolicy.APPROVAL_REQUIRED
+                                        && match.getStatus() == EventStatus.OPEN
+                                        && match.getStartsAt().isAfter(FIXED_NOW)
+                                        && match.getAvailableSpots() > 0
+                                        && !host
+                                        && !activeParticipant;
+                        return new MatchActionCapabilities(
+                                visible,
+                                editable,
+                                editable,
+                                editable,
+                                reserve,
+                                cancelReservation,
+                                requestToJoin,
+                                editable && match.isRecurringOccurrence(),
+                                editable && match.isRecurringOccurrence());
                     }
 
                     @Override
@@ -1795,25 +1865,25 @@ class UiRouteTest {
                                         Matchers.contains(
                                                 Matchers.allOf(
                                                         Matchers.hasProperty(
-                                                                "profileHref",
-                                                                Matchers.is("/users/user2")),
-                                                        Matchers.hasProperty(
-                                                                "profileImageUrl",
-                                                                Matchers.is(
-                                                                        "/assets/default-profile-avatar.svg")),
-                                                        Matchers.hasProperty(
-                                                                "removeUrl", Matchers.nullValue())),
+                                                                "username", Matchers.is("user2"))),
                                                 Matchers.allOf(
                                                         Matchers.hasProperty(
-                                                                "profileHref",
-                                                                Matchers.is("/users/user3")),
-                                                        Matchers.hasProperty(
-                                                                "profileImageUrl",
-                                                                Matchers.is(
-                                                                        "/assets/default-profile-avatar.svg")),
-                                                        Matchers.hasProperty(
-                                                                "removeUrl",
-                                                                Matchers.nullValue())))));
+                                                                "username",
+                                                                Matchers.is("user3"))))))
+                .andExpect(
+                        model().attribute(
+                                        "userProfileImageUrls",
+                                        Matchers.allOf(
+                                                Matchers.hasEntry(
+                                                        2L, "/assets/default-profile-avatar.svg"),
+                                                Matchers.hasEntry(
+                                                        3L, "/assets/default-profile-avatar.svg"))))
+                .andExpect(
+                        model().attribute(
+                                        "participantRemovePaths",
+                                        Matchers.allOf(
+                                                Matchers.not(Matchers.hasKey(2L)),
+                                                Matchers.not(Matchers.hasKey(3L)))));
     }
 
     @Test
@@ -1829,12 +1899,18 @@ class UiRouteTest {
                                         "participants",
                                         Matchers.contains(
                                                 Matchers.hasProperty(
-                                                        "reviewHref", Matchers.nullValue()),
+                                                        "username", Matchers.is("user2")),
                                                 Matchers.hasProperty(
-                                                        "reviewHref",
-                                                        Matchers.is(
-                                                                "/users/"
-                                                                        + "user3?reviewForm=open#reviews")))));
+                                                        "username", Matchers.is("user3")))))
+                .andExpect(
+                        model().attribute(
+                                        "participantReviewHrefs",
+                                        Matchers.allOf(
+                                                Matchers.not(Matchers.hasKey(2L)),
+                                                Matchers.hasEntry(
+                                                        3L,
+                                                        "/users/"
+                                                                + "user3?reviewForm=open#reviews"))));
     }
 
     @Test
@@ -1846,7 +1922,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
-                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute(
                                         "reservationCancelPath",
@@ -1863,7 +1939,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
-                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute(
                                         "reservationCancelPath",
@@ -1877,8 +1953,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/51"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("reservationEnabled", true))
-                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("isInvitedPlayer", false))
                 .andExpect(model().attribute("hostPendingInviteCount", 1))
                 .andExpect(model().attribute("hostPendingInvitesOpen", true))
@@ -1894,27 +1969,20 @@ class UiRouteTest {
                 .andExpect(model().attribute("occurrences", Matchers.hasSize(5)))
                 .andExpect(
                         model().attribute(
-                                        "occurrences",
-                                        Matchers.hasItem(
-                                                Matchers.hasProperty(
-                                                        "statusLabel", Matchers.is("Completed")))))
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(48L, "completed")))
                 .andExpect(
                         model().attribute(
-                                        "occurrences",
-                                        Matchers.hasItem(
-                                                Matchers.allOf(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("In progress")),
-                                                        Matchers.hasProperty(
-                                                                "statusTone",
-                                                                Matchers.is("in-progress"))))))
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(55L, "inProgress")))
                 .andExpect(
                         model().attribute(
-                                        "occurrences",
-                                        Matchers.hasItem(
-                                                Matchers.hasProperty(
-                                                        "statusLabel", Matchers.is("Full")))))
+                                        "occurrenceStatusTones",
+                                        Matchers.hasEntry(55L, "in-progress")))
+                .andExpect(
+                        model().attribute(
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(49L, "full")))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(
                         model().attribute(
@@ -1927,14 +1995,12 @@ class UiRouteTest {
                 .andExpect(model().attribute("occurrences", Matchers.hasSize(1)))
                 .andExpect(
                         model().attribute(
-                                        "occurrences",
-                                        Matchers.hasItem(
-                                                Matchers.allOf(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Cancelled")),
-                                                        Matchers.hasProperty(
-                                                                "href", Matchers.nullValue())))));
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(50L, "cancelled")))
+                .andExpect(
+                        model().attribute(
+                                        "occurrenceVisibleHrefs",
+                                        Matchers.not(Matchers.hasKey(50L))));
     }
 
     @Test
@@ -1943,10 +2009,8 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "occurrences",
-                                        Matchers.hasItem(
-                                                Matchers.hasProperty(
-                                                        "statusLabel", Matchers.is("En curso")))));
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(55L, "inProgress")));
     }
 
     @Test
@@ -1957,7 +2021,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attribute("joinRequestEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("joinRequestPath", "/matches/52/join-requests"))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", true))
                 .andExpect(model().attribute("seriesJoinRequestPending", false))
@@ -1977,7 +2041,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("hasPendingJoinRequest", false))
-                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestPending", true));
     }
@@ -2030,15 +2094,12 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "occurrences",
-                                        Matchers.hasItem(
-                                                Matchers.allOf(
-                                                        Matchers.hasProperty(
-                                                                "statusLabel",
-                                                                Matchers.is("Cancelled")),
-                                                        Matchers.hasProperty(
-                                                                "href",
-                                                                Matchers.is("/matches/50"))))));
+                                        "occurrenceDisplayStateKeys",
+                                        Matchers.hasEntry(50L, "cancelled")))
+                .andExpect(
+                        model().attribute(
+                                        "occurrenceVisibleHrefs",
+                                        Matchers.hasEntry(50L, "/matches/50")));
     }
 
     @Test
@@ -2050,7 +2111,7 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
-                .andExpect(model().attribute("reservationCancellationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute(
                                         "reservationCancelPath", "/matches/46/reservations/cancel"))
@@ -2071,7 +2132,7 @@ class UiRouteTest {
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", false))
                 .andExpect(model().attribute("reservationConfirmed", false))
-                .andExpect(model().attribute("reservationEnabled", true));
+                .andExpect(model().attributeExists("matchActionCapabilities"));
     }
 
     @Test
@@ -2085,7 +2146,7 @@ class UiRouteTest {
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("isConfirmedParticipant", true))
                 .andExpect(model().attribute("reservationConfirmed", true))
-                .andExpect(model().attribute("reservationEnabled", true));
+                .andExpect(model().attributeExists("matchActionCapabilities"));
     }
 
     @Test
@@ -2106,7 +2167,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/48"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attribute("reservationEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
                         model().attribute("eventStateNotice", "This event has already occurred."));
     }
@@ -2118,26 +2179,21 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("hostCanEdit", true))
-                .andExpect(model().attribute("hostCanCancel", true))
-                .andExpect(model().attribute("reservationEnabled", true))
-                .andExpect(model().attribute("joinRequestEnabled", false))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hostEditPath", "/host/matches/42/edit"))
                 .andExpect(model().attribute("hostCancelPath", "/host/matches/42/cancel"))
                 .andExpect(
                         model().attribute(
-                                        "participants",
-                                        Matchers.contains(
-                                                Matchers.hasProperty(
-                                                        "removeUrl",
-                                                        Matchers.is(
-                                                                "/host/matches/42/participants/2/remove")),
-                                                Matchers.hasProperty(
-                                                        "removeUrl",
-                                                        Matchers.is(
-                                                                "/host/matches/42/participants/3/remove")))));
+                                        "participantRemovePaths",
+                                        Matchers.allOf(
+                                                Matchers.hasEntry(
+                                                        2L,
+                                                        "/host/matches/42/participants/2/remove"),
+                                                Matchers.hasEntry(
+                                                        3L,
+                                                        "/host/matches/42/participants/3/remove"))));
     }
 
     @Test
@@ -2147,9 +2203,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("hostCanEditSeries", true))
-                .andExpect(model().attribute("hostCanCancelSeries", true))
-                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
                 .andExpect(model().attribute("hostSeriesEditPath", "/host/matches/46/series/edit"))
                 .andExpect(
@@ -2164,9 +2218,8 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("reservationEnabled", true))
+                .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", true))
-                .andExpect(model().attribute("joinRequestEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))
                 .andExpect(model().attribute("hasPendingJoinRequest", false))
                 .andExpect(model().attribute("hostPendingRequestCount", 1))
@@ -2181,8 +2234,7 @@ class UiRouteTest {
         mockMvc.perform(get("/matches/44"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(model().attribute("hostCanEdit", false))
-                .andExpect(model().attribute("hostCanCancel", false));
+                .andExpect(model().attributeExists("matchActionCapabilities"));
     }
 
     @Test
