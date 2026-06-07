@@ -2981,18 +2981,6 @@ class UiRouteTest {
         mockMvc.perform(post("/host/matches/44/cancel")).andExpect(status().isNotFound());
     }
 
-    @Test
-    void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/requests"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("host/participation/aggregate-requests"))
-                .andExpect(model().attribute("aggregateRequests", true))
-                .andExpect(model().attributeExists("pendingRequests"))
-                .andExpect(model().attribute("matchesUrl", "/events"));
-    }
-
     private static MessageSource messageSource() {
         final ReloadableResourceBundleMessageSource messageSource =
                 new ReloadableResourceBundleMessageSource();

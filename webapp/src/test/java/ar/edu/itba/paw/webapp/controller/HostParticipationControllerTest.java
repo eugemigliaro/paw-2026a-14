@@ -4,8 +4,10 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
@@ -63,6 +65,20 @@ class HostParticipationControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
+        AuthenticationUtils.authenticateUser(7L);
+        when(matchParticipationService.findPendingRequestsForHost(Mockito.any()))
+                .thenReturn(java.util.List.of());
+
+        mockMvc.perform(get("/host/requests"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/participation/aggregate-requests"))
+                .andExpect(model().attribute("aggregateRequests", true))
+                .andExpect(model().attributeExists("pendingRequests"))
+                .andExpect(model().attribute("matchesUrl", "/events"));
     }
 
     @Test
