@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class ViewTemplateAssetsTest {
@@ -230,6 +232,32 @@ class ViewTemplateAssetsTest {
         assertTrue(siteHeader.contains("nav.logout"));
         assertFalse(siteHeader.contains("${shell."));
         assertFalse(siteHeader.contains("ShellViewModelFactory"));
+    }
+
+    @Test
+    void jspViewsAndTagsDoNotInferAuthorizationFromResourceOwnership() throws IOException {
+        final String templates =
+                readTemplatesUnder("src/main/webapp/WEB-INF/views")
+                        + readTemplatesUnder("src/main/webapp/WEB-INF/tags");
+
+        assertFalse(templates.contains("currentUser.id"));
+        assertFalse(templates.contains("currentUser.getId"));
+        assertFalse(templates.contains(".host.id"));
+        assertFalse(templates.contains(".host.getId"));
+        assertFalse(templates.contains("getHost()"));
+        assertFalse(templates.contains("UserRole."));
+        assertFalse(templates.contains("SecurityContextHolder"));
+    }
+
+    @Test
+    void eventCardRelationshipBadgesRenderOnlyViewModelState() throws IOException {
+        final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final String matchDetail = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
+
+        assertRelationshipBadgeRendering(feedIndex);
+        assertRelationshipBadgeRendering(eventsList);
+        assertRelationshipBadgeRendering(matchDetail);
     }
 
     @Test
@@ -664,6 +692,39 @@ class ViewTemplateAssetsTest {
 
     private static String read(final String relativePath) throws IOException {
         return Files.readString(Path.of(relativePath));
+    }
+
+    private static String readTemplatesUnder(final String relativePath) throws IOException {
+        try (var files = Files.walk(Path.of(relativePath))) {
+            return files.filter(Files::isRegularFile)
+                    .filter(ViewTemplateAssetsTest::isJspTemplate)
+                    .map(ViewTemplateAssetsTest::readUnchecked)
+                    .collect(Collectors.joining("\n"));
+        }
+    }
+
+    private static boolean isJspTemplate(final Path path) {
+        final String filename = path.getFileName().toString();
+        return filename.endsWith(".jsp") || filename.endsWith(".jspf") || filename.endsWith(".tag");
+    }
+
+    private static String readUnchecked(final Path path) {
+        try {
+            return Files.readString(path);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static void assertRelationshipBadgeRendering(final String template) {
+        assertTrue(template.contains("items=\"${event.relationshipBadges}\""));
+        assertTrue(template.contains("relationshipBadge.type"));
+        assertTrue(template.contains("relationshipBadge.label"));
+        assertFalse(template.contains("currentUser"));
+        assertFalse(template.contains(".host.id"));
+        assertFalse(template.contains("hasActiveReservation"));
+        assertFalse(template.contains("hasPendingRequest"));
+        assertFalse(template.contains("hasInvitation"));
     }
 
     private static Properties properties(final String relativePath) throws IOException {

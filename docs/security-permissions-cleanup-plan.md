@@ -33,7 +33,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 8: Public profile, reviews, and report affordances.
 - [x] Module 9: Host controllers and mutating paths.
 - [x] Module 10: `SecurityConfig` route audit.
-- [ ] Module 11: JSP and view model sweep.
+- [x] Module 11: JSP and view model sweep.
 - [ ] Module 12: Final verification.
 
 Current review notes:
@@ -729,11 +729,33 @@ rg -n "can[A-Z]|hostCan|isHost|admin|role|permission|visible|reportUserCanSubmit
 
 Acceptance criteria:
 
-- [ ] JSPs do not infer authorization from raw domain ownership.
-- [ ] JSP affordances are backed by service-enforced POST paths.
-- [ ] Event card relationship badges are classified as presentation-only or
+- [x] JSPs do not infer authorization from raw domain ownership.
+- [x] JSP affordances are backed by service-enforced POST paths.
+- [x] Event card relationship badges are classified as presentation-only or
   moved behind service-provided read state.
-- [ ] New user-facing copy, if any, is present in both message bundles.
+- [x] New user-facing copy, if any, is present in both message bundles.
+
+Implemented in Module 11:
+
+- Confirmed JSP/tag permission-like conditions render model state instead of
+  deriving authorization from raw ownership checks. Match detail host controls
+  use `MatchManagementPermissions`/`MatchInteractionState` values supplied by
+  `EventPageSupport`; tournament detail and bracket controls use
+  service-computed tournament/bracket view models; profile review/report
+  affordances use service-owned profile/report state.
+- Confirmed the remaining `<sec:authorize>` usage in the site header is
+  route-level navigation display for anonymous/authenticated/admin menu items,
+  aligned with `SecurityConfig` route rules.
+- Classified event-card relationship badges as presentation-only state. Match
+  badges for pending, invited, and going states are read from participation and
+  reservation services and do not authorize writes. The tournament
+  `my_event` badge is a label only and exposes no management action; tournament
+  management remains enforced by tournament services and protected host routes.
+- Added static view tests that reject JSP/tag raw ownership authorization
+  patterns and assert relationship badge rendering consumes only
+  `event.relationshipBadges` view-model data.
+- No user-facing copy was added in this module, so no message-bundle changes
+  were needed.
 
 ## Module 12: Final Verification
 
