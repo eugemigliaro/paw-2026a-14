@@ -93,6 +93,35 @@ public class TournamentServiceImpl implements TournamentService {
     }
 
     @Override
+    public TournamentManagementPermissions getManagementPermissions(
+            final Tournament tournament, final User actingUser) {
+        final boolean canMutate = canMutate(tournament, actingUser);
+        final TournamentStatus status = tournament == null ? null : tournament.getStatus();
+        final boolean canCloseRegistration = TournamentStatus.REGISTRATION == status && canMutate;
+        final boolean canEditTournament = TournamentStatus.REGISTRATION == status && canMutate;
+        final boolean canCancelTournament =
+                status != null
+                        && TournamentStatus.COMPLETED != status
+                        && TournamentStatus.CANCELLED != status
+                        && canMutate;
+        final boolean canManageBracket = TournamentStatus.BRACKET_SETUP == status && canMutate;
+        final boolean canViewBracket =
+                TournamentStatus.IN_PROGRESS == status
+                        || TournamentStatus.COMPLETED == status
+                        || TournamentStatus.CANCELLED == status;
+        final boolean canDefineMatchDates = TournamentStatus.BRACKET_SETUP == status && canMutate;
+        final boolean canManageResults = TournamentStatus.IN_PROGRESS == status && canMutate;
+        return new TournamentManagementPermissions(
+                canCloseRegistration,
+                canEditTournament,
+                canCancelTournament,
+                canManageBracket,
+                canViewBracket,
+                canDefineMatchDates,
+                canManageResults);
+    }
+
+    @Override
     public PaginatedResult<Tournament> searchPublicTournaments(
             final String query,
             final List<Sport> sport,

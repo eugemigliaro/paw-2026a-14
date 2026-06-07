@@ -255,6 +255,115 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void hostCanManageRegistrationTournament() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
+
+        // 2. Exercise
+        final TournamentManagementPermissions permissions =
+                tournamentService.getManagementPermissions(tournament, host);
+
+        // 3. Assert
+        Assertions.assertTrue(permissions.canCloseRegistration());
+        Assertions.assertTrue(permissions.canEditTournament());
+        Assertions.assertTrue(permissions.canCancelTournament());
+        Assertions.assertFalse(permissions.canManageBracket());
+        Assertions.assertFalse(permissions.canViewBracket());
+    }
+
+    @Test
+    public void unrelatedUserCannotManageTournament() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
+
+        // 2. Exercise
+        final TournamentManagementPermissions permissions =
+                tournamentService.getManagementPermissions(tournament, UserUtils.getUser(2L));
+
+        // 3. Assert
+        Assertions.assertFalse(permissions.canCloseRegistration());
+        Assertions.assertFalse(permissions.canEditTournament());
+        Assertions.assertFalse(permissions.canCancelTournament());
+        Assertions.assertFalse(permissions.canManageBracket());
+    }
+
+    @Test
+    public void adminModCanManageAcrossOwnershipBoundaries() {
+        // 1. Arrange
+        final User actingUser = UserUtils.getUser(99L);
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.BRACKET_SETUP);
+        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
+
+        // 2. Exercise
+        final TournamentManagementPermissions permissions =
+                tournamentService.getManagementPermissions(tournament, actingUser);
+
+        // 3. Assert
+        Assertions.assertFalse(permissions.canCloseRegistration());
+        Assertions.assertFalse(permissions.canEditTournament());
+        Assertions.assertTrue(permissions.canCancelTournament());
+        Assertions.assertTrue(permissions.canManageBracket());
+        Assertions.assertTrue(permissions.canDefineMatchDates());
+    }
+
+    @Test
+    public void completedTournamentBlocksMutatingManagementActions() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament = tournament(10L, host, TournamentStatus.COMPLETED);
+
+        // 2. Exercise
+        final TournamentManagementPermissions permissions =
+                tournamentService.getManagementPermissions(tournament, host);
+
+        // 3. Assert
+        Assertions.assertFalse(permissions.canCloseRegistration());
+        Assertions.assertFalse(permissions.canEditTournament());
+        Assertions.assertFalse(permissions.canCancelTournament());
+        Assertions.assertFalse(permissions.canManageBracket());
+        Assertions.assertTrue(permissions.canViewBracket());
+    }
+
+    @Test
+    public void cancelledTournamentBlocksMutatingManagementActions() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament = tournament(10L, host, TournamentStatus.CANCELLED);
+
+        // 2. Exercise
+        final TournamentManagementPermissions permissions =
+                tournamentService.getManagementPermissions(tournament, host);
+
+        // 3. Assert
+        Assertions.assertFalse(permissions.canCloseRegistration());
+        Assertions.assertFalse(permissions.canEditTournament());
+        Assertions.assertFalse(permissions.canCancelTournament());
+        Assertions.assertFalse(permissions.canManageBracket());
+        Assertions.assertTrue(permissions.canViewBracket());
+    }
+
+    @Test
+    public void hostCanManageResultsOnlyWhenTournamentIsInProgress() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament = tournament(10L, host, TournamentStatus.IN_PROGRESS);
+
+        // 2. Exercise
+        final TournamentManagementPermissions permissions =
+                tournamentService.getManagementPermissions(tournament, host);
+
+        // 3. Assert
+        Assertions.assertTrue(permissions.canCancelTournament());
+        Assertions.assertFalse(permissions.canManageBracket());
+        Assertions.assertFalse(permissions.canDefineMatchDates());
+        Assertions.assertTrue(permissions.canManageResults());
+        Assertions.assertTrue(permissions.canViewBracket());
+    }
+
+    @Test
     public void updateFailsWhenTournamentIsCompleted() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);

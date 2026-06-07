@@ -15,25 +15,24 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
+import ar.edu.itba.paw.services.TournamentManagementPermissions;
 import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
+import ar.edu.itba.paw.services.TournamentRegistrationState;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.TournamentDetailViewModel;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -109,11 +108,11 @@ public class TournamentController {
                         .findPublicTournament(tournamentId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
-
-        final Optional<TournamentSoloEntry> soloEntry =
-                tournamentRegistrationService.findSoloEntry(tournamentId, currentUser);
-        final Optional<TournamentTeam> userTeam =
-                tournamentRegistrationService.findUserTeam(tournamentId, currentUser);
+        final TournamentManagementPermissions managementPermissions =
+                tournamentService.getManagementPermissions(tournament, currentUser);
+        final TournamentRegistrationState registrationState =
+                tournamentRegistrationService.getRegistrationState(
+                        tournament, currentUser, managementPermissions.canCloseRegistration());
 
         final ModelAndView mav = new ModelAndView("tournaments/detail");
         mav.addObject(
@@ -124,7 +123,7 @@ public class TournamentController {
                         locale));
         mav.addObject(
                 "tournamentPage",
-                buildTournamentPage(tournament, currentUser, soloEntry, userTeam, locale));
+                buildTournamentPage(tournament, registrationState, managementPermissions, locale));
         mav.addObject("soloJoinPath", "/tournaments/" + tournamentId + "/solo-entry");
         mav.addObject("soloLeavePath", "/tournaments/" + tournamentId + "/solo-entry/leave");
         mav.addObject(
@@ -173,6 +172,10 @@ public class TournamentController {
             throw exception;
         }
 
+        final TournamentManagementPermissions managementPermissions =
+                tournamentService.getManagementPermissions(
+                        bracketView.getTournament(), currentUser);
+
         final ModelAndView mav = new ModelAndView("tournaments/bracket");
         mav.addObject(
                 "pageTitle",
@@ -180,11 +183,11 @@ public class TournamentController {
                         "page.title.tournamentBracket",
                         new Object[] {bracketView.getTournament().getTitle()},
                         locale));
-        mav.addObject("bracketPage", buildBracketPage(bracketView, locale));
+        mav.addObject("bracketPage", buildBracketPage(bracketView, managementPermissions, locale));
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
                 "matchDatesSetupPath",
-                canDefineMatchDates(bracketView.getTournament(), currentUser)
+                managementPermissions.canDefineMatchDates()
                         ? "/host/tournaments/" + tournamentId + "/bracket/setup"
                         : null);
         mav.addObject(
@@ -230,54 +233,9 @@ public class TournamentController {
 
     private TournamentDetailViewModel buildTournamentPage(
             final Tournament tournament,
-            final User currentUser,
-            final Optional<TournamentSoloEntry> soloEntry,
-            final Optional<TournamentTeam> userTeam,
-            final Locale locale) { // TODO: remove business logic
-        final Instant now = Instant.now(clock);
-        final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
-        final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
-        final TournamentSoloEntryStatus soloStatus =
-                soloEntry.map(TournamentSoloEntry::getStatus).orElse(null);
-        final boolean canJoinSolo =
-                currentUser != null
-                        && registrationOpen
-                        && tournament.isAllowSoloSignup()
-                        && !tournamentRegistrationService.isSoloPoolFull(tournament.getId())
-                        && userTeam.isEmpty()
-                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
-                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
-        final boolean canLeaveSolo =
-                currentUser != null
-                        && registrationOpen
-                        && soloStatus == TournamentSoloEntryStatus.IN_POOL;
-        final boolean requiresLoginToJoin =
-                currentUser == null && registrationOpen && tournament.isAllowSoloSignup();
-        final boolean canCloseRegistration =
-                TournamentStatus.REGISTRATION == tournament.getStatus()
-                        && (isHost(tournament, currentUser) || isAdminMod());
-        final boolean canEditTournament =
-                TournamentStatus.REGISTRATION == tournament.getStatus()
-                        && (isHost(tournament, currentUser) || isAdminMod());
-        final boolean canCancelTournament =
-                TournamentStatus.COMPLETED != tournament.getStatus()
-                        && TournamentStatus.CANCELLED != tournament.getStatus()
-                        && (isHost(tournament, currentUser) || isAdminMod());
-        final boolean canManageBracket =
-                TournamentStatus.BRACKET_SETUP == tournament.getStatus()
-                        && (isHost(tournament, currentUser) || isAdminMod());
-        final boolean canViewBracket =
-                TournamentStatus.IN_PROGRESS == tournament.getStatus()
-                        || TournamentStatus.COMPLETED == tournament.getStatus()
-                        || TournamentStatus.CANCELLED == tournament.getStatus();
-        final TournamentRegistrationReadiness readiness =
-                canCloseRegistration
-                        ? tournamentRegistrationService.getRegistrationReadiness(
-                                tournament.getId(), currentUser)
-                        : null;
-        final boolean closeRegistrationBlocked =
-                readiness != null && readiness.isCancellationRisk();
-        final boolean closeRegistrationDisabled = !registrationOpen || closeRegistrationBlocked;
+            final TournamentRegistrationState registrationState,
+            final TournamentManagementPermissions managementPermissions,
+            final Locale locale) {
         final List<TournamentTeamMember> teamMembers =
                 tournamentRegistrationService.listTeamMembers(tournament.getId());
         final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbersFromMembers(teamMembers);
@@ -309,23 +267,30 @@ public class TournamentController {
                 hostProfileHref(tournament.getHost()),
                 profileUrlFor(tournament.getHost()),
                 bannerUrlFor(tournament),
-                participationLabel(soloEntry, userTeam, locale, teamDisplayNumbers),
+                participationLabel(
+                        registrationState.getSoloEntry(),
+                        registrationState.getUserTeam(),
+                        locale,
+                        teamDisplayNumbers),
                 nextStepLabel(tournament, locale),
                 aboutParagraphs(tournament, locale),
                 participantRows(tournament, locale, teamDisplayNumbers, teamMembers),
-                closeRegistrationDisabledMessage(registrationOpen, readiness, locale),
-                closeRegistrationDisabled,
-                registrationOpen,
+                closeRegistrationDisabledMessage(
+                        registrationState.isRegistrationOpen(),
+                        registrationState.getReadiness(),
+                        locale),
+                registrationState.isCloseRegistrationDisabled(),
+                registrationState.isRegistrationOpen(),
                 tournament.isAllowSoloSignup(),
-                canJoinSolo,
-                canLeaveSolo,
-                requiresLoginToJoin,
-                registrationNotStarted,
-                canCloseRegistration,
-                canEditTournament,
-                canCancelTournament,
-                canManageBracket,
-                canViewBracket);
+                registrationState.canJoinSolo(),
+                registrationState.canLeaveSolo(),
+                registrationState.requiresLoginToJoin(),
+                registrationState.isRegistrationNotStarted(),
+                managementPermissions.canCloseRegistration(),
+                managementPermissions.canEditTournament(),
+                managementPermissions.canCancelTournament(),
+                managementPermissions.canManageBracket(),
+                managementPermissions.canViewBracket());
     }
 
     private String closeRegistrationDisabledMessage(
@@ -431,23 +396,6 @@ public class TournamentController {
                 platformTimeZoneService.defaultZone());
     }
 
-    private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
-        final Instant opensAt = tournament.getRegistrationOpensAt();
-        final Instant closesAt = tournament.getRegistrationClosesAt();
-        return TournamentStatus.REGISTRATION == tournament.getStatus()
-                && opensAt != null
-                && closesAt != null
-                && !now.isBefore(opensAt)
-                && now.isBefore(closesAt);
-    }
-
-    private boolean isRegistrationNotStarted(final Tournament tournament, final Instant now) {
-        final Instant opensAt = tournament.getRegistrationOpensAt();
-        return TournamentStatus.REGISTRATION == tournament.getStatus()
-                && opensAt != null
-                && now.isBefore(opensAt);
-    }
-
     private String joinModeLabel(final Tournament tournament, final Locale locale) {
         if (tournament.isAllowSoloSignup() && tournament.isAllowTeamDraft()) {
             return messageSource.getMessage("tournament.detail.joinMode.both", null, locale);
@@ -548,24 +496,6 @@ public class TournamentController {
                 : null;
     }
 
-    private static boolean isHost(final Tournament tournament, final User currentUser) {
-        return tournament.getHost() != null
-                && currentUser != null
-                && tournament.getHost().getId().equals(currentUser.getId());
-    }
-
-    private static boolean canDefineMatchDates(
-            final Tournament tournament, final User currentUser) {
-        return TournamentStatus.BRACKET_SETUP == tournament.getStatus()
-                && (isHost(tournament, currentUser) || isAdminMod());
-    }
-
-    private static boolean isAdminMod() {
-        return CurrentAuthenticatedUser.get()
-                .map(principal -> UserRole.ADMIN_MOD == principal.getRole())
-                .orElse(false);
-    }
-
     private static String registrationErrorCode(final TournamentJoinFailureReason reason) {
         switch (reason) {
             case SOLO_SIGNUP_DISABLED:
@@ -644,14 +574,13 @@ public class TournamentController {
     }
 
     private TournamentBracketViewModel buildBracketPage(
-            final TournamentBracketView bracketView, final Locale locale) {
+            final TournamentBracketView bracketView,
+            final TournamentManagementPermissions managementPermissions,
+            final Locale locale) {
         final Tournament tournament = bracketView.getTournament();
         final Long viewerTeamId =
                 bracketView.getViewerTeam() == null ? null : bracketView.getViewerTeam().getId();
-        final boolean canManageResults =
-                TournamentStatus.IN_PROGRESS == tournament.getStatus()
-                        && (isHost(tournament, SecurityControllerUtils.currentUserOrNull())
-                                || isAdminMod());
+        final boolean canManageResults = managementPermissions.canManageResults();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 bracketView.getMatches().stream()
                         .sorted(

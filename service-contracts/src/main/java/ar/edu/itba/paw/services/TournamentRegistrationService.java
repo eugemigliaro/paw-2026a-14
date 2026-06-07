@@ -24,6 +24,9 @@ public interface TournamentRegistrationService {
 
     List<TournamentTeamMember> listTeamMembers(long tournamentId);
 
+    TournamentRegistrationState getRegistrationState(
+            Tournament tournament, User user, boolean canCloseRegistration);
+
     TournamentRegistrationReadiness getRegistrationReadiness(long tournamentId, User actingUser);
 
     Tournament closeRegistration(long tournamentId, User actingUser);

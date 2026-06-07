@@ -25,8 +25,10 @@ import ar.edu.itba.paw.services.TournamentBracketFailureReason;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentJoinFailureReason;
+import ar.edu.itba.paw.services.TournamentManagementPermissions;
 import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
+import ar.edu.itba.paw.services.TournamentRegistrationState;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.TournamentBracketException;
@@ -80,6 +82,24 @@ class TournamentControllerTest {
                                         messageSource(),
                                         Clock.fixed(NOW, ZoneId.of("UTC"))))
                         .build();
+        Mockito.when(
+                        tournamentService.getManagementPermissions(
+                                Mockito.any(Tournament.class), Mockito.nullable(User.class)))
+                .thenAnswer(
+                        invocation ->
+                                managementPermissions(
+                                        invocation.getArgument(0), invocation.getArgument(1)));
+        Mockito.when(
+                        tournamentRegistrationService.getRegistrationState(
+                                Mockito.any(Tournament.class),
+                                Mockito.nullable(User.class),
+                                Mockito.anyBoolean()))
+                .thenAnswer(
+                        invocation ->
+                                registrationState(
+                                        invocation.getArgument(0),
+                                        invocation.getArgument(1),
+                                        invocation.getArgument(2)));
     }
 
     @AfterEach
@@ -169,9 +189,10 @@ class TournamentControllerTest {
     void publicDetailTurnsOffJoinWhenSoloPoolIsFull() throws Exception {
         // 1. Arrange
         final User player = UserUtils.getUser(9L);
+        final Tournament tournament = tournament(77L, TournamentStatus.REGISTRATION);
         AuthenticationUtils.authenticateUser(player, "{bcrypt}hash", UserRole.USER, true);
         Mockito.when(tournamentService.findPublicTournament(77L))
-                .thenReturn(Optional.of(tournament(77L, TournamentStatus.REGISTRATION)));
+                .thenReturn(Optional.of(tournament));
         Mockito.when(
                         tournamentRegistrationService.findSoloEntry(
                                 Mockito.eq(77L), Mockito.eq(player)))
@@ -181,6 +202,20 @@ class TournamentControllerTest {
                                 Mockito.eq(77L), Mockito.eq(player)))
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.isSoloPoolFull(77L)).thenReturn(true);
+        Mockito.when(
+                        tournamentRegistrationService.getRegistrationState(
+                                Mockito.eq(tournament), Mockito.eq(player), Mockito.eq(false)))
+                .thenReturn(
+                        new TournamentRegistrationState(
+                                Optional.empty(),
+                                Optional.empty(),
+                                null,
+                                true,
+                                false,
+                                false,
+                                false,
+                                false,
+                                false));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
@@ -228,15 +263,30 @@ class TournamentControllerTest {
     @Test
     void hostPublicDetailDisablesCloseRegistrationWhenUnderCapacity() throws Exception {
         // 1. Arrange
+        final Tournament tournament = tournament(77L, TournamentStatus.REGISTRATION);
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
         Mockito.when(tournamentService.findPublicTournament(77L))
-                .thenReturn(Optional.of(tournament(77L, TournamentStatus.REGISTRATION)));
+                .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentRegistrationService.findSoloEntry(Mockito.eq(77L), Mockito.eq(host)))
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.getRegistrationReadiness(77L, host))
                 .thenReturn(new TournamentRegistrationReadiness(1, 0, 0, true));
+        Mockito.when(
+                        tournamentRegistrationService.getRegistrationState(
+                                Mockito.eq(tournament), Mockito.eq(host), Mockito.eq(true)))
+                .thenReturn(
+                        new TournamentRegistrationState(
+                                Optional.empty(),
+                                Optional.empty(),
+                                new TournamentRegistrationReadiness(1, 0, 0, true),
+                                true,
+                                false,
+                                false,
+                                false,
+                                false,
+                                true));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
@@ -521,6 +571,50 @@ class TournamentControllerTest {
 
     private static TournamentTeamMember member(final TournamentTeam team, final User user) {
         return new TournamentTeamMember(null, team, user, false, NOW);
+    }
+
+    private static TournamentManagementPermissions managementPermissions(
+            final Tournament tournament, final User actingUser) {
+        final boolean canManage =
+                tournament.getHost() != null
+                        && actingUser != null
+                        && tournament.getHost().getId().equals(actingUser.getId());
+        final TournamentStatus status = tournament.getStatus();
+        return new TournamentManagementPermissions(
+                TournamentStatus.REGISTRATION == status && canManage,
+                TournamentStatus.REGISTRATION == status && canManage,
+                TournamentStatus.COMPLETED != status
+                        && TournamentStatus.CANCELLED != status
+                        && canManage,
+                TournamentStatus.BRACKET_SETUP == status && canManage,
+                TournamentStatus.IN_PROGRESS == status
+                        || TournamentStatus.COMPLETED == status
+                        || TournamentStatus.CANCELLED == status,
+                TournamentStatus.BRACKET_SETUP == status && canManage,
+                TournamentStatus.IN_PROGRESS == status && canManage);
+    }
+
+    private static TournamentRegistrationState registrationState(
+            final Tournament tournament, final User user, final boolean canCloseRegistration) {
+        final boolean registrationOpen =
+                TournamentStatus.REGISTRATION == tournament.getStatus()
+                        && !NOW.isBefore(tournament.getRegistrationOpensAt())
+                        && NOW.isBefore(tournament.getRegistrationClosesAt());
+        final boolean registrationNotStarted =
+                TournamentStatus.REGISTRATION == tournament.getStatus()
+                        && NOW.isBefore(tournament.getRegistrationOpensAt());
+        final TournamentRegistrationReadiness readiness =
+                canCloseRegistration ? new TournamentRegistrationReadiness(2, 0, 2, false) : null;
+        return new TournamentRegistrationState(
+                Optional.empty(),
+                Optional.empty(),
+                readiness,
+                registrationOpen,
+                registrationNotStarted,
+                user != null && registrationOpen && tournament.isAllowSoloSignup(),
+                false,
+                user == null && registrationOpen && tournament.isAllowSoloSignup(),
+                !registrationOpen || (readiness != null && readiness.isCancellationRisk()));
     }
 
     private static MessageSource messageSource() {

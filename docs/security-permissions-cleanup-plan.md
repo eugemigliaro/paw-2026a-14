@@ -27,7 +27,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 2: Establish shared authorization vocabulary.
 - [x] Module 3: Match detail visibility.
 - [x] Module 4: Match detail action state.
-- [ ] Module 5: Tournament detail permissions.
+- [x] Module 5: Tournament detail permissions.
 - [ ] Module 6: Tournament bracket permissions.
 - [ ] Module 7: Centralize admin/mod role checks.
 - [ ] Module 8: Public profile, reviews, and report affordances.
@@ -441,9 +441,22 @@ Tests to add or update:
 
 Acceptance criteria:
 
-- [ ] `TournamentController` no longer defines `isHost` or `isAdminMod`.
-- [ ] Tournament capability booleans are computed outside the controller.
-- [ ] `buildTournamentPage` no longer contains business-permission TODO logic.
+- [x] `TournamentController` no longer defines `isHost` or `isAdminMod`.
+- [x] Tournament capability booleans are computed outside the controller.
+- [x] `buildTournamentPage` no longer contains business-permission TODO logic.
+
+Implemented in Module 5:
+
+- Added `TournamentManagementPermissions` and `TournamentRegistrationState`
+  service read models.
+- Moved tournament detail join/leave, login-required, close-registration,
+  edit/cancel, bracket visibility, bracket management, match-date setup, and
+  result-management capability calculations out of `TournamentController`.
+- Kept `TournamentController` responsible for labels, paths, flash messages,
+  and JSP view-model assembly.
+- Added service tests for solo join/leave/readiness state, anonymous
+  affordances, host management, unrelated-user denial, admin/mod override, and
+  completed/cancelled lifecycle blocking.
 
 ## Module 6: Tournament Bracket Permissions
 

@@ -163,6 +163,49 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     }
 
     @Override
+    public TournamentRegistrationState getRegistrationState(
+            final Tournament tournament, final User user, final boolean canCloseRegistration) {
+        final Optional<TournamentSoloEntry> soloEntry = findSoloEntry(tournament, user);
+        final Optional<TournamentTeam> userTeam = findUserTeam(tournament, user);
+        final Instant now = Instant.now(clock);
+        final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
+        final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
+        final TournamentSoloEntryStatus soloStatus =
+                soloEntry.map(TournamentSoloEntry::getStatus).orElse(null);
+        final boolean canJoinSolo =
+                user != null
+                        && user.getId() != null
+                        && registrationOpen
+                        && tournament.isAllowSoloSignup()
+                        && !isSoloPoolFull(tournament)
+                        && userTeam.isEmpty()
+                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
+                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
+        final boolean canLeaveSolo =
+                user != null
+                        && user.getId() != null
+                        && registrationOpen
+                        && soloStatus == TournamentSoloEntryStatus.IN_POOL;
+        final boolean requiresLoginToJoin =
+                user == null && registrationOpen && tournament.isAllowSoloSignup();
+        final TournamentRegistrationReadiness readiness =
+                canCloseRegistration ? registrationReadiness(tournament) : null;
+        final boolean closeRegistrationBlocked =
+                readiness != null && readiness.isCancellationRisk();
+        final boolean closeRegistrationDisabled = !registrationOpen || closeRegistrationBlocked;
+        return new TournamentRegistrationState(
+                soloEntry,
+                userTeam,
+                readiness,
+                registrationOpen,
+                registrationNotStarted,
+                canJoinSolo,
+                canLeaveSolo,
+                requiresLoginToJoin,
+                closeRegistrationDisabled);
+    }
+
+    @Override
     public TournamentRegistrationReadiness getRegistrationReadiness(
             final long tournamentId, final User actingUser) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
@@ -171,6 +214,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             return new TournamentRegistrationReadiness(0, 0, 0, false);
         }
 
+        return registrationReadiness(tournament);
+    }
+
+    private TournamentRegistrationReadiness registrationReadiness(final Tournament tournament) {
+        final long tournamentId = tournament.getId();
         final int activeSoloEntries =
                 Math.toIntExact(tournamentSoloEntryDao.countActiveByTournament(tournamentId));
         final int existingTeamCount =
@@ -254,12 +302,24 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private boolean isRegistrationOpenNow(final Tournament tournament) {
         final Instant now = Instant.now(clock);
+        return isRegistrationOpenNow(tournament, now);
+    }
+
+    private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
         final Instant opensAt = tournament.getRegistrationOpensAt();
         final Instant closesAt = tournament.getRegistrationClosesAt();
-        return opensAt != null
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
                 && closesAt != null
                 && !now.isBefore(opensAt)
                 && now.isBefore(closesAt);
+    }
+
+    private boolean isRegistrationNotStarted(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && now.isBefore(opensAt);
     }
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
@@ -297,6 +357,27 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 tournamentSoloEntryDao.countActiveByTournament(tournament.getId());
         final long maxSoloEntries = (long) tournament.getBracketSize() * tournament.getTeamSize();
         return currentSoloEntries >= maxSoloEntries;
+    }
+
+    private Optional<TournamentSoloEntry> findSoloEntry(
+            final Tournament tournament, final User user) {
+        if (tournament == null
+                || tournament.getId() == null
+                || user == null
+                || user.getId() == null) {
+            return Optional.empty();
+        }
+        return tournamentSoloEntryDao.findByTournamentAndUser(tournament.getId(), user.getId());
+    }
+
+    private Optional<TournamentTeam> findUserTeam(final Tournament tournament, final User user) {
+        if (tournament == null
+                || tournament.getId() == null
+                || user == null
+                || user.getId() == null) {
+            return Optional.empty();
+        }
+        return tournamentTeamDao.findUserTeam(tournament.getId(), user.getId());
     }
 
     private TournamentRegistrationException registrationException(

@@ -369,6 +369,126 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void registrationStateAllowsAuthenticatedSoloJoinWhenOpenAndCapacityAvailable() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
+        final User user = UserUtils.getUser(2L);
+        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
+                .thenReturn(Optional.empty());
+
+        // 2. Exercise
+        final TournamentRegistrationState state =
+                registrationService.getRegistrationState(tournament, user, false);
+
+        // 3. Assert
+        Assertions.assertTrue(state.isRegistrationOpen());
+        Assertions.assertTrue(state.canJoinSolo());
+        Assertions.assertFalse(state.canLeaveSolo());
+        Assertions.assertFalse(state.requiresLoginToJoin());
+    }
+
+    @Test
+    public void registrationStateBlocksSoloJoinWhenPoolIsFull() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 2, 2);
+        final User user = UserUtils.getUser(2L);
+        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.countActiveByTournament(10L)).thenReturn(4L);
+
+        // 2. Exercise
+        final TournamentRegistrationState state =
+                registrationService.getRegistrationState(tournament, user, false);
+
+        // 3. Assert
+        Assertions.assertFalse(state.canJoinSolo());
+        Assertions.assertFalse(state.canLeaveSolo());
+    }
+
+    @Test
+    public void registrationStateAllowsLeaveOnlyForActiveSoloPoolEntry() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
+        final User user = UserUtils.getUser(2L);
+        final TournamentSoloEntry existing =
+                soloEntry(20L, tournament, user, TournamentSoloEntryStatus.IN_POOL);
+        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
+                .thenReturn(Optional.of(existing));
+
+        // 2. Exercise
+        final TournamentRegistrationState state =
+                registrationService.getRegistrationState(tournament, user, false);
+
+        // 3. Assert
+        Assertions.assertFalse(state.canJoinSolo());
+        Assertions.assertTrue(state.canLeaveSolo());
+        Assertions.assertTrue(state.getSoloEntry().isPresent());
+    }
+
+    @Test
+    public void registrationStateBlocksActionsAfterRegistrationLifecycleEnds() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), 4, 1, TournamentStatus.COMPLETED);
+        final User user = UserUtils.getUser(2L);
+        final TournamentSoloEntry existing =
+                soloEntry(20L, tournament, user, TournamentSoloEntryStatus.IN_POOL);
+        Mockito.when(tournamentTeamDao.findUserTeam(10L, user.getId()))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentSoloEntryDao.findByTournamentAndUser(10L, user.getId()))
+                .thenReturn(Optional.of(existing));
+
+        // 2. Exercise
+        final TournamentRegistrationState state =
+                registrationService.getRegistrationState(tournament, user, false);
+
+        // 3. Assert
+        Assertions.assertFalse(state.isRegistrationOpen());
+        Assertions.assertFalse(state.canJoinSolo());
+        Assertions.assertFalse(state.canLeaveSolo());
+        Assertions.assertFalse(state.requiresLoginToJoin());
+    }
+
+    @Test
+    public void registrationStateShowsLoginRequiredAffordanceForAnonymousUsers() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
+
+        // 2. Exercise
+        final TournamentRegistrationState state =
+                registrationService.getRegistrationState(tournament, null, false);
+
+        // 3. Assert
+        Assertions.assertTrue(state.isRegistrationOpen());
+        Assertions.assertFalse(state.canJoinSolo());
+        Assertions.assertFalse(state.canLeaveSolo());
+        Assertions.assertTrue(state.requiresLoginToJoin());
+    }
+
+    @Test
+    public void registrationStateDisablesCloseRegistrationWhenReadinessWouldCancel() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 2);
+        Mockito.when(tournamentSoloEntryDao.countActiveByTournament(10L)).thenReturn(1L);
+        Mockito.when(tournamentTeamDao.countByTournament(10L)).thenReturn(0L);
+
+        // 2. Exercise
+        final TournamentRegistrationState state =
+                registrationService.getRegistrationState(tournament, UserUtils.getUser(1L), true);
+
+        // 3. Assert
+        Assertions.assertNotNull(state.getReadiness());
+        Assertions.assertTrue(state.getReadiness().isCancellationRisk());
+        Assertions.assertTrue(state.isCloseRegistrationDisabled());
+    }
+
+    @Test
     public void nonHostCannotCloseRegistration() {
         // 1. Arrange
         final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
