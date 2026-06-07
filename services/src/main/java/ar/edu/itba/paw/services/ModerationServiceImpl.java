@@ -13,13 +13,13 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.persistence.MatchDao;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
-import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.moderation.*;
+import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
+import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.time.Clock;
 import java.time.Instant;
@@ -47,10 +47,10 @@ public class ModerationServiceImpl implements ModerationService {
 
     private final UserBanDao userBanDao;
     private final ModerationReportDao moderationReportDao;
-    private final UserDao userDao;
-    private final MatchDao matchDao;
-    private final MatchParticipantDao matchParticipantDao;
-    private final PlayerReviewDao playerReviewDao;
+    private final UserDataService userDataService;
+    private final MatchDataService matchDataService;
+    private final MatchParticipantDataService matchParticipantDataService;
+    private final PlayerReviewDataService playerReviewDataService;
     private final MailDispatchService mailDispatchService;
     private final MatchNotificationService matchNotificationService;
     private final MessageSource messageSource;
@@ -60,20 +60,20 @@ public class ModerationServiceImpl implements ModerationService {
     public ModerationServiceImpl(
             final UserBanDao userBanDao,
             final ModerationReportDao moderationReportDao,
-            final UserDao userDao,
-            final MatchDao matchDao,
-            final MatchParticipantDao matchParticipantDao,
-            final PlayerReviewDao playerReviewDao,
+            final UserDataService userDataService,
+            final MatchDataService matchDataService,
+            final MatchParticipantDataService matchParticipantDataService,
+            final PlayerReviewDataService playerReviewDataService,
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService,
             final MessageSource messageSource,
             final Clock clock) {
         this.userBanDao = userBanDao;
         this.moderationReportDao = moderationReportDao;
-        this.userDao = userDao;
-        this.matchDao = matchDao;
-        this.matchParticipantDao = matchParticipantDao;
-        this.playerReviewDao = playerReviewDao;
+        this.userDataService = userDataService;
+        this.matchDataService = matchDataService;
+        this.matchParticipantDataService = matchParticipantDataService;
+        this.playerReviewDataService = playerReviewDataService;
         this.mailDispatchService = mailDispatchService;
         this.matchNotificationService = matchNotificationService;
         this.messageSource = messageSource;
@@ -289,27 +289,27 @@ public class ModerationServiceImpl implements ModerationService {
     @Transactional
     public boolean softDeleteReview(
             final User reviewer, final User reviewed, final String reason, final User deletedBy) {
-        return playerReviewDao.softDeleteReview(
+        return playerReviewDataService.softDeleteReview(
                 reviewer, reviewed, deletedBy, normalizeText(reason, 4000));
     }
 
     @Override
     @Transactional
     public boolean restoreReview(final User reviewer, final User reviewed) {
-        return playerReviewDao.restoreReview(reviewer, reviewed);
+        return playerReviewDataService.restoreReview(reviewer, reviewed);
     }
 
     @Override
     @Transactional
     public boolean softDeleteMatch(
             final Long matchId, final User deletedBy, final String deleteReason) {
-        return matchDao.softDeleteMatch(matchId, deletedBy, deleteReason);
+        return matchDataService.softDeleteMatch(matchId, deletedBy, deleteReason);
     }
 
     @Override
     @Transactional
     public boolean restoreMatch(final Long matchId) {
-        return matchDao.restoreMatch(matchId);
+        return matchDataService.restoreMatch(matchId);
     }
 
     private void validateReportRequest(
@@ -324,9 +324,9 @@ public class ModerationServiceImpl implements ModerationService {
 
     private void cancelFutureContentForUser(final User user) {
         final Instant now = Instant.now(clock);
-        final List<Match> matchesToCancel = matchDao.findFutureHostedMatches(user, now);
-        matchParticipantDao.cancelFutureReservations(user, now);
-        if (matchDao.cancelFutureHostedMatches(user, now) <= 0) {
+        final List<Match> matchesToCancel = matchDataService.findFutureHostedMatches(user, now);
+        matchParticipantDataService.cancelFutureReservations(user, now);
+        if (matchDataService.cancelFutureHostedMatches(user, now) <= 0) {
             return;
         }
         for (final Match matchToCancel : matchesToCancel) {
@@ -372,7 +372,8 @@ public class ModerationServiceImpl implements ModerationService {
         final String name =
                 switch (targetType) {
                     case USER ->
-                            userDao.findById(targetId)
+                            userDataService
+                                    .findById(targetId)
                                     .map(User::getUsername)
                                     .orElseGet(
                                             () ->
@@ -381,7 +382,8 @@ public class ModerationServiceImpl implements ModerationService {
                                                             new Object[] {targetId},
                                                             locale));
                     case MATCH ->
-                            matchDao.findById(targetId)
+                            matchDataService
+                                    .findById(targetId)
                                     .map(Match::getTitle)
                                     .orElseGet(
                                             () ->
@@ -390,7 +392,7 @@ public class ModerationServiceImpl implements ModerationService {
                                                             new Object[] {targetId},
                                                             locale));
                     case REVIEW ->
-                            playerReviewDao
+                            playerReviewDataService
                                     .findByIdIncludingDeleted(targetId)
                                     .map(review -> review.getReviewer().getUsername())
                                     .map(
@@ -448,7 +450,8 @@ public class ModerationServiceImpl implements ModerationService {
             final Instant bannedUntil =
                     Instant.now(clock).plusSeconds(banDurationDays * 24L * 3600L);
             final User user =
-                    userDao.findById(report.getTargetId())
+                    userDataService
+                            .findById(report.getTargetId())
                             .orElseThrow(
                                     () -> new ModerationReportNotFoundException("User not found."));
             banUser(report, bannedUntil, user, resolutionDetails);
@@ -472,7 +475,7 @@ public class ModerationServiceImpl implements ModerationService {
         }
         if (report.getTargetType() == ReportTargetType.REVIEW) {
             final Optional<PlayerReview> review =
-                    playerReviewDao.findByIdIncludingDeleted(report.getTargetId());
+                    playerReviewDataService.findByIdIncludingDeleted(report.getTargetId());
             review.ifPresent(
                     found ->
                             softDeleteReview(
@@ -490,13 +493,14 @@ public class ModerationServiceImpl implements ModerationService {
     private void upliftReportDecision(final ModerationReport report) {
         if (report.getTargetType() == ReportTargetType.REVIEW) {
             final Optional<PlayerReview> review =
-                    playerReviewDao.findByIdIncludingDeleted(report.getTargetId());
+                    playerReviewDataService.findByIdIncludingDeleted(report.getTargetId());
             review.ifPresent(found -> restoreReview(found.getReviewer(), found.getReviewed()));
             return;
         }
         if (report.getTargetType() == ReportTargetType.USER) {
             final User user =
-                    userDao.findById(report.getTargetId())
+                    userDataService
+                            .findById(report.getTargetId())
                             .orElseThrow(
                                     () -> new ModerationTargetNotFoundException("User not found."));
             final Optional<UserBan> ban = userBanDao.findActiveBanForUser(user, Instant.now(clock));
@@ -505,14 +509,14 @@ public class ModerationServiceImpl implements ModerationService {
             return;
         }
         if (report.getTargetType() == ReportTargetType.MATCH) {
-            final Optional<Match> match = matchDao.findById(report.getTargetId());
+            final Optional<Match> match = matchDataService.findById(report.getTargetId());
             if (match.isEmpty()) {
                 return;
             }
             if (!match.get().isDeleted()) {
                 throw new ModerationReportErrorException("Invalid match report target.");
             }
-            matchDao.restoreMatch(match.get().getId());
+            matchDataService.restoreMatch(match.get().getId());
             return;
         }
     }

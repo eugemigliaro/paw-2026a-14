@@ -8,8 +8,8 @@ import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.*;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -32,17 +32,17 @@ public class TournamentServiceImpl implements TournamentService {
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
-    private final TournamentDao tournamentDao;
+    private final TournamentDataService tournamentDataService;
     private final TournamentMailService tournamentMailService;
     private final ImageService imageService;
     private final Clock clock;
 
     public TournamentServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
             final TournamentMailService tournamentMailService,
             final ImageService imageService,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
         this.tournamentMailService = tournamentMailService;
         this.imageService = imageService;
         this.clock = clock;
@@ -56,7 +56,7 @@ public class TournamentServiceImpl implements TournamentService {
         final Instant startsAt = toInstant(request.getStartDate(), request.getStartTime());
         final Instant endsAt = toInstant(request.getEndDate(), request.getEndTime());
 
-        return tournamentDao.create(
+        return tournamentDataService.create(
                 host,
                 request.getSport(),
                 request.getTitle(),
@@ -80,12 +80,12 @@ public class TournamentServiceImpl implements TournamentService {
 
     @Override
     public Optional<Tournament> findPublicTournament(final long tournamentId) {
-        return tournamentDao.findPublicById(tournamentId);
+        return tournamentDataService.findPublicById(tournamentId);
     }
 
     @Override
     public Optional<Tournament> findTournamentForHost(final long tournamentId, final User host) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .filter(tournament -> canMutate(tournament, host));
@@ -113,7 +113,7 @@ public class TournamentServiceImpl implements TournamentService {
                 pageSize,
                 DEFAULT_PAGE_SIZE,
                 safePageSize ->
-                        tournamentDao.countPublicTournaments(
+                        tournamentDataService.countPublicTournaments(
                                 query,
                                 sport,
                                 dateRange.start(),
@@ -121,7 +121,7 @@ public class TournamentServiceImpl implements TournamentService {
                                 minPrice,
                                 maxPrice),
                 (offset, safePageSize) ->
-                        tournamentDao.findPublicTournaments(
+                        tournamentDataService.findPublicTournaments(
                                 query,
                                 sport,
                                 dateRange.start(),
@@ -157,7 +157,7 @@ public class TournamentServiceImpl implements TournamentService {
                 pageSize,
                 DEFAULT_PAGE_SIZE,
                 safePageSize ->
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 host,
                                 upcoming,
                                 includeHosted,
@@ -168,7 +168,7 @@ public class TournamentServiceImpl implements TournamentService {
                                 minPrice,
                                 maxPrice),
                 (offset, safePageSize) ->
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 host,
                                 upcoming,
                                 includeHosted,
@@ -221,7 +221,7 @@ public class TournamentServiceImpl implements TournamentService {
                 toInstant(
                         request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
         tournament.setUpdatedAt(Instant.now(clock));
-        return tournamentDao.update(tournament);
+        return tournamentDataService.update(tournament);
     }
 
     @Override
@@ -244,13 +244,13 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setCancelledAt(now);
         tournament.setCancelReason(reason);
         tournament.setUpdatedAt(now);
-        final Tournament updatedTournament = tournamentDao.update(tournament);
+        final Tournament updatedTournament = tournamentDataService.update(tournament);
         tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
         return updatedTournament;
     }
 
     private Tournament findByIdOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .orElseThrow(() -> new TournamentLifecycleException("Tournament not found"));

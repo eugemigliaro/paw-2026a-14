@@ -5,7 +5,7 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,13 +16,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class TournamentMailServiceImpl implements TournamentMailService {
 
-    private final TournamentTeamDao tournamentTeamDao;
+    private final TournamentTeamDataService tournamentTeamDataService;
     private final MailDispatchService mailDispatchService;
 
     public TournamentMailServiceImpl(
-            final TournamentTeamDao tournamentTeamDao,
+            final TournamentTeamDataService tournamentTeamDataService,
             final MailDispatchService mailDispatchService) {
-        this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentTeamDataService = tournamentTeamDataService;
         this.mailDispatchService = mailDispatchService;
     }
 
@@ -67,7 +67,7 @@ public class TournamentMailServiceImpl implements TournamentMailService {
 
         final Map<String, User> recipientsByIdentity = new LinkedHashMap<>();
         for (final TournamentTeamMember member :
-                tournamentTeamDao.findMembersByTournament(tournament.getId())) {
+                tournamentTeamDataService.findMembersByTournament(tournament.getId())) {
             final User user = member == null ? null : member.getUser();
             if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
                 continue;

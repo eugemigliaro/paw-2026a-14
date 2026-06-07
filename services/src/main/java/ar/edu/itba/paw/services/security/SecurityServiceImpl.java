@@ -2,8 +2,8 @@ package ar.edu.itba.paw.services.security;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.MatchDao;
 import ar.edu.itba.paw.services.SecurityService;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import java.lang.reflect.Method;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -19,10 +19,10 @@ public class SecurityServiceImpl implements SecurityService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecurityServiceImpl.class);
 
-    private final MatchDao matchDao;
+    private final MatchDataService matchDataService;
 
-    public SecurityServiceImpl(final MatchDao matchDao) {
-        this.matchDao = matchDao;
+    public SecurityServiceImpl(final MatchDataService matchDataService) {
+        this.matchDataService = matchDataService;
     }
 
     @Override
@@ -68,7 +68,7 @@ public class SecurityServiceImpl implements SecurityService {
         if (current == null) {
             return false;
         }
-        final Optional<Match> match = matchDao.findById(matchId);
+        final Optional<Match> match = matchDataService.findById(matchId);
         return match.map(m -> current.getId().equals(m.getHost().getId())).orElse(false);
     }
 }

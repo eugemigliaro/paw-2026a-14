@@ -9,8 +9,8 @@ import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.registration.*;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
@@ -47,7 +47,7 @@ public class AccountAuthServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-10T18:00:00Z");
 
-    @Mock private UserDao userDao;
+    @Mock private UserDataService userDataService;
     @Mock private EmailActionRequestDao emailActionRequestDao;
 
     private RecordingMailDispatchService mailDispatchService;
@@ -61,7 +61,7 @@ public class AccountAuthServiceImplTest {
         passwordEncoder = new BCryptPasswordEncoder();
         accountAuthService =
                 new AccountAuthServiceImpl(
-                        userDao,
+                        userDataService,
                         emailActionRequestDao,
                         new MailProperties(
                                 MailMode.LOG,
@@ -128,7 +128,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRegisterRejectsExistingVerifiedEmail() {
-        Mockito.when(userDao.findAccountByEmail("player@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("player@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -159,7 +159,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRegisterRejectsExistingUnverifiedEmail() {
-        Mockito.when(userDao.findAccountByEmail("pending@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("pending@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -190,9 +190,11 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRegisterRejectsTakenUsername() {
-        Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
+        Mockito.when(userDataService.findAccountByEmail("new@test.com"))
+                .thenReturn(Optional.empty());
         final User userWithTakenName = UserUtils.getUser(7L);
-        Mockito.when(userDao.findByUsername("user7")).thenReturn(Optional.of(userWithTakenName));
+        Mockito.when(userDataService.findByUsername("user7"))
+                .thenReturn(Optional.of(userWithTakenName));
 
         Assertions.assertThrows(
                 UsernameTakenException.class,
@@ -223,10 +225,11 @@ public class AccountAuthServiceImplTest {
                         null,
                         UserLanguages.ENGLISH);
 
-        Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
-        Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
+        Mockito.when(userDataService.findAccountByEmail("new@test.com"))
+                .thenReturn(Optional.empty());
+        Mockito.when(userDataService.findByUsername("new_user")).thenReturn(Optional.empty());
         Mockito.when(
-                        userDao.createAccount(
+                        userDataService.createAccount(
                                 ArgumentMatchers.eq("new@test.com"),
                                 ArgumentMatchers.eq("new_user"),
                                 ArgumentMatchers.eq("Jamie"),
@@ -268,7 +271,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testResendVerificationReturnsEmptyForVerifiedAccount() {
-        Mockito.when(userDao.findAccountByEmail("verified@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("verified@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -305,7 +308,7 @@ public class AccountAuthServiceImplTest {
                         UserRole.USER,
                         null,
                         UserLanguages.SPANISH);
-        Mockito.when(userDao.findAccountByEmail("pending@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("pending@test.com"))
                 .thenReturn(Optional.of(pendingAccount));
         Mockito.when(
                         emailActionRequestDao.create(
@@ -400,7 +403,7 @@ public class AccountAuthServiceImplTest {
                         FIXED_NOW,
                         UserLanguages.SPANISH);
 
-        Mockito.when(userDao.findAccountByEmail("legacy@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("legacy@test.com"))
                 .thenReturn(Optional.of(account));
         Mockito.when(
                         emailActionRequestDao.create(
@@ -435,7 +438,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRequestPasswordResetReturnsEmptyForUnverifiedAccount() {
-        Mockito.when(userDao.findAccountByEmail("pending@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("pending@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -475,7 +478,7 @@ public class AccountAuthServiceImplTest {
 
         Mockito.when(emailActionRequestDao.findByTokenHash(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
-        Mockito.when(userDao.findAccountById(8L))
+        Mockito.when(userDataService.findAccountById(8L))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -542,9 +545,10 @@ public class AccountAuthServiceImplTest {
     }
 
     private AccountAuthServiceImpl accountAuthService(
-            final UserDao userDao, final EmailActionRequestDao emailActionRequestDao) {
+            final UserDataService userDataService,
+            final EmailActionRequestDao emailActionRequestDao) {
         return new AccountAuthServiceImpl(
-                userDao,
+                userDataService,
                 emailActionRequestDao,
                 new MailProperties(
                         MailMode.LOG,
@@ -689,7 +693,7 @@ public class AccountAuthServiceImplTest {
         }
     }
 
-    private static class FakeUserDao implements UserDao {
+    private static class FakeUserDao implements UserDataService {
 
         private final List<UserAccount> accounts = new ArrayList<>();
         private long nextAccountId = 9L;
@@ -773,11 +777,6 @@ public class AccountAuthServiceImplTest {
                 final String lastName,
                 final String phone,
                 final ImageMetadata profileImageMetadata) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void updateProfileImage(final Long id, final ImageMetadata profileImageMetadata) {
             throw new UnsupportedOperationException();
         }
 

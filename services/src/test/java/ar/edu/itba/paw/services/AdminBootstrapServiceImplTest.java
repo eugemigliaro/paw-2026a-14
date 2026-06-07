@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.UserRole;
-import ar.edu.itba.paw.persistence.UserDao;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -21,7 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @ExtendWith(MockitoExtension.class)
 public class AdminBootstrapServiceImplTest {
 
-    @Mock private UserDao userDao;
+    @Mock private UserDataService userDataService;
     @Mock private Clock clock;
 
     private PasswordEncoder passwordEncoder;
@@ -37,11 +37,11 @@ public class AdminBootstrapServiceImplTest {
 
     @Test
     public void bootstrapSkipsWhenConfigurationContainsUnresolvedPlaceholder() {
-        Mockito.when(userDao.findAccountByEmail("${admin.bootstrap.email}"))
+        Mockito.when(userDataService.findAccountByEmail("${admin.bootstrap.email}"))
                 .thenReturn(java.util.Optional.empty());
         service =
                 new AdminBootstrapServiceImpl(
-                        userDao,
+                        userDataService,
                         clock,
                         "${admin.bootstrap.email}",
                         "admin",
@@ -52,12 +52,13 @@ public class AdminBootstrapServiceImplTest {
 
         service.bootstrapFromConfiguration();
 
-        Assertions.assertTrue(userDao.findAccountByEmail("${admin.bootstrap.email}").isEmpty());
+        Assertions.assertTrue(
+                userDataService.findAccountByEmail("${admin.bootstrap.email}").isEmpty());
     }
 
     @Test
     public void bootstrapCreatesAdminWhenConfigurationIsPresent() {
-        Mockito.when(userDao.findAccountByEmail("admin@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("admin@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -75,7 +76,7 @@ public class AdminBootstrapServiceImplTest {
 
         service =
                 new AdminBootstrapServiceImpl(
-                        userDao,
+                        userDataService,
                         clock,
                         "admin@test.com",
                         "adminUser",
@@ -86,7 +87,7 @@ public class AdminBootstrapServiceImplTest {
 
         service.bootstrapFromConfiguration();
 
-        Optional<UserAccount> created = userDao.findAccountByEmail("admin@test.com");
+        Optional<UserAccount> created = userDataService.findAccountByEmail("admin@test.com");
 
         Assertions.assertTrue(created.isPresent());
         Assertions.assertEquals("admin@test.com", created.get().getEmail());

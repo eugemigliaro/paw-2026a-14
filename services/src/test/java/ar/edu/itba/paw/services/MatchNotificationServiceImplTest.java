@@ -6,7 +6,7 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -28,7 +28,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 @ExtendWith(MockitoExtension.class)
 public class MatchNotificationServiceImplTest {
 
-    @Mock private MatchParticipantDao matchParticipantDao;
+    @Mock private MatchParticipantDataService matchParticipantDataService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchNotificationServiceImpl matchNotificationService;
@@ -38,7 +38,7 @@ public class MatchNotificationServiceImplTest {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
-                new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService);
+                new MatchNotificationServiceImpl(matchParticipantDataService, mailDispatchService);
     }
 
     @AfterEach
@@ -50,7 +50,8 @@ public class MatchNotificationServiceImplTest {
     public void testNotifyMatchUpdatedSendsOneMailPerParticipant() {
         final Match match = createMatch(40L, "Updated Match", EventStatus.OPEN);
         final List<User> participants = List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(40L)).thenReturn(participants);
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(40L))
+                .thenReturn(participants);
 
         matchNotificationService.notifyMatchUpdated(match);
 
@@ -65,7 +66,8 @@ public class MatchNotificationServiceImplTest {
     public void testNotifyMatchCancelledSendsOneMailPerParticipant() {
         final Match match = createMatch(41L, "Cancelled Match", EventStatus.CANCELLED);
         final List<User> participants = List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(41L)).thenReturn(participants);
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(41L))
+                .thenReturn(participants);
 
         matchNotificationService.notifyMatchCancelled(match);
 
@@ -79,7 +81,8 @@ public class MatchNotificationServiceImplTest {
     @Test
     public void testNotifyMatchUpdatedDoesNothingWhenNoParticipants() {
         final Match match = createMatch(42L, "Quiet Match", EventStatus.OPEN);
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(42L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(42L))
+                .thenReturn(List.of());
 
         matchNotificationService.notifyMatchUpdated(match);
 
@@ -96,9 +99,9 @@ public class MatchNotificationServiceImplTest {
                 createRecurringMatch(51L, "Weekly Padel", EventStatus.OPEN, 600L, 2);
         final User firstParticipant = UserUtils.getUser(2L);
         final User secondParticipant = UserUtils.getUser(3L);
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(50L))
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(50L))
                 .thenReturn(List.of(firstParticipant));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(51L))
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(51L))
                 .thenReturn(List.of(firstParticipant, secondParticipant));
 
         // 2. Exercise
@@ -121,9 +124,9 @@ public class MatchNotificationServiceImplTest {
                 createRecurringMatch(53L, "Weekly Padel", EventStatus.CANCELLED, 600L, 2);
         final User firstParticipant = UserUtils.getUser(2L);
         final User secondParticipant = UserUtils.getUser(3L);
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(52L))
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(52L))
                 .thenReturn(List.of(firstParticipant));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(53L))
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(53L))
                 .thenReturn(List.of(firstParticipant, secondParticipant));
 
         // 2. Exercise

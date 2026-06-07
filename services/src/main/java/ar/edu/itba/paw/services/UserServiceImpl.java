@@ -3,13 +3,13 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.registration.AccountRegistrationException;
 import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
 import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -30,16 +30,16 @@ public class UserServiceImpl implements UserService {
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9_]{3,50}$");
 
-    private final UserDao userDao;
+    private final UserDataService userDataService;
     private final ImageService imageService;
     private final MessageSource messageSource;
 
     @Autowired
     public UserServiceImpl(
-            final UserDao userDao,
+            final UserDataService userDataService,
             final ImageService imageService,
             final MessageSource messageSource) {
-        this.userDao = Objects.requireNonNull(userDao);
+        this.userDataService = Objects.requireNonNull(userDataService);
         this.imageService = Objects.requireNonNull(imageService);
         this.messageSource = Objects.requireNonNull(messageSource);
     }
@@ -47,27 +47,27 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User createUser(final String email, final String username) {
-        return userDao.createUser(email, username);
+        return userDataService.createUser(email, username);
     }
 
     @Override
     public Optional<User> findByEmail(final String email) {
-        return userDao.findByEmail(email);
+        return userDataService.findByEmail(email);
     }
 
     @Override
     public Optional<User> findById(final Long id) {
-        return userDao.findById(id);
+        return userDataService.findById(id);
     }
 
     @Override
     public List<User> findByIds(final Collection<Long> ids) {
-        return userDao.findByIds(ids);
+        return userDataService.findByIds(ids);
     }
 
     @Override
     public Optional<User> findByUsername(final String username) {
-        return userDao.findByUsername(username);
+        return userDataService.findByUsername(username);
     }
 
     @Override
@@ -92,13 +92,13 @@ public class UserServiceImpl implements UserService {
             profileImageMetadata = user.getProfileImageMetadata();
         }
 
-        final Optional<User> userWithUsername = userDao.findByUsername(normalizedUsername);
+        final Optional<User> userWithUsername = userDataService.findByUsername(normalizedUsername);
         if (userWithUsername.isPresent() && !userWithUsername.get().getId().equals(user.getId())) {
             throw new UsernameTakenException(message("profile.edit.error.usernameTaken", locale));
         }
 
         try {
-            userDao.updateProfile(
+            userDataService.updateProfile(
                     user.getId(),
                     normalizedUsername,
                     normalizedName,
@@ -106,7 +106,8 @@ public class UserServiceImpl implements UserService {
                     normalizedPhone,
                     profileImageMetadata);
         } catch (final DataIntegrityViolationException exception) {
-            if (userDao.findByUsername(normalizedUsername)
+            if (userDataService
+                    .findByUsername(normalizedUsername)
                     .filter(u -> !u.getId().equals(user.getId()))
                     .isPresent()) {
                 throw new UsernameTakenException(
@@ -130,7 +131,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updatePreferredLanguage(final User user, final String preferredLanguage) {
         nonNullUser(user);
-        userDao.updatePreferredLanguage(
+        userDataService.updatePreferredLanguage(
                 user.getId(), UserLanguages.normalizeLanguage(preferredLanguage));
     }
 

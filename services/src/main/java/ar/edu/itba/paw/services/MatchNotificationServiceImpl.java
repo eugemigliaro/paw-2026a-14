@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,21 +14,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class MatchNotificationServiceImpl implements MatchNotificationService {
 
-    private final MatchParticipantDao matchParticipantDao;
+    private final MatchParticipantDataService matchParticipantDataService;
     private final MailDispatchService mailDispatchService;
 
     @Autowired
     public MatchNotificationServiceImpl(
-            final MatchParticipantDao matchParticipantDao,
+            final MatchParticipantDataService matchParticipantDataService,
             final MailDispatchService mailDispatchService) {
-        this.matchParticipantDao = matchParticipantDao;
+        this.matchParticipantDataService = matchParticipantDataService;
         this.mailDispatchService = mailDispatchService;
     }
 
     @Override
     public void notifyMatchUpdated(final Match match) {
         final List<User> participants =
-                matchParticipantDao.findConfirmedParticipants(match.getId());
+                matchParticipantDataService.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
             mailDispatchService.sendMatchUpdated(participant, match);
         }
@@ -37,7 +37,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
     @Override
     public void notifyMatchCancelled(final Match match) {
         final List<User> participants =
-                matchParticipantDao.findConfirmedParticipants(match.getId());
+                matchParticipantDataService.findConfirmedParticipants(match.getId());
         for (final User participant : participants) {
             mailDispatchService.sendMatchCancelled(participant, match);
         }
@@ -166,7 +166,7 @@ public class MatchNotificationServiceImpl implements MatchNotificationService {
                 new LinkedHashMap<>();
         for (final Match match : matches) {
             for (final User participant :
-                    matchParticipantDao.findConfirmedParticipants(match.getId())) {
+                    matchParticipantDataService.findConfirmedParticipants(match.getId())) {
                 final String identity = participantIdentity(participant);
                 participantsByIdentity.compute(
                         identity,

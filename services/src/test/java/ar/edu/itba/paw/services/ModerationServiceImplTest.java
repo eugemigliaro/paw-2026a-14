@@ -11,13 +11,13 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
-import ar.edu.itba.paw.persistence.MatchDao;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
-import ar.edu.itba.paw.persistence.PlayerReviewDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
+import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.time.Clock;
@@ -45,10 +45,10 @@ public class ModerationServiceImplTest {
 
     @Mock private UserBanDao userBanDao;
     @Mock private ModerationReportDao moderationReportDao;
-    @Mock private UserDao userDao;
-    @Mock private MatchDao matchDao;
-    @Mock private MatchParticipantDao matchParticipantDao;
-    @Mock private PlayerReviewDao playerReviewDao;
+    @Mock private UserDataService userDataService;
+    @Mock private MatchDataService matchDataService;
+    @Mock private MatchParticipantDataService matchParticipantDataService;
+    @Mock private PlayerReviewDataService playerReviewDataService;
     @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
@@ -61,25 +61,25 @@ public class ModerationServiceImplTest {
                 new ModerationServiceImpl(
                         userBanDao,
                         moderationReportDao,
-                        userDao,
-                        matchDao,
-                        matchParticipantDao,
-                        playerReviewDao,
+                        userDataService,
+                        matchDataService,
+                        matchParticipantDataService,
+                        playerReviewDataService,
                         mailDispatchService,
                         matchNotificationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
-    private void usePlayerReviewDao(final PlayerReviewDao playerReviewDao) {
+    private void usePlayerReviewDao(final PlayerReviewDataService playerReviewDataService) {
         moderationService =
                 new ModerationServiceImpl(
                         userBanDao,
                         moderationReportDao,
-                        userDao,
-                        matchDao,
-                        matchParticipantDao,
-                        playerReviewDao,
+                        userDataService,
+                        matchDataService,
+                        matchParticipantDataService,
+                        playerReviewDataService,
                         mailDispatchService,
                         matchNotificationService,
                         messageSource(),
@@ -91,10 +91,10 @@ public class ModerationServiceImplTest {
                 new ModerationServiceImpl(
                         userBanDao,
                         moderationReportDao,
-                        userDao,
-                        matchDao,
-                        matchParticipantDao,
-                        playerReviewDao,
+                        userDataService,
+                        matchDataService,
+                        matchParticipantDataService,
+                        playerReviewDataService,
                         mailDispatchService,
                         matchNotificationService,
                         messageSource(),
@@ -132,7 +132,7 @@ public class ModerationServiceImplTest {
         Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
                 .thenReturn(new UserBan(10L, report, expectedBannedUntil));
 
-        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         final ModerationReport resolved =
                 moderationService.resolveReport(
@@ -169,7 +169,7 @@ public class ModerationServiceImplTest {
                 .thenReturn(true);
         Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
                 .thenReturn(new UserBan(10L, report, expectedBannedUntil));
-        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         moderationService.resolveReport(
                 77L,
@@ -202,7 +202,7 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(ReportStatus.RESOLVED)))
                 .thenReturn(true);
 
-        Mockito.when(userDao.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(UserUtils.getUser(88L)));
 
         moderationService.resolveReport(
                 77L,
@@ -442,7 +442,7 @@ public class ModerationServiceImplTest {
 
     @Test
     public void softDeleteMatch_returnsTrueForExistingMatchModerationAction() {
-        Mockito.when(matchDao.softDeleteMatch(10L, UserUtils.getUser(99L), "Reason"))
+        Mockito.when(matchDataService.softDeleteMatch(10L, UserUtils.getUser(99L), "Reason"))
                 .thenReturn(true);
 
         final boolean result =
@@ -458,7 +458,7 @@ public class ModerationServiceImplTest {
 
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         try {
-            Mockito.when(userDao.findById(userId)).thenReturn(Optional.of(user));
+            Mockito.when(userDataService.findById(userId)).thenReturn(Optional.of(user));
 
             final ModerationReport report =
                     new ModerationReport(
@@ -549,7 +549,7 @@ public class ModerationServiceImplTest {
                 FIXED_NOW);
     }
 
-    private static class ModeratedPlayerReviewDao implements PlayerReviewDao {
+    private static class ModeratedPlayerReviewDao implements PlayerReviewDataService {
 
         private final PlayerReview review;
 

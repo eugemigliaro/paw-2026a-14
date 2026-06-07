@@ -2,8 +2,8 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.exceptions.registration.AccountRegistrationException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
@@ -22,14 +22,14 @@ public class UserServiceImplTest {
 
     @InjectMocks private UserServiceImpl userService;
 
-    @Mock private UserDao userDao;
+    @Mock private UserDataService userDataService;
     @Mock private ImageService imageService;
     @Mock private MessageSource messageSource;
 
     @Test
     public void testFindByIdWhenUserExists() {
         final User user = new User(1L, "test", "test", null, null, null, null, null);
-        Mockito.when(userDao.findById(1L)).thenReturn(Optional.of(user));
+        Mockito.when(userDataService.findById(1L)).thenReturn(Optional.of(user));
 
         final Optional<User> result = userService.findById(1L);
 
@@ -39,7 +39,7 @@ public class UserServiceImplTest {
 
     @Test
     public void testFindByIdWhenUserNotExists() {
-        Mockito.when(userDao.findById(Mockito.anyLong())).thenReturn(Optional.empty());
+        Mockito.when(userDataService.findById(Mockito.anyLong())).thenReturn(Optional.empty());
 
         final Optional<User> result = userService.findById(1L);
 
@@ -50,7 +50,7 @@ public class UserServiceImplTest {
     public void testFindByIdsDelegatesToDao() {
         final User first = new User(1L, "first@test.com", "first", null, null, null, null, null);
         final User second = new User(2L, "second@test.com", "second", null, null, null, null, null);
-        Mockito.when(userDao.findByIds(List.of(1L, 2L))).thenReturn(List.of(first, second));
+        Mockito.when(userDataService.findByIds(List.of(1L, 2L))).thenReturn(List.of(first, second));
 
         final List<User> result = userService.findByIds(List.of(1L, 2L));
 
@@ -60,7 +60,8 @@ public class UserServiceImplTest {
     @Test
     public void testCreateUserWhenUserDoesNotExist() {
         final User user = new User(1L, "test", "test", null, null, null, null, null);
-        Mockito.when(userDao.createUser(Mockito.anyString(), Mockito.anyString())).thenReturn(user);
+        Mockito.when(userDataService.createUser(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(user);
 
         final User result = userService.createUser("test", "test");
 
@@ -71,7 +72,7 @@ public class UserServiceImplTest {
     @Test
     public void testFindByUsernameDelegates() {
         final User user = new User(2L, "player@test.com", "player", null, null, null, null, null);
-        Mockito.when(userDao.findByUsername("player")).thenReturn(Optional.of(user));
+        Mockito.when(userDataService.findByUsername("player")).thenReturn(Optional.of(user));
 
         final Optional<User> result = userService.findByUsername("player");
 
@@ -91,7 +92,7 @@ public class UserServiceImplTest {
                         "+1 111 111 1111",
                         new ImageMetadata(14L, "image/png", 4L),
                         null);
-        Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
+        Mockito.when(userDataService.findByUsername("new_user")).thenReturn(Optional.empty());
 
         final User result =
                 userService.updateProfile(
@@ -119,7 +120,8 @@ public class UserServiceImplTest {
                         null);
         final User conflictingUser =
                 new User(3L, "other@test.com", "new_user", "Other", "User", null, null, null);
-        Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.of(conflictingUser));
+        Mockito.when(userDataService.findByUsername("new_user"))
+                .thenReturn(Optional.of(conflictingUser));
         Mockito.when(
                         messageSource.getMessage(
                                 Mockito.anyString(),

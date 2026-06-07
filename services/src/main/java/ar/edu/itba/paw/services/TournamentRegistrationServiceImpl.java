@@ -9,10 +9,10 @@ import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -30,19 +30,19 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
-    private final TournamentDao tournamentDao;
+    private final TournamentDataService tournamentDataService;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
-    private final TournamentTeamDao tournamentTeamDao;
+    private final TournamentTeamDataService tournamentTeamDataService;
     private final Clock clock;
 
     public TournamentRegistrationServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
-            final TournamentTeamDao tournamentTeamDao,
+            final TournamentTeamDataService tournamentTeamDataService,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
-        this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentTeamDataService = tournamentTeamDataService;
         this.clock = clock;
     }
 
@@ -58,7 +58,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                     "Solo signup is disabled for this tournament");
         }
 
-        if (tournamentTeamDao.findUserTeam(tournamentId, user.getId()).isPresent()) {
+        if (tournamentTeamDataService.findUserTeam(tournamentId, user.getId()).isPresent()) {
             throw new TournamentRegistrationAlreadyOnTeamException(
                     "User is already on a team in this tournament");
         }
@@ -135,7 +135,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         if (user == null || user.getId() == null) {
             return Optional.empty();
         }
-        return tournamentTeamDao.findUserTeam(tournamentId, user.getId());
+        return tournamentTeamDataService.findUserTeam(tournamentId, user.getId());
     }
 
     @Override
@@ -150,7 +150,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     @Override
     public List<TournamentTeamMember> listTeamMembers(final long tournamentId) {
         findTournamentOrThrow(tournamentId);
-        return tournamentTeamDao.findMembersByTournament(tournamentId);
+        return tournamentTeamDataService.findMembersByTournament(tournamentId);
     }
 
     @Override
@@ -165,7 +165,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final int activeSoloEntries =
                 Math.toIntExact(tournamentSoloEntryDao.countActiveByTournament(tournamentId));
         final int existingTeamCount =
-                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+                Math.toIntExact(tournamentTeamDataService.countByTournament(tournamentId));
         final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
         final int soloTeamCount =
                 Math.min(activeSoloEntries / tournament.getTeamSize(), availableTeamSlots);
@@ -184,7 +184,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final List<TournamentSoloEntry> activeEntries =
                 tournamentSoloEntryDao.findActiveByTournament(tournamentId);
         final int existingTeamCount =
-                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+                Math.toIntExact(tournamentTeamDataService.countByTournament(tournamentId));
         final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
         final int soloTeamCount =
                 Math.min(activeEntries.size() / tournament.getTeamSize(), availableTeamSlots);
@@ -198,14 +198,14 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
         for (int teamIndex = 0; teamIndex < soloTeamCount; teamIndex++) {
             final TournamentTeam team =
-                    tournamentTeamDao.create(
+                    tournamentTeamDataService.create(
                             tournament, null, TournamentTeamOrigin.SOLO_POOL, null);
 
             final int firstEntryIndex = teamIndex * tournament.getTeamSize();
             for (int playerOffset = 0; playerOffset < tournament.getTeamSize(); playerOffset++) {
                 final TournamentSoloEntry soloEntry =
                         activeEntries.get(firstEntryIndex + playerOffset);
-                tournamentTeamDao.addMember(team, soloEntry.getUser(), false);
+                tournamentTeamDataService.addMember(team, soloEntry.getUser(), false);
                 soloEntry.setStatus(TournamentSoloEntryStatus.ASSIGNED);
                 soloEntry.setAssignedTeam(team);
                 tournamentSoloEntryDao.update(soloEntry);
@@ -219,11 +219,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         tournament.setStatus(TournamentStatus.BRACKET_SETUP);
         tournament.setRegistrationClosedAt(now);
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        return tournamentDataService.update(tournament);
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .orElseThrow(
