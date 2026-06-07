@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.exception;
 
-import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureException;
 import ar.edu.itba.paw.webapp.controller.VerificationController;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.util.Locale;

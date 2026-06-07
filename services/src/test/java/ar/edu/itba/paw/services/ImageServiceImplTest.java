@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
+import ar.edu.itba.paw.models.exceptions.imageUpload.*;
 import ar.edu.itba.paw.persistence.ImageDao;
-import ar.edu.itba.paw.services.exceptions.imageUpload.*;
 import java.io.ByteArrayInputStream;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;

@@ -2,11 +2,11 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
-import ar.edu.itba.paw.services.exceptions.match.MatchException;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import java.time.Clock;

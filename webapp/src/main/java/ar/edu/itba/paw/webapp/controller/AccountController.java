@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.imageUpload.ImageUploadException;
 import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.imageUpload.ImageUploadException;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;

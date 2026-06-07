@@ -2,8 +2,8 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.registration.AccountRegistrationException;
 import ar.edu.itba.paw.persistence.UserDao;
-import ar.edu.itba.paw.services.exceptions.registration.AccountRegistrationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;

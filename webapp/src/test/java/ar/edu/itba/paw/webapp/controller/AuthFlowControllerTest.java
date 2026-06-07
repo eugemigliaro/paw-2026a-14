@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureExpiredException;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
@@ -14,7 +15,6 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureExpiredException;
 import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;

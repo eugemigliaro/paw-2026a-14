@@ -9,13 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchClosedException;
+import ar.edu.itba.paw.models.exceptions.match.MatchForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.match.MatchStartedException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.match.MatchClosedException;
-import ar.edu.itba.paw.services.exceptions.match.MatchForbiddenActionException;
-import ar.edu.itba.paw.services.exceptions.match.MatchStartedException;
 import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;

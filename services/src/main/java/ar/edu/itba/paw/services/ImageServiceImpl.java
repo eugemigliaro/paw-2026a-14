@@ -1,11 +1,11 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ImageMetadata;
+import ar.edu.itba.paw.models.exceptions.imageUpload.EmptyImageFileException;
+import ar.edu.itba.paw.models.exceptions.imageUpload.ImageTooLargeException;
+import ar.edu.itba.paw.models.exceptions.imageUpload.ImageUploadException;
+import ar.edu.itba.paw.models.exceptions.imageUpload.UnsupportedImageFormatException;
 import ar.edu.itba.paw.persistence.ImageDao;
-import ar.edu.itba.paw.services.exceptions.imageUpload.EmptyImageFileException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.ImageTooLargeException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.ImageUploadException;
-import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

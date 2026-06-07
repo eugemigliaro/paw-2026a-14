@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.exception;
 
-import ar.edu.itba.paw.services.exceptions.ForbiddenException;
-import ar.edu.itba.paw.services.exceptions.NotFoundException;
+import ar.edu.itba.paw.models.exceptions.ForbiddenException;
+import ar.edu.itba.paw.models.exceptions.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
