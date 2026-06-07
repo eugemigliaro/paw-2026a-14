@@ -120,8 +120,7 @@ public class UserModerationReportController {
         final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final ModerationReport report =
                 moderationService
-                        .findReportById(reportId) // TODO: move to service/security.
-                        .filter(found -> found.getReporter().getId().equals(user.getId()))
+                        .findReportByIdForReporter(reportId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
@@ -134,9 +133,7 @@ public class UserModerationReportController {
         mav.addObject(
                 "pageDescription",
                 messageSource.getMessage("reports.mine.detail.description", null, locale));
-        mav.addObject(
-                "appealAllowed",
-                report.getStatus() == ReportStatus.RESOLVED && report.getAppealCount() < 1);
+        mav.addObject("appealAllowed", moderationService.canAppealReport(report, user));
         mav.addObject("report", toViewModel(report, locale));
         mav.addObject("action", model.asMap().get("action"));
         return mav;

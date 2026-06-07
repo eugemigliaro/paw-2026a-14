@@ -202,6 +202,77 @@ public class PlayerReviewServiceImplTest {
     }
 
     @Test
+    public void testDeleteReviewRejectsDifferentReviewer() {
+        final PlayerReview persisted =
+                review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great teammate", null);
+        playerReviewService = new PlayerReviewServiceImpl(new StatefulPlayerReviewDao(persisted));
+
+        final PlayerReviewException exception =
+                Assertions.assertThrows(
+                        PlayerReviewException.class,
+                        () ->
+                                playerReviewService.deleteReview(
+                                        UserUtils.getUser(4L), UserUtils.getUser(3L)));
+
+        Assertions.assertEquals(PlayerReviewException.NOT_FOUND, exception.getCode());
+        Assertions.assertTrue(
+                playerReviewService
+                        .findReviewByPair(UserUtils.getUser(2L), UserUtils.getUser(3L))
+                        .isPresent());
+    }
+
+    @Test
+    public void testGetProfileReviewStateAllowsEligibleReviewer() {
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
+
+        final PlayerReviewProfileState state =
+                playerReviewService.getProfileReviewState(
+                        UserUtils.getUser(2L), UserUtils.getUser(3L));
+
+        Assertions.assertTrue(state.canSubmit());
+        Assertions.assertEquals(
+                PlayerReviewProfileState.LockedReason.NONE, state.getLockedReason());
+    }
+
+    @Test
+    public void testGetProfileReviewStateRejectsSelfReview() {
+        final PlayerReviewProfileState state =
+                playerReviewService.getProfileReviewState(
+                        UserUtils.getUser(2L), UserUtils.getUser(2L));
+
+        Assertions.assertFalse(state.canSubmit());
+        Assertions.assertEquals(
+                PlayerReviewProfileState.LockedReason.SELF, state.getLockedReason());
+    }
+
+    @Test
+    public void testGetProfileReviewStateRejectsIneligibleReviewer() {
+        Mockito.when(playerReviewDao.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
+
+        final PlayerReviewProfileState state =
+                playerReviewService.getProfileReviewState(
+                        UserUtils.getUser(2L), UserUtils.getUser(3L));
+
+        Assertions.assertFalse(state.canSubmit());
+        Assertions.assertEquals(
+                PlayerReviewProfileState.LockedReason.NOT_ELIGIBLE, state.getLockedReason());
+        Assertions.assertTrue(state.showLockedMessage());
+    }
+
+    @Test
+    public void testGetProfileReviewStateRejectsAnonymousReviewer() {
+        final PlayerReviewProfileState state =
+                playerReviewService.getProfileReviewState(null, UserUtils.getUser(3L));
+
+        Assertions.assertFalse(state.canSubmit());
+        Assertions.assertEquals(
+                PlayerReviewProfileState.LockedReason.ANONYMOUS, state.getLockedReason());
+        Assertions.assertTrue(state.showLockedMessage());
+    }
+
+    @Test
     public void testFindMethodsDelegateToDaoResults() {
         final PlayerReview review = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great", null);
         final PlayerReviewSummary summary = new PlayerReviewSummary(3L, 1, 0, 1);

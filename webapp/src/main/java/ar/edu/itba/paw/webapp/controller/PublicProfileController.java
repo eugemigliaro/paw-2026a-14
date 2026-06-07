@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlatformTimeZoneService;
 import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
+import ar.edu.itba.paw.services.PlayerReviewProfileState;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
@@ -138,10 +139,7 @@ public class PublicProfileController {
                 "profilePhoneLabel",
                 messageSource.getMessage("profile.public.phone", null, "Phone", resolvedLocale));
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
-        final boolean reportUserCanSubmit =
-                currentUser != null
-                        && !currentUser.getId().equals(user.getId()); // TODO: remove business logic
-        mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
+        mav.addObject("reportUserCanSubmit", moderationService.canReportUser(currentUser, user));
         final Optional<UserBan> activeBan = moderationService.findActiveBan(user);
         mav.addObject("profileBanned", activeBan.isPresent());
         mav.addObject(
@@ -238,7 +236,6 @@ public class PublicProfileController {
             final PlayerReviewFilter reviewFilter,
             final int reviewPage,
             final Locale locale) {
-        // TODO: remove business logic from controller
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(user);
         final PaginatedResult<PlayerReview> reviewResult =
                 playerReviewService.findReviewsForUser(
@@ -248,14 +245,8 @@ public class PublicProfileController {
                         .map(review -> toReviewViewModel(review, locale))
                         .toList();
         final User currentUser = SecurityControllerUtils.currentUserOrNull();
-        final Optional<PlayerReview> viewerReview =
-                currentUser == null
-                        ? Optional.empty()
-                        : playerReviewService.findReviewByPair(currentUser, user);
-        final boolean reviewCanSubmit =
-                currentUser != null
-                        && !currentUser.getId().equals(user.getId())
-                        && playerReviewService.canReview(currentUser, user);
+        final PlayerReviewProfileState reviewState =
+                playerReviewService.getProfileReviewState(currentUser, user);
         final String profilePath = "/users/" + user.getUsername();
 
         mav.addObject("reviewSummary", summary);
@@ -290,9 +281,9 @@ public class PublicProfileController {
                 reviewResult.hasNext()
                         ? buildReviewPageUrl(user, reviewFilter, reviewResult.getPage() + 1)
                         : null);
-        mav.addObject("reviewCanSubmit", reviewCanSubmit);
-        mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
-        mav.addObject("viewerReview", viewerReview.orElse(null));
+        mav.addObject("reviewCanSubmit", reviewState.canSubmit());
+        mav.addObject("reviewFormVisible", reviewState.canSubmit() && "open".equals(reviewForm));
+        mav.addObject("viewerReview", reviewState.getViewerReview().orElse(null));
         mav.addObject("reviewActionPath", profilePath + "/reviews");
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
         mav.addObject(
@@ -301,7 +292,7 @@ public class PublicProfileController {
         mav.addObject(
                 "reviewSectionPath",
                 buildReviewPageUrl(user, reviewFilter, reviewResult.getPage()));
-        if (reviewCanSubmit) {
+        if (reviewState.canSubmit()) {
             mav.addObject(
                     "reviewCommentPromptLabel",
                     messageSource.getMessage(
@@ -309,17 +300,22 @@ public class PublicProfileController {
                             new Object[] {user.getUsername()},
                             locale));
         }
-        final boolean isSelf = currentUser != null && currentUser.getId().equals(user.getId());
-        if (!reviewCanSubmit && !isSelf) {
-            final String lockedKey =
-                    currentUser == null
-                            ? "profile.reviews.locked.anonymous"
-                            : "profile.reviews.locked.authenticated";
+        if (reviewState.showLockedMessage()) {
+            final String lockedKey = reviewLockedMessageKey(reviewState.getLockedReason());
             final Object[] lockedArgs =
-                    currentUser == null ? null : new Object[] {user.getUsername()};
+                    reviewState.getLockedReason() == PlayerReviewProfileState.LockedReason.ANONYMOUS
+                            ? null
+                            : new Object[] {user.getUsername()};
             mav.addObject(
                     "reviewLockedMessage", messageSource.getMessage(lockedKey, lockedArgs, locale));
         }
+    }
+
+    private static String reviewLockedMessageKey(
+            final PlayerReviewProfileState.LockedReason lockedReason) {
+        return lockedReason == PlayerReviewProfileState.LockedReason.ANONYMOUS
+                ? "profile.reviews.locked.anonymous"
+                : "profile.reviews.locked.authenticated";
     }
 
     private List<FilterOptionViewModel> reviewFilterOptions(

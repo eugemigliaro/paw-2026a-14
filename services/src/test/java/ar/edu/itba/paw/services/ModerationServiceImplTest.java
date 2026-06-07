@@ -366,6 +366,78 @@ public class ModerationServiceImplTest {
     }
 
     @Test
+    public void canReportUser_returnsTrueForDifferentUsers() {
+        final boolean result =
+                moderationService.canReportUser(UserUtils.getUser(50L), UserUtils.getUser(88L));
+
+        Assertions.assertTrue(result);
+    }
+
+    @Test
+    public void canReportUser_returnsFalseForSelfReport() {
+        final boolean result =
+                moderationService.canReportUser(UserUtils.getUser(50L), UserUtils.getUser(50L));
+
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    public void canReportUser_returnsFalseForAnonymousReporter() {
+        final boolean result = moderationService.canReportUser(null, UserUtils.getUser(88L));
+
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    public void findReportByIdForReporter_returnsOwnedReport() {
+        final ModerationReport report = sampleUserReport();
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+
+        final Optional<ModerationReport> result =
+                moderationService.findReportByIdForReporter(77L, UserUtils.getUser(50L));
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(report, result.get());
+    }
+
+    @Test
+    public void findReportByIdForReporter_hidesOtherUsersReport() {
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(sampleUserReport()));
+
+        final Optional<ModerationReport> result =
+                moderationService.findReportByIdForReporter(77L, UserUtils.getUser(51L));
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void canAppealReport_returnsTrueForOwnedResolvedReportWithoutAppeal() {
+        final boolean result =
+                moderationService.canAppealReport(
+                        sampleResolvedUserReport((short) 0), UserUtils.getUser(50L));
+
+        Assertions.assertTrue(result);
+    }
+
+    @Test
+    public void canAppealReport_returnsFalseForOtherUsersReport() {
+        final boolean result =
+                moderationService.canAppealReport(
+                        sampleResolvedUserReport((short) 0), UserUtils.getUser(51L));
+
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    public void canAppealReport_returnsFalseWhenAlreadyAppealed() {
+        final boolean result =
+                moderationService.canAppealReport(
+                        sampleResolvedUserReport((short) 1), UserUtils.getUser(50L));
+
+        Assertions.assertFalse(result);
+    }
+
+    @Test
     public void markReportUnderReview_returnsUpdatedReport() {
         final ModerationReport report = sampleUserReport();
         Mockito.when(
@@ -601,6 +673,29 @@ public class ModerationServiceImplTest {
                 null,
                 (short) 0,
                 null,
+                null,
+                null,
+                null,
+                FIXED_NOW,
+                FIXED_NOW);
+    }
+
+    private static ModerationReport sampleResolvedUserReport(final short appealCount) {
+        return new ModerationReport(
+                77L,
+                UserUtils.getUser(50L),
+                ReportTargetType.USER,
+                88L,
+                ReportReason.HARASSMENT,
+                "details",
+                ReportStatus.RESOLVED,
+                ReportResolution.USER_BANNED,
+                "reason",
+                UserUtils.getUser(99L),
+                FIXED_NOW,
+                appealCount > 0 ? "appeal" : null,
+                appealCount,
+                appealCount > 0 ? FIXED_NOW : null,
                 null,
                 null,
                 null,

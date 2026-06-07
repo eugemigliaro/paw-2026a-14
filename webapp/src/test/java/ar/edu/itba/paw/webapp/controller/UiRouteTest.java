@@ -43,6 +43,7 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.MatchUpdateFailureReason;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
+import ar.edu.itba.paw.services.PlayerReviewProfileState;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.TournamentService;
@@ -1552,6 +1553,30 @@ class UiRouteTest {
                                 && reviewed != null
                                 && reviewer.getId().equals(9L)
                                 && reviewed.getId().equals(3L);
+                    }
+
+                    @Override
+                    public PlayerReviewProfileState getProfileReviewState(
+                            final User reviewer, final User reviewed) {
+                        if (reviewer == null) {
+                            return PlayerReviewProfileState.anonymous();
+                        }
+                        final Optional<PlayerReview> existingReview =
+                                findReviewByPair(reviewer, reviewed);
+                        if (reviewer.equals(reviewed)) {
+                            return new PlayerReviewProfileState(
+                                    existingReview,
+                                    false,
+                                    PlayerReviewProfileState.LockedReason.SELF);
+                        }
+                        if (!canReview(reviewer, reviewed)) {
+                            return new PlayerReviewProfileState(
+                                    existingReview,
+                                    false,
+                                    PlayerReviewProfileState.LockedReason.NOT_ELIGIBLE);
+                        }
+                        return new PlayerReviewProfileState(
+                                existingReview, true, PlayerReviewProfileState.LockedReason.NONE);
                     }
 
                     @Override

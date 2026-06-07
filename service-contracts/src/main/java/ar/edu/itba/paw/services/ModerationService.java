@@ -40,6 +40,12 @@ public interface ModerationService {
 
     Optional<ModerationReport> findReportById(Long reportId);
 
+    Optional<ModerationReport> findReportByIdForReporter(Long reportId, User reporter);
+
+    boolean canReportUser(User reporter, User targetUser);
+
+    boolean canAppealReport(ModerationReport report, User reporter);
+
     ModerationReport markReportUnderReview(Long reportId, User adminUser);
 
     ModerationReport resolveReport(

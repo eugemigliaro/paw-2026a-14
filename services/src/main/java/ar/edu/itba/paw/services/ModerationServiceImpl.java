@@ -198,6 +198,36 @@ public class ModerationServiceImpl implements ModerationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<ModerationReport> findReportByIdForReporter(
+            final Long reportId, final User reporter) {
+        nonNullUser(reporter);
+        return moderationReportDao
+                .findById(reportId)
+                .filter(report -> isReporter(report, reporter));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canReportUser(final User reporter, final User targetUser) {
+        return reporter != null
+                && targetUser != null
+                && reporter.getId() != null
+                && targetUser.getId() != null
+                && !reporter.getId().equals(targetUser.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean canAppealReport(final ModerationReport report, final User reporter) {
+        return report != null
+                && reporter != null
+                && isReporter(report, reporter)
+                && report.getStatus() == ReportStatus.RESOLVED
+                && report.getAppealCount() < 1;
+    }
+
+    @Override
     @Transactional
     public ModerationReport markReportUnderReview(final Long reportId, final User adminUser) {
         nonNullUser(adminUser);
@@ -515,6 +545,13 @@ public class ModerationServiceImpl implements ModerationService {
         if (user == null) {
             throw new ModerationException("invalid_report", "Reporter user is required.");
         }
+    }
+
+    private static boolean isReporter(final ModerationReport report, final User reporter) {
+        return report.getReporter() != null
+                && report.getReporter().getId() != null
+                && reporter.getId() != null
+                && report.getReporter().getId().equals(reporter.getId());
     }
 
     private void applyContentDelete(

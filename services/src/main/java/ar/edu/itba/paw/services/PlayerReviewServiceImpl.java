@@ -96,6 +96,26 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
     }
 
     @Override
+    public PlayerReviewProfileState getProfileReviewState(
+            final User reviewer, final User reviewed) {
+        if (reviewer == null) {
+            return PlayerReviewProfileState.anonymous();
+        }
+        nonNullUser(reviewed);
+        final Optional<PlayerReview> viewerReview = findReviewByPair(reviewer, reviewed);
+        if (reviewer.equals(reviewed)) {
+            return new PlayerReviewProfileState(
+                    viewerReview, false, PlayerReviewProfileState.LockedReason.SELF);
+        }
+        if (!playerReviewDao.canReview(reviewer, reviewed)) {
+            return new PlayerReviewProfileState(
+                    viewerReview, false, PlayerReviewProfileState.LockedReason.NOT_ELIGIBLE);
+        }
+        return new PlayerReviewProfileState(
+                viewerReview, true, PlayerReviewProfileState.LockedReason.NONE);
+    }
+
+    @Override
     public boolean canReview(final User reviewer, final User reviewed) {
         return reviewer != null
                 && reviewed != null

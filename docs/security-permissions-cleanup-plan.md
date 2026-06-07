@@ -30,7 +30,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 5: Tournament detail permissions.
 - [x] Module 6: Tournament bracket permissions.
 - [x] Module 7: Centralize admin/mod role checks.
-- [ ] Module 8: Public profile, reviews, and report affordances.
+- [x] Module 8: Public profile, reviews, and report affordances.
 - [ ] Module 9: Host controllers and mutating paths.
 - [ ] Module 10: `SecurityConfig` route audit.
 - [ ] Module 11: JSP and view model sweep.
@@ -594,19 +594,33 @@ Target shape:
 
 Tests to add or update:
 
-- [ ] User cannot review self.
-- [ ] User can review only eligible players.
-- [ ] User cannot delete someone else's review.
-- [ ] Authorized delete still works.
-- [ ] User cannot report self.
-- [ ] Profile report affordance is hidden for anonymous and self-viewer cases.
+- [x] User cannot review self.
+- [x] User can review only eligible players.
+- [x] User cannot delete someone else's review.
+- [x] Authorized delete still works.
+- [x] User cannot report self.
+- [x] Profile report affordance is hidden for anonymous and self-viewer cases.
 
 Acceptance criteria:
 
-- [ ] Review permission decisions live in service code.
-- [ ] Report affordance decisions live in service code.
-- [ ] Controller only translates service outcomes and chooses localized
+- [x] Review permission decisions live in service code.
+- [x] Report affordance decisions live in service code.
+- [x] Controller only translates service outcomes and chooses localized
   presentation strings.
+
+Implemented in Module 8:
+
+- Added `PlayerReviewProfileState` so `PlayerReviewService` owns profile review
+  eligibility, viewer review lookup, and locked review state.
+- Added `ModerationService` helpers for user-report affordance, reporter-owned
+  report detail lookup, and report appeal eligibility.
+- Updated public profile, personal report detail, and ban appeal controllers to
+  consume service-owned read state and only map outcomes to model attributes and
+  localized message keys.
+- Added service and controller coverage for self-review denial, eligible review
+  state, non-owned review deletion denial, user self-report denial, anonymous
+  and self-viewer report affordance hiding, reporter-owned report reads, and
+  appeal eligibility.
 
 ## Module 9: Host Controllers And Mutating Paths
 

@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlayerReviewProfileState;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
@@ -57,6 +58,36 @@ class PublicProfileControllerTest {
 
         Mockito.when(userSportRatingService.findRatingsForUser(Mockito.any()))
                 .thenReturn(java.util.List.of());
+        Mockito.when(
+                        playerReviewService.getProfileReviewState(
+                                Mockito.nullable(User.class), Mockito.any(User.class)))
+                .thenAnswer(
+                        invocation -> {
+                            final User reviewer = invocation.getArgument(0);
+                            final User reviewed = invocation.getArgument(1);
+                            if (reviewer == null) {
+                                return PlayerReviewProfileState.anonymous();
+                            }
+                            if (reviewer.equals(reviewed)) {
+                                return new PlayerReviewProfileState(
+                                        Optional.empty(),
+                                        false,
+                                        PlayerReviewProfileState.LockedReason.SELF);
+                            }
+                            return new PlayerReviewProfileState(
+                                    Optional.empty(),
+                                    true,
+                                    PlayerReviewProfileState.LockedReason.NONE);
+                        });
+        Mockito.when(
+                        moderationService.canReportUser(
+                                Mockito.nullable(User.class), Mockito.any(User.class)))
+                .thenAnswer(
+                        invocation -> {
+                            final User reporter = invocation.getArgument(0);
+                            final User target = invocation.getArgument(1);
+                            return reporter != null && !reporter.equals(target);
+                        });
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -131,6 +162,48 @@ class PublicProfileControllerTest {
     }
 
     @Test
+    void getProfileHidesReportAffordanceForAnonymousViewer() throws Exception {
+        final User targetUser = UserUtils.getUser(42L);
+        stubProfile(targetUser);
+
+        mockMvc.perform(get("/users/target"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("reportUserCanSubmit", false));
+    }
+
+    @Test
+    void getProfileHidesReportAffordanceForSelfViewer() throws Exception {
+        AuthenticationUtils.authenticateUser(42L);
+        final User targetUser = UserUtils.getUser(42L);
+        stubProfile(targetUser);
+
+        mockMvc.perform(get("/users/target"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("reportUserCanSubmit", false));
+    }
+
+    @Test
+    void getProfileUsesReviewStateForLockedMessage() throws Exception {
+        final User targetUser = UserUtils.getUser(42L);
+        stubProfile(targetUser);
+        Mockito.when(
+                        playerReviewService.getProfileReviewState(
+                                Mockito.isNull(), Mockito.eq(targetUser)))
+                .thenReturn(PlayerReviewProfileState.anonymous());
+        Mockito.when(
+                        messageSource.getMessage(
+                                Mockito.eq("profile.reviews.locked.anonymous"),
+                                Mockito.isNull(),
+                                Mockito.any()))
+                .thenReturn("Log in to review");
+
+        mockMvc.perform(get("/users/target"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("reviewCanSubmit", false))
+                .andExpect(model().attribute("reviewLockedMessage", "Log in to review"));
+    }
+
+    @Test
     void postReviewRedirectsWithSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(1L);
         final User user = UserUtils.getUser(42L);
@@ -171,6 +244,17 @@ class PublicProfileControllerTest {
         mockMvc.perform(post("/users/target/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/target?reviewError=not_found#reviews"));
+    }
+
+    private void stubProfile(final User targetUser) {
+        Mockito.when(userService.findByUsername("target")).thenReturn(Optional.of(targetUser));
+        Mockito.when(playerReviewService.findSummaryForUser(targetUser))
+                .thenReturn(new PlayerReviewSummary(targetUser.getId(), 0, 0, 0));
+        Mockito.when(
+                        playerReviewService.findReviewsForUser(
+                                targetUser, PlayerReviewFilter.BOTH, 1, 10))
+                .thenReturn(new PaginatedResult<>(List.of(), 0, 1, 10));
+        Mockito.when(moderationService.findActiveBan(targetUser)).thenReturn(Optional.empty());
     }
 
     private static DefaultFormattingConversionService conversionService() {

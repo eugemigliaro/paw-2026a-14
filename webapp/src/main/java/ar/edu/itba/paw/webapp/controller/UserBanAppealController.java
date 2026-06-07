@@ -53,9 +53,9 @@ public class UserBanAppealController {
         mav.addObject(
                 "banDescription",
                 messageSource.getMessage(
-                        report.getAppealCount() > 0
-                                ? "account.ban.description"
-                                : "account.ban.description.appeal.available",
+                        moderationService.canAppealReport(report, user)
+                                ? "account.ban.description.appeal.available"
+                                : "account.ban.description",
                         null,
                         locale));
         mav.addObject(
@@ -69,7 +69,7 @@ public class UserBanAppealController {
                 messageSource.getMessage(
                         "moderation.reason." + report.getReason().getDbValue(), null, locale));
         mav.addObject("appealReason", report.getAppealReason());
-        mav.addObject("appealAllowed", report.getAppealCount() < 1);
+        mav.addObject("appealAllowed", moderationService.canAppealReport(report, user));
         mav.addObject("action", model.asMap().get("action"));
         return mav;
     }
