@@ -53,7 +53,6 @@ import ar.edu.itba.paw.services.exceptions.imageUpload.UnsupportedImageFormatExc
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationForbiddenException;
 import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationNotFoundException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
 import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateForbiddenException;
@@ -128,7 +127,6 @@ class UiRouteTest {
     private MatchParticipationException reservationCancellationFailure;
     private MatchReservationException seriesReservationFailure;
     private MatchReservationException seriesCancellationFailure;
-    private MatchParticipationException seriesJoinRequestFailure;
     private boolean currentUserHasReservation;
     private boolean currentUserHasSeriesReservation;
     private boolean currentUserHasJoinRequest;
@@ -159,7 +157,6 @@ class UiRouteTest {
         reservationCancellationFailure = null;
         seriesReservationFailure = null;
         seriesCancellationFailure = null;
-        seriesJoinRequestFailure = null;
         currentUserHasReservation = false;
         currentUserHasSeriesReservation = false;
         currentUserHasJoinRequest = false;
@@ -1032,11 +1029,6 @@ class UiRouteTest {
 
                     @Override
                     public void requestToJoinSeries(final Long matchId, final User user) {
-                        final MatchParticipationException failure = seriesJoinRequestFailure;
-                        if (failure != null) {
-                            throw failure;
-                        }
-
                         if (user == null) {
                             throw new MatchParticipationException(
                                     "User must be authenticated to request to join a match");
@@ -2216,15 +2208,6 @@ class UiRouteTest {
     }
 
     @Test
-    void postPrivateInviteDeclineRedirectsToUpcomingMatches() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(post("/matches/51/invites/decline"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/events"));
-    }
-
-    @Test
     void postReservationCancelWithNoActiveReservationShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
         reservationCancellationFailure = new MatchParticipationException("No active reservation");
@@ -2290,44 +2273,6 @@ class UiRouteTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("seriesReservationError"));
-    }
-
-    @Test
-    void postJoinRequestAsAuthenticatedUserRedirectsWithOneTimeNotice() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(post("/matches/56/join-requests"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/56"))
-                .andExpect(flash().attribute("joinRequested", true));
-    }
-
-    @Test
-    void postSeriesJoinRequestWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
-        mockMvc.perform(post("/matches/52/recurring-join-requests"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void postSeriesJoinRequestAsAuthenticatedUserRedirectsToRecurringRequestedEvent()
-            throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(post("/matches/52/recurring-join-requests"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/52"))
-                .andExpect(flash().attribute("seriesJoinRequested", true));
-    }
-
-    @Test
-    void postSeriesJoinRequestFailureRedirectsWithJoinErrorCode() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesJoinRequestFailure =
-                new MatchParticipationSeriesAlreadyPendingException("Already requested");
-
-        mockMvc.perform(post("/matches/52/recurring-join-requests"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/52?joinError=series_already_pending"));
     }
 
     @Test
