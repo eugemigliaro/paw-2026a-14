@@ -799,9 +799,8 @@ final class EventPageSupport {
     private String reservationErrorMessage(
             final String code,
             final Locale
-                    locale) { // TODO: check. could be rewritten to be "reservation.error." + code
-        // in the message key, and then have a default message for unknown
-        // codes
+                    locale) { // TODO: make it so exceptions that messages are reservation.error. +
+        // code
         switch (code) {
             case "closed":
                 return messageSource.getMessage("reservation.error.closed", null, locale);
@@ -855,7 +854,9 @@ final class EventPageSupport {
     }
 
     private String joinErrorMessage(
-            final String code, final Locale locale) { // TODO: same obs as reservationErrorMessage
+            final String code,
+            final Locale
+                    locale) { // TODO: make it so exceptions that messages are join.error. + code
         switch (code) {
             case "closed":
                 return messageSource.getMessage("join.error.closed", null, locale);
@@ -892,7 +893,9 @@ final class EventPageSupport {
     }
 
     private String inviteErrorMessage(
-            final String code, final Locale locale) { // TODO: same obs as reservationErrorMessage
+            final String code,
+            final Locale
+                    locale) { // TODO: make it so exceptions that messages are invite.error. + code
         if (code == null) {
             return null;
         }
@@ -913,7 +916,8 @@ final class EventPageSupport {
 
     private String hostActionNotice(
             final String hostAction,
-            final Locale locale) { // TODO: same obs as reservationErrorMessage
+            final Locale locale) { // TODO: make it so exceptions that messages are host.action. +
+        // hostAction
         if ("updated".equalsIgnoreCase(hostAction)) {
             return messageSource.getMessage("host.action.updated", null, locale);
         }

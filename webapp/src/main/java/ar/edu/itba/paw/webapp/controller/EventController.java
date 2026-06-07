@@ -6,21 +6,8 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotCancellableException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotParticipantException;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationStartedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationAlreadyJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationClosedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationFullException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationNotRecurringException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesAlreadyJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesFullException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesNotJoinedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationSeriesStartedException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationStartedException;
+import ar.edu.itba.paw.services.exceptions.match.MatchException;
+import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import java.time.Clock;
@@ -45,6 +32,7 @@ public class EventController {
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
+    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final EventPageSupport eventPageSupport;
 
     @Autowired
@@ -54,6 +42,7 @@ public class EventController {
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
             final MessageSource messageSource,
+            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final Clock clock,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -62,6 +51,7 @@ public class EventController {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
+        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.eventPageSupport =
                 new EventPageSupport(
                         matchService,
@@ -124,8 +114,8 @@ public class EventController {
             matchReservationService.reserveSpot(matchId, user);
             redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchReservationException exception) {
-            return reservationErrorDetails(user, matchId, reservationErrorCode(exception), locale);
+        } catch (final MatchException e) {
+            return reservationErrorDetails(user, matchId, errorCode(e), locale);
         }
     }
 
@@ -146,8 +136,8 @@ public class EventController {
             }
             redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationException exception) {
-            return reservationErrorDetails(user, matchId, cancellationErrorCode(exception), locale);
+        } catch (final MatchException e) {
+            return reservationErrorDetails(user, matchId, errorCode(e), locale);
         }
     }
 
@@ -165,9 +155,8 @@ public class EventController {
             matchReservationService.reserveSeries(matchId, user);
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchReservationException exception) {
-            return seriesReservationErrorDetails(
-                    user, matchId, reservationErrorCode(exception), locale);
+        } catch (final MatchException e) {
+            return seriesReservationErrorDetails(user, matchId, errorCode(e), locale);
         }
     }
 
@@ -185,9 +174,8 @@ public class EventController {
             matchReservationService.cancelSeriesReservations(matchId, user);
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchReservationException exception) {
-            return seriesReservationErrorDetails(
-                    user, matchId, reservationErrorCode(exception), locale);
+        } catch (final MatchException e) {
+            return seriesReservationErrorDetails(user, matchId, errorCode(e), locale);
         }
     }
 
@@ -196,33 +184,8 @@ public class EventController {
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
     }
 
-    private static String reservationErrorCode(
-            final MatchReservationException
-                    exception) { // TODO: move these codes to the exceptions themselves
-        return switch (exception) {
-            case MatchReservationClosedException ignored -> "closed";
-            case MatchReservationStartedException ignored -> "started";
-            case MatchReservationAlreadyJoinedException ignored -> "already_joined";
-            case MatchReservationFullException ignored -> "full";
-            case MatchReservationNotRecurringException ignored -> "not_recurring";
-            case MatchReservationSeriesStartedException ignored -> "series_started";
-            case MatchReservationSeriesAlreadyJoinedException ignored -> "series_already_joined";
-            case MatchReservationSeriesFullException ignored -> "series_full";
-            case MatchReservationSeriesNotJoinedException ignored -> "series_not_joined";
-            default -> "not_found";
-        };
-    }
-
-    private static String cancellationErrorCode(
-            final MatchParticipationException
-                    exception) { // TODO: move these codes to the exceptions themselves
-        return switch (exception) {
-            case MatchParticipationStartedException ignored -> "started";
-            case MatchParticipationNotCancellableException ignored -> "not_cancellable";
-            case MatchParticipationNotJoinedException ignored -> "not_joined";
-            case MatchParticipationNotParticipantException ignored -> "not_joined";
-            default -> "not_found";
-        };
+    private String errorCode(final MatchException exception) {
+        return domainExceptionErrorResolver.resolve(exception);
     }
 
     private ModelAndView reservationErrorDetails(
