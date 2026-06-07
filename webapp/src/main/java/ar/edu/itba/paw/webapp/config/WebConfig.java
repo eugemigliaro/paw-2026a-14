@@ -23,6 +23,7 @@ import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.concurrent.ThreadPoolExecutor;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -225,18 +226,23 @@ public class WebConfig implements WebMvcConfigurer {
         return validator();
     }
 
-    @Override
-    public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-
+    @Bean
+    public ThreadPoolTaskExecutor mvcAsyncTaskExecutor() {
+        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(10);
         executor.setMaxPoolSize(50);
         executor.setQueueCapacity(100);
-
         executor.setThreadNamePrefix("async-image-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
+        return executor;
+    }
 
-        configurer.setTaskExecutor(executor);
+    @Override
+    public void configureAsyncSupport(final AsyncSupportConfigurer configurer) {
+        configurer.setTaskExecutor(mvcAsyncTaskExecutor());
         configurer.setDefaultTimeout(30000);
     }
 
