@@ -37,9 +37,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
@@ -51,7 +53,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
-class FeedControllerTournamentTest {
+class FeedControllerTest {
 
     private MatchService matchService;
     private TournamentService tournamentService;
@@ -311,6 +313,153 @@ class FeedControllerTournamentTest {
 
         Assertions.assertEquals(1, feedPage.getFeaturedEvents().size());
         Assertions.assertEquals("/tournaments/78", feedPage.getFeaturedEvents().get(0).getHref());
+    }
+
+    @Test
+    void getFeedRouteRendersFeedPage() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(model().attributeExists("feedPage"))
+                .andExpect(model().attribute("nearMeUnavailable", false));
+    }
+
+    @Test
+    void getFeedRouteWithSpanishLocaleLocalizesShellAndCards() throws Exception {
+        mockMvc.perform(get("/").locale(Locale.forLanguageTag("es")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(
+                        model().attribute(
+                                        "feedPage",
+                                        Matchers.hasProperty(
+                                                "title",
+                                                Matchers.is("Encontrá tu próximo partido."))));
+    }
+
+    @Test
+    void getFeedRouteWithRepeatedSportParamsPassesCommaSeparatedToService() throws Exception {
+        mockMvc.perform(get("/").param("sport", "padel").param("sport", "football"))
+                .andExpect(status().isOk());
+
+        final ArgumentCaptor<List<Sport>> sportsCaptor = sportsFilterCaptor();
+        Mockito.verify(matchService)
+                .searchPublicMatches(
+                        ArgumentMatchers.anyString(),
+                        sportsCaptor.capture(),
+                        ArgumentMatchers.nullable(LocalDate.class),
+                        ArgumentMatchers.nullable(LocalDate.class),
+                        ArgumentMatchers.nullable(EventSort.class),
+                        ArgumentMatchers.anyInt(),
+                        ArgumentMatchers.anyInt(),
+                        ArgumentMatchers.nullable(BigDecimal.class),
+                        ArgumentMatchers.nullable(BigDecimal.class),
+                        ArgumentMatchers.nullable(Double.class),
+                        ArgumentMatchers.nullable(Double.class));
+
+        final List<Sport> capturedSports = sportsCaptor.getValue();
+        Assertions.assertNotNull(capturedSports);
+        Assertions.assertTrue(capturedSports.contains(Sport.PADEL));
+        Assertions.assertTrue(capturedSports.contains(Sport.FOOTBALL));
+    }
+
+    @Test
+    void getFeedRouteWithCommaSeparatedSportParamAcceptsMultipleSports() throws Exception {
+        mockMvc.perform(get("/").param("sport", "padel,tennis"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "selectedSports",
+                                        Matchers.containsInAnyOrder("padel", "tennis")));
+    }
+
+    @Test
+    void postExploreLocationStoresValidCoordinatesInSession() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-34.61")
+                                        .param("longitude", "-58.38"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/?sort=distance"))
+                        .andReturn();
+
+        Assertions.assertEquals(
+                -34.61, result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
+        Assertions.assertEquals(
+                -58.38, result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void postExploreLocationIgnoresInvalidCoordinates() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                post("/explore/location")
+                                        .param("latitude", "-91")
+                                        .param("longitude", "-58.38"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/?sort=distance"))
+                        .andReturn();
+
+        Assertions.assertNull(
+                result.getRequest().getSession().getAttribute("exploreLocationLatitude"));
+        Assertions.assertNull(
+                result.getRequest().getSession().getAttribute("exploreLocationLongitude"));
+    }
+
+    @Test
+    void getFeedRouteShowsNearMeSortOptionBeforeLocationIsStored() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "sortOptions",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty(
+                                                        "params",
+                                                        Matchers.hasEntry("sort", "distance")))));
+    }
+
+    @Test
+    void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
+        final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
+    void getFeedRouteIncludesDistanceLabelWithStoredLocation() throws Exception {
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/").sessionAttr("exploreLocationLatitude", -34.60)
+                                        .sessionAttr("exploreLocationLongitude", -58.38))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final FeedPageViewModel feedPage =
+                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
+        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+    }
+
+    @Test
+    void getFeedRouteWithMinAndMaxPricePropagatesToModel() throws Exception {
+        mockMvc.perform(get("/").param("minPrice", "5").param("maxPrice", "25"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "selectedMinPrice",
+                                        Matchers.comparesEqualTo(new BigDecimal("5"))))
+                .andExpect(
+                        model().attribute(
+                                        "selectedMaxPrice",
+                                        Matchers.comparesEqualTo(new BigDecimal("25"))));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ArgumentCaptor<List<Sport>> sportsFilterCaptor() {
+        return ArgumentCaptor.forClass(List.class);
     }
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {
