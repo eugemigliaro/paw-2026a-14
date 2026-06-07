@@ -25,6 +25,7 @@
 <c:url var="cssTournamentsHref" value="/css/tournaments.css" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
 <c:url var="accountEditFormHref" value="/js/account-edit-form.js" />
+<c:url var="fileUploadPreviewHref" value="/js/file-upload-preview.js" />
 <c:url var="passwordToggleHref" value="/js/password-visibility-toggle.js" />
 <c:url var="hostJoinPolicyGuardHref" value="/js/host-join-policy-guard.js" />
 <c:url var="overflowMenuHref" value="/js/overflow-menu.js" />
@@ -62,6 +63,7 @@
 <script defer src="${leafletJsHref}"></script>
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${accountEditFormHref}"></script>
+<script defer src="${fileUploadPreviewHref}"></script>
 <script defer src="${passwordToggleHref}"></script>
 <script defer src="${hostJoinPolicyGuardHref}"></script>
 <script defer src="${overflowMenuHref}"></script>

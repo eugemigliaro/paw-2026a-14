@@ -52,8 +52,73 @@ class ViewTemplateAssetsTest {
         assertFalse(eventsList.contains("<script>"));
         assertFalse(hostCreateMatch.contains("<script>"));
         assertTrue(head.contains("/js/account-edit-form.js"));
+        assertTrue(head.contains("/js/file-upload-preview.js"));
         assertTrue(head.contains("/js/events-toggle-filter.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
+    }
+
+    private static final String IMAGE_ACCEPT =
+            "accept=\"image/png,image/jpeg,image/webp,image/gif\"";
+
+    @Test
+    void imageUploadsExposeClientSidePreviewHooks() throws IOException {
+        final String accountIndex = read("src/main/webapp/WEB-INF/views/account/index.jsp");
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String hostTournamentCreate =
+                read("src/main/webapp/WEB-INF/views/host/tournaments/create.jsp");
+        final String script = read("src/main/webapp/js/file-upload-preview.js");
+        final String authCss = read("src/main/webapp/css/auth.css");
+        final String hostCreateCss = read("src/main/webapp/css/host-create.css");
+
+        assertTrue(accountIndex.contains("data-image-preview-container=\"true\""));
+        assertTrue(accountIndex.contains("data-image-preview-input=\"true\""));
+        assertTrue(accountIndex.contains(IMAGE_ACCEPT));
+        assertTrue(accountIndex.contains("image-upload-preview--profile"));
+
+        assertTrue(hostCreateMatch.contains("id=\"match-banner-image\""));
+        assertTrue(hostCreateMatch.contains("data-image-preview-container=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-image-preview-input=\"true\""));
+        assertTrue(hostCreateMatch.contains(IMAGE_ACCEPT));
+        assertTrue(hostCreateMatch.contains("image-upload-preview--banner"));
+
+        assertTrue(hostTournamentCreate.contains("id=\"tournament-banner-image\""));
+        assertTrue(hostTournamentCreate.contains("data-image-preview-container=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-image-preview-input=\"true\""));
+        assertTrue(hostTournamentCreate.contains(IMAGE_ACCEPT));
+        assertTrue(hostTournamentCreate.contains("image-upload-preview--banner"));
+
+        assertTrue(script.contains("URL.createObjectURL"));
+        assertTrue(script.contains("URL.revokeObjectURL"));
+        assertTrue(script.contains("data-image-preview-input"));
+        assertTrue(authCss.contains(".image-upload-preview--profile"));
+        assertTrue(authCss.contains("border-radius: 999px"));
+        assertTrue(hostCreateCss.contains(".image-upload-preview--banner"));
+        assertTrue(hostCreateCss.contains("border-radius: 12px"));
+    }
+
+    @Test
+    void hostBannerImageValidationMessagesAreLocalized() throws IOException {
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertEquals(
+                "Please upload a JPG, PNG, WEBP, or GIF image.",
+                english.getProperty("host.form.bannerImage.error.invalidFormat"));
+        assertEquals(
+                "Sub\u00ed una imagen en formato JPG, PNG, WEBP o GIF.",
+                spanish.getProperty("host.form.bannerImage.error.invalidFormat"));
+        assertEquals(
+                "The uploaded image is empty.",
+                english.getProperty("host.form.bannerImage.error.empty"));
+        assertEquals(
+                "La imagen subida est\u00e1 vac\u00eda.",
+                spanish.getProperty("host.form.bannerImage.error.empty"));
+        assertEquals(
+                "The uploaded image must be 5 MB or smaller.",
+                english.getProperty("host.form.bannerImage.error.tooLarge"));
+        assertEquals(
+                "La imagen subida debe pesar 5 MB o menos.",
+                spanish.getProperty("host.form.bannerImage.error.tooLarge"));
     }
 
     @Test
@@ -288,7 +353,7 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("data-location-picker=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-zoom-in=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
-        assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
+        assertFalse(hostCreateMatch.contains("data-location-current=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
         assertFalse(hostCreateMatch.contains("data-location-unavailable-message"));
         assertFalse(hostCreateMatch.contains("data-location-current-status"));
@@ -302,6 +367,8 @@ class ViewTemplateAssetsTest {
         assertNotNull(english.getProperty("host.form.location.zoomOut"));
         assertNotNull(spanish.getProperty("host.form.location.zoomIn"));
         assertNotNull(spanish.getProperty("host.form.location.zoomOut"));
+        assertFalse(english.containsKey("host.form.location.current"));
+        assertFalse(spanish.containsKey("host.form.location.current"));
     }
 
     @Test
@@ -319,7 +386,7 @@ class ViewTemplateAssetsTest {
         assertTrue(hostTournamentCreate.contains("data-location-map=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-zoom-in=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-zoom-out=\"true\""));
-        assertTrue(hostTournamentCreate.contains("data-location-current=\"true\""));
+        assertFalse(hostTournamentCreate.contains("data-location-current=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-clear=\"true\""));
         assertTrue(hostTournamentCreate.contains("host.form.location.map"));
         assertTrue(hostTournamentCreate.contains("host.form.location.map.aria"));
@@ -350,13 +417,16 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("L.tileLayer"));
         assertTrue(script.contains("L.marker"));
         assertTrue(script.contains("L.divIcon"));
-        assertTrue(script.contains("isSecureContext"));
         assertTrue(script.contains("window.MatchPointLocationPicker"));
         assertTrue(script.contains("data-latitude-input"));
         assertTrue(script.contains("location-picker:change"));
         assertTrue(script.contains("data-location-zoom-in"));
         assertTrue(script.contains("data-location-zoom-out"));
         assertTrue(script.contains("data-location-picker"));
+        assertFalse(script.contains("data-location-current"));
+        assertFalse(script.contains("map.locate"));
+        assertFalse(script.contains("locationfound"));
+        assertFalse(script.contains("isSecureContext"));
         assertTrue(head.contains("/js/vendor/leaflet.js"));
         assertTrue(head.contains("/css/vendor/leaflet.css"));
     }
