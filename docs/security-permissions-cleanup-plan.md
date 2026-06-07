@@ -31,7 +31,7 @@ change, targeted tests, and the module acceptance criteria are all done.
 - [x] Module 6: Tournament bracket permissions.
 - [x] Module 7: Centralize admin/mod role checks.
 - [x] Module 8: Public profile, reviews, and report affordances.
-- [ ] Module 9: Host controllers and mutating paths.
+- [x] Module 9: Host controllers and mutating paths.
 - [ ] Module 10: `SecurityConfig` route audit.
 - [ ] Module 11: JSP and view model sweep.
 - [ ] Module 12: Final verification.
@@ -44,9 +44,9 @@ Current review notes:
   but the controller still computes management/display capabilities.
 - `PublicProfileController` owns both review eligibility display and
   report-user affordance logic.
-- `MatchServiceImpl.cancelMatch` has a service-layer authorization bug: it
-  compares `actingUser` to the current authenticated user instead of requiring
-  host ownership or an approved elevated override.
+- Fixed by Module 9: `MatchServiceImpl.cancelMatch` is covered as a service
+  enforcement path that requires host ownership or an approved elevated
+  admin/mod override.
 - Fixed after Module 1: `ModerationService.appealReport` now receives the
   acting reporter and enforces report ownership in the service layer.
 
@@ -164,14 +164,13 @@ Resource authorization and business permissions:
   user's active ban and the linked moderation report. Assign appeal eligibility
   read state to Module 8; the active-ban lookup itself is acceptable actor
   passing.
-- `HostParticipationController` re-checks match join policy in controller
-  methods for pending requests and invites, and computes `includeSeries`.
-  Assign to Module 9. Ownership checks are mostly service-backed, but policy and
-  recurrence eligibility should move behind `MatchParticipationService`.
-- `HostTournamentController.showEditTournament` checks `isEditable` in the
-  controller after `findTournamentForHost`, and `showBracketSetup` has a
-  controller-owned 403-vs-404 fallback using `findPublicTournament`. Assign to
-  Module 9.
+- Fixed by Module 9: `HostParticipationController` no longer re-checks match
+  join policy or computes series invite eligibility. `MatchParticipationService`
+  owns host request/invite policy and returns the invitation result state used
+  for the success flash.
+- Fixed by Module 9: `HostTournamentController.showEditTournament` now uses a
+  service-owned editable host lookup, and `showBracketSetup` no longer probes
+  public tournaments in the controller.
 
 Presentation-only or harmless formatting:
 
@@ -194,9 +193,9 @@ Presentation-only or harmless formatting:
 
 Service-side bugs captured during the sweep:
 
-- `MatchServiceImpl.cancelMatch` authorizes a non-host when `actingUser` equals
-  the current authenticated user. Assign to Module 9 after Module 2 chooses the
-  shared admin/mod override convention.
+- Fixed by Module 9: `MatchServiceImpl.cancelMatch` uses the host-or-approved
+  admin/mod management convention, with tests for non-owner denial and
+  admin/mod override.
 - Fixed after Module 1: `ModerationService.appealReport` now receives the
   acting reporter and rejects non-owned reports without revealing that the
   report exists. Broader report detail/read-state cleanup remains Module 8.
@@ -653,14 +652,31 @@ Expected pattern:
 
 Acceptance criteria:
 
-- [ ] No host controller manually checks whether the user owns the match or
+- [x] No host controller manually checks whether the user owns the match or
   tournament.
-- [ ] Match update, match cancellation, tournament update/cancellation,
+- [x] Match update, match cancellation, tournament update/cancellation,
   registration closing, bracket setup, and result recording enforce ownership
   or approved admin/mod override in services.
-- [ ] Existing service methods have tests for denied ownership.
-- [ ] Service tests cover admin/mod override where product rules allow elevated
+- [x] Existing service methods have tests for denied ownership.
+- [x] Service tests cover admin/mod override where product rules allow elevated
   intervention.
+
+Implemented in Module 9:
+
+- Moved host-side request approval/rejection policy and pending-request page
+  policy into `MatchParticipationServiceImpl`.
+- Moved host invite-page policy into `MatchParticipationServiceImpl` and added
+  `MatchInvitationResult` so the controller can render the correct single-match
+  vs series-invite success state without inspecting match recurrence.
+- Added `TournamentService.findEditableTournamentForHost` and used it for the
+  tournament edit page instead of checking tournament status in the controller.
+- Removed the bracket setup controller fallback that probed public tournament
+  existence to decide `403` vs `404`; host access is now represented by the
+  service lookup outcome.
+- Confirmed match/tournament update, cancellation, registration closing,
+  bracket setup, and result recording write paths already enforce host or
+  approved admin/mod access in services. Added targeted service coverage for
+  moved participation policy and editable tournament lookup.
 
 ## Module 10: SecurityConfig Route Audit
 

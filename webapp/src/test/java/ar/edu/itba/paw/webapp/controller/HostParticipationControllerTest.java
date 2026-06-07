@@ -7,11 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.types.EventJoinPolicy;
+import ar.edu.itba.paw.services.MatchInvitationResult;
 import ar.edu.itba.paw.services.MatchParticipationService;
-import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -29,14 +27,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class HostParticipationControllerTest {
 
     private MockMvc mockMvc;
-    private MatchService matchService;
     private MatchParticipationService matchParticipationService;
     private MessageSource messageSource;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
-        matchService = Mockito.mock(MatchService.class);
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
         messageSource = Mockito.mock(MessageSource.class);
         userService = Mockito.mock(UserService.class);
@@ -44,10 +40,7 @@ class HostParticipationControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostParticipationController(
-                                        matchService,
-                                        matchParticipationService,
-                                        userService,
-                                        messageSource))
+                                        matchParticipationService, userService, messageSource))
                         .build();
     }
 
@@ -63,13 +56,6 @@ class HostParticipationControllerTest {
         final User host = Mockito.mock(User.class);
         final User requestedUser = Mockito.mock(User.class);
 
-        Match mockMatch = Mockito.mock(Match.class);
-
-        when(mockMatch.getHost()).thenReturn(host);
-        when(mockMatch.getHost().getId()).thenReturn(1L);
-        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
-
-        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/requests/9/approve"))
@@ -83,10 +69,7 @@ class HostParticipationControllerTest {
         AuthenticationUtils.authenticateUser(1L);
 
         final User requestedUser = Mockito.mock(User.class);
-        final Match mockMatch = Mockito.mock(Match.class);
 
-        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
-        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
         when(messageSource.getMessage(
                         Mockito.eq("event.host.requests.error.closed"),
@@ -110,10 +93,7 @@ class HostParticipationControllerTest {
         AuthenticationUtils.authenticateUser(9L);
 
         final User requestedUser = Mockito.mock(User.class);
-        final Match mockMatch = Mockito.mock(Match.class);
 
-        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
-        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
         Mockito.doThrow(new MatchParticipationException("forbidden", "Only the host can approve."))
                 .when(matchParticipationService)
@@ -131,13 +111,6 @@ class HostParticipationControllerTest {
         final User host = Mockito.mock(User.class);
         final User requestedUser = Mockito.mock(User.class);
 
-        Match mockMatch = Mockito.mock(Match.class);
-
-        when(mockMatch.getHost()).thenReturn(host);
-        when(mockMatch.getHost().getId()).thenReturn(1L);
-        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
-
-        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
 
         mockMvc.perform(post("/host/matches/42/requests/9/reject"))
@@ -152,14 +125,15 @@ class HostParticipationControllerTest {
 
         final User host = Mockito.mock(User.class);
         final User requestedUser = Mockito.mock(User.class);
-        Match mockMatch = Mockito.mock(Match.class);
 
-        when(mockMatch.getHost()).thenReturn(host);
-        when(mockMatch.getHost().getId()).thenReturn(1L);
-        when(mockMatch.getJoinPolicy()).thenReturn(EventJoinPolicy.INVITE_ONLY);
-
-        when(matchService.findMatchById(42L)).thenReturn(Optional.of(mockMatch));
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
+        Mockito.when(
+                        matchParticipationService.inviteUserWithResult(
+                                Mockito.eq(42L),
+                                Mockito.any(User.class),
+                                Mockito.eq("test@test.com"),
+                                Mockito.eq(false)))
+                .thenReturn(MatchInvitationResult.singleMatch());
 
         mockMvc.perform(post("/host/matches/42/invites").param("email", "test@test.com"))
                 .andExpect(status().is3xxRedirection())

@@ -255,6 +255,55 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void findEditableTournamentForHostReturnsRegistrationTournamentForHost() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+
+        // 2. Exercise
+        final Optional<Tournament> result =
+                tournamentService.findEditableTournamentForHost(10L, host);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(tournament, result.get());
+    }
+
+    @Test
+    public void findEditableTournamentForHostRejectsPostRegistrationTournament() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        Mockito.when(tournamentDao.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
+
+        // 2. Exercise
+        final Optional<Tournament> result =
+                tournamentService.findEditableTournamentForHost(10L, host);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void findEditableTournamentForHostAllowsAdminModOverride() {
+        // 1. Arrange
+        final User actingUser = UserUtils.getUser(99L);
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
+        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
+        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+
+        // 2. Exercise
+        final Optional<Tournament> result =
+                tournamentService.findEditableTournamentForHost(10L, actingUser);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(tournament, result.get());
+    }
+
+    @Test
     public void hostCanManageRegistrationTournament() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);

@@ -1799,10 +1799,7 @@ class UiRouteTest {
                                 new HostController(
                                         matchService, messageSource, false, "", "", 0, 0, 0),
                                 new HostParticipationController(
-                                        matchService,
-                                        matchParticipationService,
-                                        userService,
-                                        messageSource),
+                                        matchParticipationService, userService, messageSource),
                                 new MatchDashboardController(
                                         matchService,
                                         matchParticipationService,

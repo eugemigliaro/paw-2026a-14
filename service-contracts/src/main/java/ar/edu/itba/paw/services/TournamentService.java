@@ -19,6 +19,8 @@ public interface TournamentService {
 
     Optional<Tournament> findTournamentForHost(long tournamentId, User host);
 
+    Optional<Tournament> findEditableTournamentForHost(long tournamentId, User host);
+
     TournamentManagementPermissions getManagementPermissions(
             Tournament tournament, User actingUser);
 

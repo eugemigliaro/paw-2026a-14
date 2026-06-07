@@ -226,6 +226,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(host);
         nonNullUser(targetUser);
         requireHost(match, host.getId());
+        requireApprovalManagedMatch(match);
 
         if (match.isRecurringOccurrence()
                 && matchParticipantDao.isSeriesJoinRequest(matchId, targetUser)) {
@@ -264,6 +265,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(host);
         nonNullUser(targetUser);
         requireHost(match, host.getId());
+        requireApprovalManagedMatch(match);
 
         if (!matchParticipantDao.rejectRequest(matchId, targetUser)) {
             throw new MatchParticipationException(
@@ -305,6 +307,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
+        requireApprovalManagedMatch(match);
         return matchParticipantDao.findPendingRequests(matchId);
     }
 
@@ -350,6 +353,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Transactional
     public void inviteUser(
             final Long matchId, final User host, final String email, final boolean includeSeries) {
+        inviteUserWithResult(matchId, host, email, includeSeries);
+    }
+
+    @Override
+    @Transactional
+    public MatchInvitationResult inviteUserWithResult(
+            final Long matchId, final User host, final String email, final boolean includeSeries) {
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
@@ -372,10 +382,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         if (includeSeries && match.isRecurringOccurrence()) {
             inviteUserToSeries(match, target);
-            return;
+            return MatchInvitationResult.series();
         }
 
         inviteUserToMatch(match, target);
+        return MatchInvitationResult.singleMatch();
     }
 
     private void inviteUserToMatch(final Match match, final User target) {
@@ -518,6 +529,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
+        requireInvitableMatch(match);
         return matchParticipantDao.findInvitedUsers(matchId);
     }
 
@@ -573,6 +585,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException(
                     "not_invite_only",
                     "Invitations are only supported for private invite-only events.");
+        }
+    }
+
+    private static void requireApprovalManagedMatch(final Match match) {
+        if (match.getVisibility() != EventVisibility.PUBLIC
+                || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
+            throw new MatchParticipationException(
+                    "forbidden", "Join requests are only supported for approval-required events.");
         }
     }
 

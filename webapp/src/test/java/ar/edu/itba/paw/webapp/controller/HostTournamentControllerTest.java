@@ -254,7 +254,9 @@ class HostTournamentControllerTest {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+        Mockito.when(
+                        tournamentService.findEditableTournamentForHost(
+                                Mockito.eq(77L), Mockito.any()))
                 .thenReturn(Optional.of(tournament(77L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise + 3. Assert

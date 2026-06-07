@@ -932,6 +932,130 @@ public class MatchParticipationServiceImplTest {
         Assertions.assertEquals("forbidden", ex.getCode());
     }
 
+    @Test
+    public void testApproveRequestRejectsNonApprovalRequiredMatch() {
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        NOW.plusSeconds(3600));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () ->
+                                matchParticipationService.approveRequest(
+                                        10L, UserUtils.getUser(1L), UserUtils.getUser(2L)));
+
+        Assertions.assertEquals("forbidden", exception.getCode());
+    }
+
+    @Test
+    public void testRejectRequestRejectsNonApprovalRequiredMatch() {
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        NOW.plusSeconds(3600));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () ->
+                                matchParticipationService.rejectRequest(
+                                        10L, UserUtils.getUser(1L), UserUtils.getUser(2L)));
+
+        Assertions.assertEquals("forbidden", exception.getCode());
+    }
+
+    @Test
+    public void testFindPendingRequestsRejectsNonApprovalRequiredMatch() {
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        NOW.plusSeconds(3600));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () ->
+                                matchParticipationService.findPendingRequests(
+                                        10L, UserUtils.getUser(1L)));
+
+        Assertions.assertEquals("forbidden", exception.getCode());
+    }
+
+    @Test
+    public void testFindInvitedUsersRejectsNonInviteOnlyMatch() {
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
+                        NOW.plusSeconds(3600));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+
+        final MatchParticipationException exception =
+                Assertions.assertThrows(
+                        MatchParticipationException.class,
+                        () ->
+                                matchParticipationService.findInvitedUsers(
+                                        10L, UserUtils.getUser(1L)));
+
+        Assertions.assertEquals("not_invite_only", exception.getCode());
+    }
+
+    @Test
+    public void testInviteUserWithResultReturnsSeriesForRecurringSeriesInvite() {
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1);
+        final Match secondOccurrence =
+                createRecurringMatch(
+                        11L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(7200),
+                        4,
+                        0,
+                        100L,
+                        2);
+        final User target = UserUtils.getUser(20L);
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(userService.findByEmail(target.getEmail())).thenReturn(Optional.of(target));
+        Mockito.when(matchDao.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence, secondOccurrence));
+        Mockito.when(matchParticipantDao.inviteUser(10L, target, true)).thenReturn(true);
+        Mockito.when(matchParticipantDao.inviteUser(11L, target, true)).thenReturn(true);
+
+        final MatchInvitationResult result =
+                matchParticipationService.inviteUserWithResult(
+                        10L, UserUtils.getUser(1L), target.getEmail(), true);
+
+        Assertions.assertTrue(result.isSeriesInvitation());
+        Assertions.assertEquals(List.of("series-invitation"), mailDispatchService.actions);
+    }
+
     private static class RecordingMailDispatchService implements MailDispatchService {
 
         private final List<String> recipients = new ArrayList<>();

@@ -93,6 +93,13 @@ public class TournamentServiceImpl implements TournamentService {
     }
 
     @Override
+    public Optional<Tournament> findEditableTournamentForHost(
+            final long tournamentId, final User host) {
+        return findTournamentForHost(tournamentId, host)
+                .filter(tournament -> TournamentStatus.REGISTRATION == tournament.getStatus());
+    }
+
+    @Override
     public TournamentManagementPermissions getManagementPermissions(
             final Tournament tournament, final User actingUser) {
         final boolean canMutate = canMutate(tournament, actingUser);

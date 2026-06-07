@@ -46,7 +46,13 @@ public interface MatchParticipationService {
 
     default void inviteUser(
             final Long matchId, final User host, final String email, final boolean includeSeries) {
+        inviteUserWithResult(matchId, host, email, includeSeries);
+    }
+
+    default MatchInvitationResult inviteUserWithResult(
+            final Long matchId, final User host, final String email, final boolean includeSeries) {
         inviteUser(matchId, host, email);
+        return MatchInvitationResult.singleMatch();
     }
 
     void acceptInvite(Long matchId, User user);

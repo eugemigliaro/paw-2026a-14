@@ -179,11 +179,8 @@ public class HostTournamentController {
         final User actingUser = SecurityControllerUtils.requireAuthenticatedUser();
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, actingUser)
+                        .findEditableTournamentForHost(tournamentId, actingUser)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!isEditable(tournament)) { // TODO: remove. This is business logic
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         return createFormView(toForm(tournament), null, locale, editFormConfig(tournament, locale));
     }
 
@@ -352,15 +349,7 @@ public class HostTournamentController {
         final Tournament tournament =
                 tournamentService
                         .findTournamentForHost(tournamentId, actingUser)
-                        .orElseGet(
-                                () -> {
-                                    if (tournamentService
-                                            .findPublicTournament(tournamentId)
-                                            .isPresent()) {
-                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-                                    }
-                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-                                });
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         TournamentBracketViewModel bracketPage;
         try {
@@ -699,10 +688,6 @@ public class HostTournamentController {
                 return bannerImage.getInputStream();
             }
         };
-    }
-
-    private boolean isEditable(final Tournament tournament) {
-        return TournamentStatus.REGISTRATION == tournament.getStatus();
     }
 
     private void applyServiceError(
