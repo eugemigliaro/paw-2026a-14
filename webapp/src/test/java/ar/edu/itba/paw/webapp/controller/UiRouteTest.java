@@ -1551,8 +1551,7 @@ class UiRouteTest {
                                         "{bcrypt}hash",
                                         UserRole.USER,
                                         FIXED_NOW,
-                                        UserLanguages.DEFAULT_LANGUAGE),
-                                "done");
+                                        UserLanguages.DEFAULT_LANGUAGE));
                     }
 
                     @Override
@@ -1570,7 +1569,7 @@ class UiRouteTest {
                     @Override
                     public VerificationConfirmationResult resetPassword(
                             final String rawToken, final String newPassword) {
-                        return new VerificationConfirmationResult(9L, "Password reset");
+                        return new VerificationConfirmationResult(9L);
                     }
 
                     @Override

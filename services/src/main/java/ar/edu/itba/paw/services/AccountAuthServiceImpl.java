@@ -171,8 +171,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 account.isEmailVerified()
                         ? account
                         : userDao.findAccountById(account.getId()).orElse(account);
-        return new VerificationConfirmationResult(
-                verifiedAccount, message("verification.message.accountVerified", locale));
+        return new VerificationConfirmationResult(verifiedAccount);
     }
 
     @Override
@@ -213,8 +212,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
-        return new VerificationConfirmationResult(
-                account.getId(), message("passwordReset.message.completed", locale));
+        return new VerificationConfirmationResult(account.getId());
     }
 
     @Override
@@ -438,11 +436,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 || password.isBlank()
                 || password.length() < MIN_PASSWORD_LENGTH
                 || password.length() > MAX_PASSWORD_LENGTH;
-    }
-
-    private String message(final String code, final Locale locale) {
-        return messageSource.getMessage(
-                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 
     private static Locale currentLocale() {
