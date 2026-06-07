@@ -95,6 +95,24 @@ public class ImageServiceImplTest {
     }
 
     @Test
+    public void testResolveImageMetadataReturnsNormalizedStoredMetadata() throws Exception {
+        final byte[] content = jpegContent();
+        final ImageUpload upload = imageUpload(" IMAGE/JPG ", "avatar.jpg", content, 100L);
+        Mockito.when(
+                        imageDao.create(
+                                Mockito.eq("image/jpeg"),
+                                Mockito.eq((long) content.length),
+                                Mockito.any()))
+                .thenReturn(46L);
+
+        final ImageMetadata metadata = imageService.resolveImageMetadata(upload);
+
+        Assertions.assertEquals(46L, metadata.getId());
+        Assertions.assertEquals("image/jpeg", metadata.getContentType());
+        Assertions.assertEquals(content.length, metadata.getContentLength());
+    }
+
+    @Test
     public void testFindMetadataByIdDelegatesToDao() {
         final ImageMetadata metadata = new ImageMetadata(7L, "image/jpeg", 100L);
         Mockito.when(imageDao.findMetadataById(7L)).thenReturn(Optional.of(metadata));
@@ -115,6 +133,14 @@ public class ImageServiceImplTest {
 
     private static ImageUpload imageUpload(
             final String contentType, final String originalFilename, final byte[] content) {
+        return imageUpload(contentType, originalFilename, content, content.length);
+    }
+
+    private static ImageUpload imageUpload(
+            final String contentType,
+            final String originalFilename,
+            final byte[] content,
+            final long declaredContentLength) {
         return new ImageUpload() {
             @Override
             public String getContentType() {
@@ -123,7 +149,7 @@ public class ImageServiceImplTest {
 
             @Override
             public long getContentLength() {
-                return content.length;
+                return declaredContentLength;
             }
 
             @Override

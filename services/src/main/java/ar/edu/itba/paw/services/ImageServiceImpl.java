@@ -41,14 +41,22 @@ public class ImageServiceImpl implements ImageService {
     public Long store(
             final String contentType, final long contentLength, final InputStream contentStream)
             throws IOException {
+        return storeAndReturnMetadata(contentType, contentLength, contentStream).getId();
+    }
+
+    private ImageMetadata storeAndReturnMetadata(
+            final String contentType, final long contentLength, final InputStream contentStream)
+            throws IOException {
         final String normalizedContentType = normalizeContentType(contentType);
         validateContentType(normalizedContentType);
         validateContentLength(contentLength);
         final byte[] content = readBounded(contentStream);
         validateContentLength(content.length);
         validateContentMatchesType(normalizedContentType, content);
-        return imageDao.create(
-                normalizedContentType, content.length, new ByteArrayInputStream(content));
+        final Long imageId =
+                imageDao.create(
+                        normalizedContentType, content.length, new ByteArrayInputStream(content));
+        return new ImageMetadata(imageId, normalizedContentType, content.length);
     }
 
     @Override
@@ -69,12 +77,8 @@ public class ImageServiceImpl implements ImageService {
         }
         validateFilenameExtension(image.getOriginalFilename());
         try {
-            final Long imageId =
-                    store(
-                            image.getContentType(),
-                            image.getContentLength(),
-                            image.getContentStream());
-            return new ImageMetadata(imageId, image.getContentType(), image.getContentLength());
+            return storeAndReturnMetadata(
+                    image.getContentType(), image.getContentLength(), image.getContentStream());
         } catch (final IOException exception) {
             throw new IllegalStateException("Unable to store tournament banner image", exception);
         }
