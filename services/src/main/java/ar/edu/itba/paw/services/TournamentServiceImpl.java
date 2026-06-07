@@ -396,8 +396,9 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateRequest(final CreateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("exception.tournament.invalidRequest");
+            throw new IllegalArgumentException("invalidRequest");
         }
+        validateSport(request.getSport());
         validateCommonFields(
                 request.getSport(),
                 request.getTitle(),
@@ -425,8 +426,9 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("exception.tournament.invalidRequest");
+            throw new IllegalArgumentException("invalidRequest");
         }
+        validateSport(request.getSport());
         validateCommonFields(
                 request.getSport(),
                 request.getTitle(),
@@ -459,10 +461,10 @@ public class TournamentServiceImpl implements TournamentService {
             final Double latitude,
             final Double longitude) {
         if (sport == null || isBlank(title) || isBlank(address)) {
-            throw new TournamentLifecycleException("exception.tournament.invalidRequest");
+            throw new TournamentLifecycleException("invalidRequest");
         }
         if (pricePerPlayer != null && pricePerPlayer.signum() < 0) {
-            throw new TournamentLifecycleException("exception.tournament.invalidRequest");
+            throw new TournamentLifecycleException("invalidRequest");
         }
         if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
             throw new TournamentLifecycleInvalidScheduleException();
@@ -475,6 +477,12 @@ public class TournamentServiceImpl implements TournamentService {
         }
         if (longitude != null && (longitude < -180 || longitude > 180)) {
             throw new TournamentLifecycleInvalidLocationException();
+        }
+    }
+
+    private void validateSport(final Sport sport) {
+        if (sport == null) {
+            throw new TournamentLifecycleException("invalidSport");
         }
     }
 
