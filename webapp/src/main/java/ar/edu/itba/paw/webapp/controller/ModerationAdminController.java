@@ -14,7 +14,6 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
@@ -50,18 +49,15 @@ public class ModerationAdminController {
 
     private final ModerationService moderationService;
     private final UserService userService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
 
     @Autowired
     public ModerationAdminController(
             final ModerationService moderationService,
             final UserService userService,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.userService = userService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
     }
 
@@ -294,8 +290,8 @@ public class ModerationAdminController {
                             ? "appeal_upheld"
                             : "appeal_lifted";
             return redirectToReports(action, redirectAttributes);
-        } catch (final ModerationException ex) {
-            return redirectToReportsError(domainExceptionErrorResolver.resolve(ex));
+        } catch (final ModerationException e) {
+            return redirectToReportsError(e.getMessage());
         }
     }
 
@@ -317,8 +313,8 @@ public class ModerationAdminController {
                     ReportStatus.RESOLVED,
                     banDurationDays);
             return redirectToReports(actionCode, redirectAttributes);
-        } catch (final ModerationException ex) {
-            return redirectToReportsError(domainExceptionErrorResolver.resolve(ex));
+        } catch (final ModerationException e) {
+            return redirectToReportsError(e.getMessage());
         }
     }
 

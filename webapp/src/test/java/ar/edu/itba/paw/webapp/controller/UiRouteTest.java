@@ -54,7 +54,10 @@ import ar.edu.itba.paw.services.exceptions.match.MatchException;
 import ar.edu.itba.paw.services.exceptions.match.MatchForbiddenActionException;
 import ar.edu.itba.paw.services.exceptions.match.MatchNotFoundException;
 import ar.edu.itba.paw.services.exceptions.match.MatchNotRecurringException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationNotJoinedException;
+import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
 import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotEditableException;
@@ -74,7 +77,9 @@ import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConv
 import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceEndModeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
@@ -149,8 +154,6 @@ class UiRouteTest {
                 new UserEmailValidator(Mockito.mock(UserService.class));
         final UsernameValidator usernameValidator =
                 new UsernameValidator(Mockito.mock(UserService.class));
-        final DomainExceptionErrorResolver errorResolver =
-                Mockito.mock(DomainExceptionErrorResolver.class);
 
         final LocalValidatorFactoryBean validator =
                 validator(messageSource, userEmailValidator, usernameValidator);
@@ -1204,12 +1207,12 @@ class UiRouteTest {
                                             null,
                                             null));
                         }
-                        if ("host-player".equals(username)) {
+                        if ("host_player".equals(username)) {
                             return Optional.of(
                                     new User(
                                             9L,
                                             "host@test.com",
-                                            "host-player",
+                                            "host_player",
                                             "Jamie",
                                             "Rivera",
                                             "+1 555 123 4567",
@@ -1502,7 +1505,7 @@ class UiRouteTest {
                                 new UserAccount(
                                         9L,
                                         email,
-                                        "host-player",
+                                        "host_player",
                                         null,
                                         null,
                                         null,
@@ -1586,7 +1589,6 @@ class UiRouteTest {
                                         matchParticipationService,
                                         playerReviewService,
                                         messageSource,
-                                        errorResolver,
                                         fixedClock,
                                         true,
                                         "/assets/tiles/{z}/{x}/{y}.png",
@@ -1597,10 +1599,8 @@ class UiRouteTest {
                                         playerReviewService,
                                         moderationService,
                                         userSportRatingService,
-                                        errorResolver,
                                         messageSource),
-                                new PlayerParticipationController(
-                                        matchParticipationService, errorResolver),
+                                new PlayerParticipationController(matchParticipationService),
                                 new AccountController(userService, messageSource),
                                 new HostController(
                                         matchService, messageSource, false, "", "", 0, 0, 0),
@@ -1608,7 +1608,6 @@ class UiRouteTest {
                                         matchService,
                                         matchParticipationService,
                                         userService,
-                                        errorResolver,
                                         messageSource),
                                 new MatchDashboardController(
                                         matchService,
@@ -1625,6 +1624,10 @@ class UiRouteTest {
                         .setValidator(validator)
                         .setConversionService(formattingConversionServiceWithSportConverter())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
+                        .setControllerAdvice(
+                                new AccessExceptionHandler(),
+                                new VerificationExceptionHandler(messageSource),
+                                new PasswordResetExceptionHandler(messageSource))
                         .build();
     }
 
@@ -1890,7 +1893,7 @@ class UiRouteTest {
 
     @Test
     void getPrivateInviteOnlyMatchDetailsForHostExposesDirectReservation() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/51"))
                 .andExpect(status().isOk())
@@ -2062,7 +2065,7 @@ class UiRouteTest {
 
     @Test
     void getRecurringMatchDetailsRouteForHostLinksCancelledOccurrences() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         // Cancelled occurrence is the 6th item, so it appears on page 2 (page size = 5)
         mockMvc.perform(get("/matches/46").param("seriesPage", "2"))
@@ -2155,7 +2158,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteForHostExposesManagementActions() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -2186,7 +2189,7 @@ class UiRouteTest {
 
     @Test
     void getRecurringMatchDetailsRouteForHostExposesSeriesManagementActions() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/46"))
                 .andExpect(status().isOk())
@@ -2203,7 +2206,7 @@ class UiRouteTest {
 
     @Test
     void getApprovalRequiredMatchDetailsRouteForHostHidesJoinRequestActions() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/52"))
                 .andExpect(status().isOk())
@@ -2220,7 +2223,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/44"))
                 .andExpect(status().isOk())
@@ -2231,7 +2234,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteWithSpanishHostActionLocalizesNotice() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/42").flashAttr("hostAction", "updated").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -2243,7 +2246,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteWithSpanishSeriesHostActionLocalizesNotice() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         get("/matches/46")
@@ -2259,7 +2262,7 @@ class UiRouteTest {
 
     @Test
     void getRealMatchDetailsRouteHidesUpdatedNoticeAfterRefresh() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
@@ -2284,7 +2287,7 @@ class UiRouteTest {
     @Test
     void postReservationRequestWhenAlreadyReservedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        matchFailure = new MatchParticipationException("Already reserved");
+        matchFailure = new MatchParticipationAlreadyJoinedException();
 
         mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -2344,7 +2347,7 @@ class UiRouteTest {
     @Test
     void postReservationCancelWithNoActiveReservationShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        matchFailure = new MatchParticipationException("No active reservation");
+        matchFailure = new MatchParticipationNotJoinedException();
 
         mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -2373,7 +2376,7 @@ class UiRouteTest {
     @Test
     void postSeriesReservationRequestWhenAlreadyJoinedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        matchFailure = new MatchParticipationException("Already joined");
+        matchFailure = new MatchParticipationSeriesAlreadyJoinedException();
 
         mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -2401,7 +2404,7 @@ class UiRouteTest {
     @Test
     void postSeriesReservationCancelWithNoFutureReservationsShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        matchFailure = new MatchParticipationException("No future reservations");
+        matchFailure = new MatchParticipationNotJoinedException();
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -2443,7 +2446,7 @@ class UiRouteTest {
 
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/52?joinError=series_already_pending"));
+                .andExpect(redirectedUrl("/matches/52?joinError=seriesAlreadyPending"));
     }
 
     @Test
@@ -2486,11 +2489,8 @@ class UiRouteTest {
     }
 
     @Test
-    void getInvalidVerificationRendersErrorPage() throws Exception {
-        mockMvc.perform(get("/verifications/invalid"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("verification/error"))
-                .andExpect(model().attributeExists("message"));
+    void getInvalidVerificationRendersNotFoundPage() throws Exception {
+        mockMvc.perform(get("/verifications/invalid")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -2546,7 +2546,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishCreatesAndRedirectsForAuthenticatedUsers() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2576,7 +2576,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishPassesValidCoordinatesToService() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2604,7 +2604,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsPartialCoordinates() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2630,7 +2630,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsOutOfRangeCoordinates() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2657,7 +2657,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishCreatesRecurringMatchWithOccurrenceCount() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2689,7 +2689,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishCreatesRecurringMatchWithUntilDate() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2721,7 +2721,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsInvalidRecurrenceFrequency() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2749,7 +2749,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishRejectsRecurringUntilDateTooSoonForFrequency() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2777,7 +2777,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishAcceptsOtherSportOption() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2799,7 +2799,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithInvalidEndTimeRerendersFormWithError() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2822,7 +2822,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithEndEqualToStartRerendersFormWithFriendlyError() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2845,7 +2845,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithEndBeforeStartRerendersFormWithFriendlyError() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -2868,7 +2868,7 @@ class UiRouteTest {
 
     @Test
     void getHostEditRouteRendersPrefilledFormForHost() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/matches/42/edit"))
                 .andExpect(status().isOk())
@@ -2904,29 +2904,29 @@ class UiRouteTest {
     }
 
     @Test
-    void getHostEditRouteForNonHostReturnsNotFound() throws Exception {
+    void getHostEditRouteForNonHostReturnsForbidden() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
-        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isForbidden());
     }
 
     @Test
     void getHostEditRouteForCompletedMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/matches/44/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostEditRouteForCancelledMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/matches/45/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostSeriesEditRouteRendersPrefilledFormForHost() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/matches/47/series/edit"))
                 .andExpect(status().isOk())
@@ -2944,14 +2944,14 @@ class UiRouteTest {
 
     @Test
     void getHostSeriesEditRouteForSingleEventReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/matches/42/series/edit")).andExpect(status().isNotFound());
     }
 
     @Test
     void postHostEditRedirectsToDetailOnSuccess() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -2974,7 +2974,7 @@ class UiRouteTest {
 
     @Test
     void postHostSeriesEditRedirectsToDetailOnSuccess() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/47/series/edit")
@@ -2999,7 +2999,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditPersistsPrivateVisibilityAsInviteOnly() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -3027,7 +3027,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditWithCapacityBelowConfirmedRerendersFormWithError() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -3050,7 +3050,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditWithEndBeforeStartRerendersFormWithErrorOnEndTime() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -3071,7 +3071,7 @@ class UiRouteTest {
 
     @Test
     void postHostPublishWithPrivateEventSucceedsRegardlessOfJoinPolicy() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -3092,7 +3092,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditForCompletedMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/44/edit")
@@ -3111,7 +3111,7 @@ class UiRouteTest {
 
     @Test
     void postHostEditForCancelledMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/host/matches/45/edit")
@@ -3134,15 +3134,15 @@ class UiRouteTest {
     }
 
     @Test
-    void postHostCancelForNonHostReturnsNotFound() throws Exception {
+    void postHostCancelForNonHostReturnsForbidden() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
-        mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isNotFound());
+        mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isForbidden());
     }
 
     @Test
     void postHostCancelRedirectsToDetailOnSuccess() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(post("/host/matches/42/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -3153,7 +3153,7 @@ class UiRouteTest {
     @Test
     void postHostCancelRecurringOccurrenceRedirectsToSelectedOccurrence() throws Exception {
         // Arrange
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         // Exercise and Assert
         mockMvc.perform(post("/host/matches/47/cancel"))
@@ -3164,7 +3164,7 @@ class UiRouteTest {
 
     @Test
     void postHostCancelRecurringSeriesRedirectsToSelectedOccurrence() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(post("/host/matches/47/series/cancel"))
                 .andExpect(status().is3xxRedirection())
@@ -3174,21 +3174,21 @@ class UiRouteTest {
 
     @Test
     void postHostCancelRecurringSeriesForSingleEventReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(post("/host/matches/42/series/cancel")).andExpect(status().isNotFound());
     }
 
     @Test
     void postHostCancelForCompletedEventReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(post("/host/matches/44/cancel")).andExpect(status().isNotFound());
     }
 
     @Test
     void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/requests"))
                 .andExpect(status().isOk())
@@ -3200,7 +3200,7 @@ class UiRouteTest {
 
     @Test
     void removedDashboardRoutesAreNotMapped() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/host/matches")).andExpect(status().isNotFound());
         mockMvc.perform(get("/host/matches/finished")).andExpect(status().isNotFound());
@@ -3212,7 +3212,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteRendersEventsPage() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/events"))
                 .andExpect(status().isOk())
@@ -3223,7 +3223,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteBindsSubmittedPageParameter() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/events").param("page", "2"))
                 .andExpect(status().isOk())
@@ -3233,7 +3233,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteRendersSortLinksAgainstEventsPath() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         final MvcResult result =
                 mockMvc.perform(get("/events")).andExpect(status().isOk()).andReturn();
@@ -3248,14 +3248,14 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteRejectsInvalidPageParameter() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/events").param("page", "0")).andExpect(status().isBadRequest());
     }
 
     @Test
     void getEventsRouteBindsSportSelectionsAsTypedEnums() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         final MvcResult result =
                 mockMvc.perform(
@@ -3283,7 +3283,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRoutePreservesPastFilterAsLowercaseQueryParam() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         final MvcResult result =
                 mockMvc.perform(get("/events").param("filter", "past"))
@@ -3297,7 +3297,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteRendersHostedTournamentsWhenTournamentTypeSelected() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         final MvcResult result =
                 mockMvc.perform(
@@ -3321,7 +3321,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteDoesNotIncludePendingCategoryByDefault() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
         currentUserHasSeriesJoinRequest = true;
 
         final MvcResult result =
@@ -3338,7 +3338,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteIncludesPendingOnlyWhenPendingCategorySelected() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
         currentUserHasSeriesJoinRequest = true;
 
         final MvcResult result =
@@ -3355,7 +3355,7 @@ class UiRouteTest {
 
     @Test
     void getEventsRouteShowsHostedAndGoingBadgesTogether() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host_player");
         currentUserHasReservation = true;
 
         final MvcResult result =
@@ -3380,7 +3380,7 @@ class UiRouteTest {
 
     @Test
     void getAccountRouteRendersPrivateAccountPageForAuthenticatedUsers() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/account"))
                 .andExpect(status().isOk())
@@ -3391,7 +3391,7 @@ class UiRouteTest {
 
     @Test
     void getAccountRouteWithSpanishLocaleLocalizesPublicProfileAction() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/account").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -3418,7 +3418,7 @@ class UiRouteTest {
 
     @Test
     void postAccountEditRouteUpdatesProfileAndRedirects() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/account/edit")
@@ -3433,7 +3433,7 @@ class UiRouteTest {
 
     @Test
     void postAccountEditRouteUpdatesPictureAndRedirects() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         multipart("/account/edit")
@@ -3443,7 +3443,7 @@ class UiRouteTest {
                                                 "avatar.png",
                                                 "image/png",
                                                 new byte[] {1, 2, 3}))
-                                .param("username", "host-player")
+                                .param("username", "host_player")
                                 .param("name", "Jamie")
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
@@ -3454,11 +3454,7 @@ class UiRouteTest {
 
     @Test
     void postAccountEditRouteShowsLocalizedImageErrorForUnsupportedFormat() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
-        final String expectedMessage =
-                messageSource()
-                        .getMessage(
-                                "account.profileImage.error.invalidFormat", null, Locale.ENGLISH);
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         multipart("/account/edit")
@@ -3469,18 +3465,18 @@ class UiRouteTest {
                                                 "application/pdf",
                                                 new byte[] {1, 2, 3}))
                                 .locale(Locale.ENGLISH)
-                                .param("username", "host-player")
+                                .param("username", "host_player")
                                 .param("name", "Jamie")
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
-                .andExpect(model().attribute("accountProfileImageError", expectedMessage));
+                .andExpect(model().attributeHasFieldErrors("accountProfileForm", "profileImage"));
     }
 
     @Test
     void getPublicProfileRouteRendersPublicProfileForAnonymousUsers() throws Exception {
-        mockMvc.perform(get("/users/host-player"))
+        mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attributeExists("profilePage"))
@@ -3493,7 +3489,7 @@ class UiRouteTest {
                         model().attribute(
                                         "profilePage",
                                         Matchers.hasProperty(
-                                                "username", Matchers.is("host-player"))))
+                                                "username", Matchers.is("host_player"))))
                 .andExpect(
                         model().attribute(
                                         "profilePage",
@@ -3523,7 +3519,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteShowsReviewActionsForEligibleAuthenticatedViewer() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/users/second-player"))
                 .andExpect(status().isOk())
@@ -3545,7 +3541,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteFiltersPositiveReviews() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/users/second-player").param("reviewFilter", "positive"))
                 .andExpect(status().isOk())
@@ -3575,7 +3571,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRoutePaginatesReviews() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/users/second-player").param("reviewPage", "2"))
                 .andExpect(status().isOk())
@@ -3602,7 +3598,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteThrowsErrorForInvalidReviewPage() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/users/second-player").param("reviewPage", "bad"))
                 .andExpect(status().isBadRequest());
@@ -3610,7 +3606,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteOpensReviewFormWhenRequested() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         get("/users/second-player")
@@ -3629,7 +3625,7 @@ class UiRouteTest {
 
     @Test
     void postPublicProfileReviewSavesReviewAndRedirects() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         post("/users/second-player/reviews")
@@ -3642,7 +3638,7 @@ class UiRouteTest {
 
     @Test
     void postPublicProfileReviewDeleteRemovesReviewAndRedirects() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(post("/users/second-player/reviews/delete"))
                 .andExpect(status().is3xxRedirection())
@@ -3652,7 +3648,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteUsesUploadedProfileImageWhenPresent() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(
                         multipart("/account/edit")
@@ -3662,13 +3658,13 @@ class UiRouteTest {
                                                 "avatar.png",
                                                 "image/png",
                                                 new byte[] {1, 2, 3}))
-                                .param("username", "host-player")
+                                .param("username", "host_player")
                                 .param("name", "Jamie")
                                 .param("lastName", "Rivera")
                                 .param("phone", "+1 555 123 4567"))
                 .andExpect(status().is3xxRedirection());
 
-        mockMvc.perform(get("/users/host-player"))
+        mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
@@ -3679,9 +3675,9 @@ class UiRouteTest {
 
     @Test
     void getOwnPublicProfileRouteShowsEditAction() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
-        mockMvc.perform(get("/users/host-player"))
+        mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("profileEditHref", "/account"))
                 .andExpect(model().attribute("reviewFormVisible", false));
@@ -3689,7 +3685,7 @@ class UiRouteTest {
 
     @Test
     void getOtherPublicProfileRouteDoesNotShowEditAction() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/users/second-player"))
                 .andExpect(status().isOk())
@@ -3699,7 +3695,7 @@ class UiRouteTest {
 
     @Test
     void getPublicProfileRouteWithSpanishLocaleLocalizesPageCopy() throws Exception {
-        mockMvc.perform(get("/users/host-player").param("lang", "es"))
+        mockMvc.perform(get("/users/host_player").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(

@@ -2,6 +2,6 @@ package ar.edu.itba.paw.services.exceptions.matchParticipation;
 
 public class MatchParticipationSeriesAlreadyInvitedException extends MatchParticipationException {
     public MatchParticipationSeriesAlreadyInvitedException() {
-        super("host.invites.error.seriesAlreadyCovered");
+        super("seriesAlreadyInvited");
     }
 }

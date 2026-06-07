@@ -6,7 +6,6 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.format.DateTimeFormatter;
@@ -32,15 +31,11 @@ public class UserBanAppealController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     public UserBanAppealController(
-            final ModerationService moderationService,
-            final MessageSource messageSource,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver) {
+            final ModerationService moderationService, final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
     }
 
     @ModelAttribute("reportAppealForm")
@@ -111,10 +106,8 @@ public class UserBanAppealController {
                     activeBan.getModerationReport().getId(), reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
-        } catch (final ModerationException exception) {
-            return new ModelAndView(
-                    "redirect:/account/ban?error="
-                            + domainExceptionErrorResolver.resolve(exception));
+        } catch (final ModerationException e) {
+            return new ModelAndView("redirect:/account/ban?error=" + e.getMessage());
         }
     }
 }

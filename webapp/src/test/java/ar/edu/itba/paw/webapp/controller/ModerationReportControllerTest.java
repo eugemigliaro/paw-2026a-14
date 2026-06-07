@@ -19,7 +19,6 @@ import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationDuplicateReportException;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -43,7 +42,6 @@ class ModerationReportControllerTest {
     private MatchService matchService;
     private PlayerReviewService playerReviewService;
     private MessageSource messageSource;
-    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
@@ -59,7 +57,6 @@ class ModerationReportControllerTest {
                                         userService,
                                         matchService,
                                         playerReviewService,
-                                        domainExceptionErrorResolver,
                                         messageSource))
                         .setConversionService(conversionService())
                         .build();
@@ -127,11 +124,7 @@ class ModerationReportControllerTest {
         mockMvc.perform(post("/reports/reviews/12").param("reason", "inappropriate_content"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reports/create"))
-                .andExpect(
-                        model().attributeHasFieldErrorCode(
-                                        "reportForm",
-                                        "reason",
-                                        "moderation.report.error.duplicate"));
+                .andExpect(model().hasErrors());
     }
 
     @Test

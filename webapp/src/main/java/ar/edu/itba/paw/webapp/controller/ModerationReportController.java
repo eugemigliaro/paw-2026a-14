@@ -13,7 +13,6 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.ReportForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.ReportMatchViewModel;
@@ -50,7 +49,6 @@ public class ModerationReportController {
     private final UserService userService;
     private final MatchService matchService;
     private final PlayerReviewService playerReviewService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
 
     @Autowired
@@ -59,13 +57,11 @@ public class ModerationReportController {
             final UserService userService,
             final MatchService matchService,
             final PlayerReviewService playerReviewService,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.userService = userService;
         this.matchService = matchService;
         this.playerReviewService = playerReviewService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
     }
 
@@ -214,7 +210,7 @@ public class ModerationReportController {
                         .findByUsername(username)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        if (user.getId().equals(reportedUser.getId())) {
+        if (reportedUser.getId().equals(user.getId())) {
             errors.reject("moderation.report.error.self");
         }
 
@@ -241,9 +237,8 @@ public class ModerationReportController {
                     form.getReason(),
                     form.getDetails());
             return redirectToReportUser(username, null, "sent", redirectAttributes);
-        } catch (final ModerationException exception) {
-            final String errorMsg =
-                    "moderation.report.error." + domainExceptionErrorResolver.resolve(exception);
+        } catch (final ModerationException e) {
+            final String errorMsg = "moderation.report.error." + e.getMessage();
             errors.reject(errorMsg);
             return showUserReportPage(username, null, null, form, new ExtendedModelMap(), locale)
                     .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
@@ -286,9 +281,8 @@ public class ModerationReportController {
                     form.getReason(),
                     form.getDetails());
             return redirectToReportReview(review.getId(), null, "sent", redirectAttributes);
-        } catch (final ModerationException exception) {
-            final String errorMsg =
-                    "moderation.report.error." + domainExceptionErrorResolver.resolve(exception);
+        } catch (final ModerationException e) {
+            final String errorMsg = "moderation.report.error." + e.getMessage();
             errors.reject(errorMsg);
             return showReviewReportPage(reviewId, null, null, form, new ExtendedModelMap(), locale)
                     .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
@@ -331,9 +325,8 @@ public class ModerationReportController {
                     form.getReason(),
                     form.getDetails());
             return redirectToReportMatch(match.getId(), null, "sent", redirectAttributes);
-        } catch (final ModerationException exception) {
-            final String errorMsg =
-                    "moderation.report.error." + domainExceptionErrorResolver.resolve(exception);
+        } catch (final ModerationException e) {
+            final String errorMsg = "moderation.report.error." + e.getMessage();
             errors.reject(errorMsg);
             return showMatchReportPage(matchId, null, null, form, new ExtendedModelMap(), locale)
                     .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);

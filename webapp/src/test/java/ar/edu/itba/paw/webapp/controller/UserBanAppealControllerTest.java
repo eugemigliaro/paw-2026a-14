@@ -14,7 +14,6 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -35,12 +34,10 @@ class UserBanAppealControllerTest {
 
     private MockMvc mockMvc;
     private ModerationService moderationService;
-    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
         moderationService = Mockito.mock(ModerationService.class);
-        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
         final MessageSource messageSource = Mockito.mock(MessageSource.class);
         Mockito.when(
                         messageSource.getMessage(
@@ -51,10 +48,7 @@ class UserBanAppealControllerTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new UserBanAppealController(
-                                        moderationService,
-                                        messageSource,
-                                        domainExceptionErrorResolver))
+                                new UserBanAppealController(moderationService, messageSource))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }

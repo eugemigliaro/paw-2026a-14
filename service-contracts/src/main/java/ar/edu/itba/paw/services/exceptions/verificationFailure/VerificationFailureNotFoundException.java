@@ -4,6 +4,6 @@ import ar.edu.itba.paw.services.exceptions.NotFoundException;
 
 public class VerificationFailureNotFoundException extends NotFoundException {
     public VerificationFailureNotFoundException() {
-        super("verification.message.notFound");
+        super("notFound");
     }
 }

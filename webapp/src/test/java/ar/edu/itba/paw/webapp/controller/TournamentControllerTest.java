@@ -29,7 +29,7 @@ import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -62,7 +62,6 @@ class TournamentControllerTest {
     private TournamentRegistrationService tournamentRegistrationService;
     private TournamentBracketService tournamentBracketService;
     private User host;
-    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
@@ -71,7 +70,6 @@ class TournamentControllerTest {
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
         host = UserUtils.getUser(7L);
-        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -80,9 +78,9 @@ class TournamentControllerTest {
                                         tournamentRegistrationService,
                                         tournamentBracketService,
                                         messageSource(),
-                                        domainExceptionErrorResolver,
                                         Clock.fixed(NOW, ZoneId.of("UTC"))))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
+                        .setControllerAdvice(new AccessExceptionHandler())
                         .build();
     }
 

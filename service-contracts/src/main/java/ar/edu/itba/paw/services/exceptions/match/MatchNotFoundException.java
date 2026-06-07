@@ -4,6 +4,6 @@ import ar.edu.itba.paw.services.exceptions.NotFoundException;
 
 public class MatchNotFoundException extends NotFoundException {
     public MatchNotFoundException() {
-        super("exception.match.notFound");
+        super("notFound");
     }
 }

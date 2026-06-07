@@ -4,6 +4,6 @@ import ar.edu.itba.paw.services.exceptions.NotFoundException;
 
 public class PlayerReviewNotFoundException extends NotFoundException {
     public PlayerReviewNotFoundException() {
-        super("exception.playerReview.notFound");
+        super("notFound");
     }
 }

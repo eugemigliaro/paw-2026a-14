@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.exceptions.match.MatchException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -16,14 +15,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class PlayerParticipationController {
 
     private final MatchParticipationService matchParticipationService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @Autowired
     public PlayerParticipationController(
-            final MatchParticipationService matchParticipationService,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver) {
+            final MatchParticipationService matchParticipationService) {
         this.matchParticipationService = matchParticipationService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
     }
 
     @PostMapping("/matches/{matchId}/join-requests")
@@ -36,7 +32,7 @@ public class PlayerParticipationController {
             redirectAttributes.addFlashAttribute("joinRequested", true);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (MatchException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + errorCode);
         }
     }
@@ -54,7 +50,7 @@ public class PlayerParticipationController {
             redirectAttributes.addFlashAttribute("seriesJoinRequested", true);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + errorCode);
         }
     }
@@ -69,7 +65,7 @@ public class PlayerParticipationController {
             redirectAttributes.addFlashAttribute("joinStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + errorCode);
         }
     }
@@ -84,7 +80,7 @@ public class PlayerParticipationController {
             redirectAttributes.addFlashAttribute("inviteStatus", "accepted");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + errorCode);
         }
     }
@@ -96,7 +92,7 @@ public class PlayerParticipationController {
             matchParticipationService.declineInvite(matchId, user);
             return new ModelAndView("redirect:/events");
         } catch (MatchException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + errorCode);
         }
     }

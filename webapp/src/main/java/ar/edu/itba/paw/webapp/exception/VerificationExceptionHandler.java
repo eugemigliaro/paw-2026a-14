@@ -23,6 +23,7 @@ public class VerificationExceptionHandler {
     @ExceptionHandler(VerificationFailureException.class)
     public ModelAndView handleVerificationFailure(
             final VerificationFailureException exception, final Locale locale) {
-        return VerificationViews.buildErrorView(exception.getMessage(), messageSource, locale, "/");
+        return VerificationViews.buildErrorView(
+                "verification.message." + exception.getMessage(), messageSource, locale, "/");
     }
 }

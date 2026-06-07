@@ -2,6 +2,6 @@ package ar.edu.itba.paw.services.exceptions.tournamentBracket;
 
 public class TournamentBracketMatchAlreadyDecidedException extends TournamentBracketException {
     public TournamentBracketMatchAlreadyDecidedException() {
-        super("exception.tournament.bracket.matchAlreadyDecided");
+        super("matchAlreadyDecided");
     }
 }

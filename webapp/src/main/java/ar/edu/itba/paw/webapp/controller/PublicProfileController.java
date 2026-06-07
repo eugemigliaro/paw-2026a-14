@@ -14,7 +14,6 @@ import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.UserSportRatingService;
 import ar.edu.itba.paw.services.exceptions.playerReview.PlayerReviewException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.ReviewForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
@@ -57,7 +56,6 @@ public class PublicProfileController {
     private final PlayerReviewService playerReviewService;
     private final ModerationService moderationService;
     private final UserSportRatingService userSportRatingService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
 
     @Autowired
@@ -66,13 +64,11 @@ public class PublicProfileController {
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
             final UserSportRatingService userSportRatingService,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource) {
         this.userService = userService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
         this.userSportRatingService = userSportRatingService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
     }
 
@@ -180,7 +176,7 @@ public class PublicProfileController {
                     user, reviewedUser, reviewForm.getReaction(), reviewForm.getComment());
             return redirectToProfile(username, null, "saved", redirectAttributes);
         } catch (final PlayerReviewException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return redirectToProfile(username, errorCode, null);
         }
     }
@@ -196,7 +192,7 @@ public class PublicProfileController {
             playerReviewService.deleteReview(user, reviewedUser);
             return redirectToProfile(username, null, "deleted", redirectAttributes);
         } catch (final PlayerReviewException e) {
-            final String errorCode = domainExceptionErrorResolver.resolve(e);
+            final String errorCode = e.getMessage();
             return redirectToProfile(username, errorCode, null);
         }
     }

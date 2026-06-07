@@ -25,13 +25,19 @@ public class PasswordResetExceptionHandler {
     public ModelAndView handleVerificationFailure(
             final VerificationFailureException exception, final Locale locale) {
         return VerificationViews.buildErrorView(
-                exception.getMessage(), messageSource, locale, "/forgot-password");
+                "verification.message." + exception.getMessage(),
+                messageSource,
+                locale,
+                "/forgot-password");
     }
 
     @ExceptionHandler(PasswordInvalidException.class)
     public ModelAndView handlePasswordInvalid(
             final PasswordInvalidException exception, final Locale locale) {
         return VerificationViews.buildErrorView(
-                exception.getMessage(), messageSource, locale, "/forgot-password");
+                "auth.registration.error." + exception.getMessage(),
+                messageSource,
+                locale,
+                "/forgot-password");
     }
 }

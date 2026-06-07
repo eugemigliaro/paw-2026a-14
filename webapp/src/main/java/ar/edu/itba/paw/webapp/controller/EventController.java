@@ -7,7 +7,6 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.exceptions.match.MatchException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import java.time.Clock;
@@ -32,7 +31,6 @@ public class EventController {
     private final MatchService matchService;
     private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final EventPageSupport eventPageSupport;
 
     @Autowired
@@ -42,7 +40,6 @@ public class EventController {
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
             final MessageSource messageSource,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final Clock clock,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -51,7 +48,6 @@ public class EventController {
         this.matchService = matchService;
         this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.eventPageSupport =
                 new EventPageSupport(
                         matchService,
@@ -115,7 +111,7 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            return reservationErrorDetails(user, matchId, errorCode(e), locale);
+            return reservationErrorDetails(user, matchId, e.getMessage(), locale);
         }
     }
 
@@ -137,7 +133,7 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            return reservationErrorDetails(user, matchId, errorCode(e), locale);
+            return reservationErrorDetails(user, matchId, e.getMessage(), locale);
         }
     }
 
@@ -156,7 +152,7 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            return seriesReservationErrorDetails(user, matchId, errorCode(e), locale);
+            return seriesReservationErrorDetails(user, matchId, e.getMessage(), locale);
         }
     }
 
@@ -175,17 +171,13 @@ public class EventController {
             redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
-            return seriesReservationErrorDetails(user, matchId, errorCode(e), locale);
+            return seriesReservationErrorDetails(user, matchId, e.getMessage(), locale);
         }
     }
 
     private static Optional<String> flashString(final Model model, final String name) {
         final Object value = model.asMap().get(name);
         return value instanceof String ? Optional.of((String) value) : Optional.empty();
-    }
-
-    private String errorCode(final MatchException exception) {
-        return domainExceptionErrorResolver.resolve(exception);
     }
 
     private ModelAndView reservationErrorDetails(

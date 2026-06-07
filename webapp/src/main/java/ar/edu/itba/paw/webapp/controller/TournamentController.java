@@ -27,7 +27,6 @@ import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketException;
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotGeneratedException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
@@ -66,7 +65,6 @@ public class TournamentController {
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final Clock clock;
 
     @Autowired
@@ -75,13 +73,11 @@ public class TournamentController {
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
             final MessageSource messageSource,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final Clock clock) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.clock = clock;
     }
 
@@ -133,8 +129,7 @@ public class TournamentController {
         try {
             tournamentRegistrationService.joinSolo(tournamentId, user);
         } catch (TournamentRegistrationException e) {
-            final String tournamentErrorCode =
-                    "tournament.registration.error." + domainExceptionErrorResolver.resolve(e);
+            final String tournamentErrorCode = "tournament.registration.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", tournamentErrorCode);
         }
         return new ModelAndView("redirect:/tournaments/" + tournamentId);
@@ -189,9 +184,8 @@ public class TournamentController {
                     user);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.result.saved");
-        } catch (final TournamentBracketException exception) {
-            final String errorCode =
-                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(exception);
+        } catch (final TournamentBracketException e) {
+            final String errorCode = "tournament.bracket.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
         }
 
@@ -206,8 +200,7 @@ public class TournamentController {
         try {
             tournamentRegistrationService.leaveSolo(tournamentId, user);
         } catch (final TournamentRegistrationException e) {
-            final String errorCode =
-                    "tournament.registration.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorCode = "tournament.registration.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
         }
 

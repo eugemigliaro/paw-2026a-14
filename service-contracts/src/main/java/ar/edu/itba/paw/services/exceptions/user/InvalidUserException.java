@@ -4,6 +4,6 @@ import ar.edu.itba.paw.services.exceptions.ForbiddenException;
 
 public class InvalidUserException extends ForbiddenException {
     public InvalidUserException() {
-        super("exception.user.forbidden");
+        super("forbidden");
     }
 }

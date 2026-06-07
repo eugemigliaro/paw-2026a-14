@@ -10,7 +10,6 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.exceptions.moderation.ModerationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
@@ -42,16 +41,12 @@ public class UserModerationReportController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @Autowired
     public UserModerationReportController(
-            final ModerationService moderationService,
-            final MessageSource messageSource,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver) {
+            final ModerationService moderationService, final MessageSource messageSource) {
         this.moderationService = moderationService;
         this.messageSource = messageSource;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
     }
 
     @ModelAttribute("reportAppealForm")
@@ -172,12 +167,9 @@ public class UserModerationReportController {
             moderationService.appealReport(reportId, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
-        } catch (final ModerationException exception) {
+        } catch (final ModerationException e) {
             return new ModelAndView(
-                    "redirect:/reports/mine/"
-                            + reportId
-                            + "?error="
-                            + domainExceptionErrorResolver.resolve(exception));
+                    "redirect:/reports/mine/" + reportId + "?error=" + e.getMessage());
         }
     }
 

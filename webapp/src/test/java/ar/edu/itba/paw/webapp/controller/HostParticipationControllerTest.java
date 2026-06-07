@@ -16,7 +16,9 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.match.MatchClosedException;
 import ar.edu.itba.paw.services.exceptions.match.MatchForbiddenActionException;
 import ar.edu.itba.paw.services.exceptions.match.MatchStartedException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import java.util.Locale;
@@ -40,7 +42,6 @@ class HostParticipationControllerTest {
     private MatchParticipationService matchParticipationService;
     private MessageSource messageSource;
     private UserService userService;
-    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
@@ -48,7 +49,6 @@ class HostParticipationControllerTest {
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
         messageSource = Mockito.mock(MessageSource.class);
         userService = Mockito.mock(UserService.class);
-        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         UserEmailValidator userEmailValidator = new UserEmailValidator(userService);
 
@@ -58,9 +58,12 @@ class HostParticipationControllerTest {
                                         matchService,
                                         matchParticipationService,
                                         userService,
-                                        domainExceptionErrorResolver,
                                         messageSource))
                         .setValidator(validator(userEmailValidator))
+                        .setControllerAdvice(
+                                new AccessExceptionHandler(),
+                                new PasswordResetExceptionHandler(messageSource),
+                                new VerificationExceptionHandler(messageSource))
                         .build();
     }
 

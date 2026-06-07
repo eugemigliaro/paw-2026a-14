@@ -23,7 +23,6 @@ import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketEx
 import ar.edu.itba.paw.services.exceptions.tournamentBracket.TournamentBracketNotGeneratedException;
 import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecycleException;
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.BracketManualPairingsForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishForm;
 import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
@@ -77,7 +76,6 @@ public class HostTournamentController {
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
@@ -91,7 +89,6 @@ public class HostTournamentController {
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -104,7 +101,6 @@ public class HostTournamentController {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
@@ -249,8 +245,7 @@ public class HostTournamentController {
             }
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
         } catch (final TournamentRegistrationException e) {
-            final String errorMsg =
-                    "tournament.registration.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorMsg = "tournament.registration.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
         }
@@ -268,8 +263,7 @@ public class HostTournamentController {
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.strategy.updated");
         } catch (final TournamentBracketException e) {
-            final String errorMsg =
-                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorMsg = "tournament.bracket.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
         return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
@@ -286,8 +280,7 @@ public class HostTournamentController {
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.host.cancel.success");
         } catch (final TournamentLifecycleException e) {
-            final String errorMsg =
-                    "tournament.lifecycle.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorMsg = "tournament.lifecycle.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
         return new ModelAndView("redirect:/tournaments/" + tournamentId);
@@ -303,8 +296,7 @@ public class HostTournamentController {
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.generate.success");
         } catch (final TournamentBracketException e) {
-            final String errorMsg =
-                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorMsg = "tournament.bracket.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
         return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
@@ -386,8 +378,7 @@ public class HostTournamentController {
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.bracket.manualPairings.saved");
         } catch (final TournamentBracketException e) {
-            final String errorMsg =
-                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorMsg = "tournament.bracket.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
         }
         return new ModelAndView("redirect:/host/tournaments/" + tournamentId + "/bracket/setup");
@@ -432,8 +423,7 @@ public class HostTournamentController {
                     "tournamentNoticeCode", "tournament.bracket.publish.success");
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
         } catch (final TournamentBracketException e) {
-            final String errorMsg =
-                    "tournament.bracket.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorMsg = "tournament.bracket.error." + e.getMessage();
             redirectAttributes.addFlashAttribute("tournamentErrorCode", errorMsg);
             return new ModelAndView(
                     "redirect:/host/tournaments/" + tournamentId + "/bracket/setup");

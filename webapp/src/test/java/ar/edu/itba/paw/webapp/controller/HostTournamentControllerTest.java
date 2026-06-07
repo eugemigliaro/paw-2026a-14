@@ -33,7 +33,7 @@ import ar.edu.itba.paw.services.exceptions.tournamentLifecycle.TournamentLifecyc
 import ar.edu.itba.paw.services.exceptions.tournamentRegistration.TournamentRegistrationUnderCapacityException;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -69,7 +69,6 @@ class HostTournamentControllerTest {
     private TournamentService tournamentService;
     private TournamentRegistrationService tournamentRegistrationService;
     private TournamentBracketService tournamentBracketService;
-    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
@@ -77,7 +76,6 @@ class HostTournamentControllerTest {
         tournamentService = Mockito.mock(TournamentService.class);
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
-        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         final MessageSource messageSource = messageSource();
         mockMvc =
@@ -86,7 +84,6 @@ class HostTournamentControllerTest {
                                         tournamentService,
                                         tournamentRegistrationService,
                                         tournamentBracketService,
-                                        domainExceptionErrorResolver,
                                         messageSource,
                                         true,
                                         "/assets/tiles/{z}/{x}/{y}.png",
@@ -97,6 +94,7 @@ class HostTournamentControllerTest {
                         .setValidator(validator(messageSource))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
+                        .setControllerAdvice(new AccessExceptionHandler())
                         .build();
     }
 

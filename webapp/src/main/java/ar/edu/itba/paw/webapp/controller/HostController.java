@@ -186,11 +186,11 @@ public class HostController {
             redirectAttributes.addFlashAttribute("hostAction", "updated");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchUpdateCapacityBelowConfirmedException e) {
-            bindingResult.rejectValue("maxPlayers", e.getMessage());
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
         } catch (final MatchUpdateCapacityAboveMaxException e) {
-            bindingResult.rejectValue("maxPlayers", e.getMessage());
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
         } catch (final MatchUpdatePendingRequestsExceedAvailableException e) {
-            bindingResult.rejectValue("joinPolicy", e.getMessage());
+            bindingResult.rejectValue("joinPolicy", "match.update.error." + e.getMessage());
         }
         return hostFormView(createEventForm, null, locale, formConfig);
     }
@@ -226,11 +226,11 @@ public class HostController {
             redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchUpdateCapacityBelowConfirmedException e) {
-            bindingResult.rejectValue("maxPlayers", e.getMessage());
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
         } catch (final MatchUpdateCapacityAboveMaxException e) {
-            bindingResult.rejectValue("maxPlayers", e.getMessage());
+            bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
         } catch (final MatchUpdatePendingRequestsExceedAvailableException e) {
-            bindingResult.rejectValue("joinPolicy", e.getMessage());
+            bindingResult.rejectValue("joinPolicy", "match.update.error." + e.getMessage());
         }
         return hostFormView(createEventForm, null, locale, formConfig);
     }
@@ -400,7 +400,7 @@ public class HostController {
             final Long matchId, final User actingUser) {
         try {
             return matchService.findEditableRecurringMatchForHost(matchId, actingUser);
-        } catch (final MatchUpdateException exception) {
+        } catch (final MatchException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }

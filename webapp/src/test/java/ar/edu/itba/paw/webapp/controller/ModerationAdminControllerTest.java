@@ -19,7 +19,6 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -45,14 +44,12 @@ class ModerationAdminControllerTest {
     private MockMvc mockMvc;
     private ModerationService moderationService;
     private UserService userService;
-    private DomainExceptionErrorResolver domainExceptionErrorResolver;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
         moderationService = Mockito.mock(ModerationService.class);
         userService = Mockito.mock(UserService.class);
-        domainExceptionErrorResolver = Mockito.mock(DomainExceptionErrorResolver.class);
 
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
@@ -61,10 +58,7 @@ class ModerationAdminControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new ModerationAdminController(
-                                        moderationService,
-                                        userService,
-                                        domainExceptionErrorResolver,
-                                        messageSource()))
+                                        moderationService, userService, messageSource()))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())

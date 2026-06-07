@@ -1,13 +1,13 @@
 package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
-import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 public class ReviewForm {
 
-    @NotBlank(message = "{NotBlank.reviewForm.reaction}")
+    @NotNull(message = "{NotNull.reviewForm.reaction}")
     private PlayerReviewReaction reaction;
 
     @Size(max = 1000, message = "{Size.reviewForm.comment}")

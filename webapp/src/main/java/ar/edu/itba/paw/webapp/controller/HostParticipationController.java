@@ -8,7 +8,6 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.exceptions.match.MatchException;
 import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
-import ar.edu.itba.paw.webapp.exception.DomainExceptionErrorResolver;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
@@ -34,7 +33,6 @@ public class HostParticipationController {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final UserService userService;
-    private final DomainExceptionErrorResolver domainExceptionErrorResolver;
     private final MessageSource messageSource;
 
     @Autowired
@@ -42,12 +40,10 @@ public class HostParticipationController {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final UserService userService,
-            final DomainExceptionErrorResolver domainExceptionErrorResolver,
             final MessageSource messageSource) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.userService = userService;
-        this.domainExceptionErrorResolver = domainExceptionErrorResolver;
         this.messageSource = messageSource;
     }
 
@@ -102,8 +98,7 @@ public class HostParticipationController {
             matchParticipationService.approveRequest(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "requestApproved");
         } catch (final MatchException e) {
-            final String errorKey =
-                    "event.host.requests.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorKey = "event.host.requests.error." + e.getMessage();
             final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
             redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
@@ -124,8 +119,7 @@ public class HostParticipationController {
             matchParticipationService.rejectRequest(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "requestRejected");
         } catch (final MatchParticipationException e) {
-            final String errorKey =
-                    "event.host.requests.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorKey = "event.host.requests.error." + e.getMessage();
             final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
             redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
@@ -173,7 +167,7 @@ public class HostParticipationController {
             redirectAttributes.addFlashAttribute(
                     "hostAction", includeSeries ? "seriesInviteSent" : "inviteSent");
         } catch (final MatchException e) {
-            final String errorKey = "host.invites.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorKey = "host.invites.error." + e.getMessage();
             final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
@@ -195,8 +189,7 @@ public class HostParticipationController {
             matchParticipationService.removeParticipant(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "participantRemoved");
         } catch (final MatchException e) {
-            final String errorKey =
-                    "event.host.participants.error." + domainExceptionErrorResolver.resolve(e);
+            final String errorKey = "event.host.participants.error." + e.getMessage();
             final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "participants");
             redirectAttributes.addFlashAttribute("hostActionError", errorMsg);

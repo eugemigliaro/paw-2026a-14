@@ -800,7 +800,8 @@ final class EventPageSupport {
         if (code == null) {
             return null;
         }
-        return messageSource.getMessage("reservation.error." + code, null, locale);
+        final String errorKey = "reservation.error." + code;
+        return messageSource.getMessage(errorKey, null, locale);
     }
 
     private static String avatarLabelForUsername(final String username) {

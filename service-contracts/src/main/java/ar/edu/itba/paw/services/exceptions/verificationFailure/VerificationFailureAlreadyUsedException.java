@@ -2,6 +2,6 @@ package ar.edu.itba.paw.services.exceptions.verificationFailure;
 
 public class VerificationFailureAlreadyUsedException extends VerificationFailureException {
     public VerificationFailureAlreadyUsedException() {
-        super("verification.message.accountUnavailable");
+        super("accountUnavailable");
     }
 }
