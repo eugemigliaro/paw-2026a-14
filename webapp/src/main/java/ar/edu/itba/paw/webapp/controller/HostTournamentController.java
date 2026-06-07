@@ -6,36 +6,10 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketAlreadyGeneratedException;
 import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketInvalidPairingsException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketInvalidRoundOrderException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketMatchAlreadyDecidedException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketMatchNotReadyException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketMissingMatchScheduleException;
 import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketNotGeneratedException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketNotInProgressException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketNotReadyForBracketException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketPairingStrategyRequiredException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketUnderCapacityException;
-import ar.edu.itba.paw.models.exceptions.tournamentBracket.TournamentBracketWinnerNotInMatchException;
 import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleInvalidBracketSizeException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleInvalidFormatException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleInvalidJoinModeException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleInvalidRegistrationWindowException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleInvalidScheduleException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleInvalidTeamSizeException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleNotCancellableException;
-import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.TournamentLifecycleNotEditableException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationAlreadyAssignedException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationAlreadyOnTeamException;
 import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationNotInSoloPoolException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationNotOpenException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationSoloPoolFullException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationSoloSignupDisabledException;
-import ar.edu.itba.paw.models.exceptions.tournamentRegistration.TournamentRegistrationUnderCapacityException;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -344,9 +318,6 @@ public class HostTournamentController {
             bracketView = tournamentBracketService.getBracket(tournamentId, user);
         } catch (final TournamentBracketNotGeneratedException exception) {
             bracketGenerated = false;
-        } catch (final TournamentBracketException exception) {
-            handleBracketException(exception, null);
-            throw exception;
         }
 
         final List<TournamentTeam> manualPairingTeams =
@@ -733,107 +704,6 @@ public class HostTournamentController {
 
     private boolean isEditable(final Tournament tournament) {
         return TournamentStatus.REGISTRATION == tournament.getStatus();
-    }
-
-    private void applyServiceError(
-            final TournamentLifecycleException exception,
-            final BindingResult bindingResult,
-            final Locale locale) {
-        final String code = lifecycleErrorCode(exception);
-        if (exception instanceof TournamentLifecycleInvalidBracketSizeException) {
-            bindingResult.rejectValue("bracketSize", code);
-        } else if (exception instanceof TournamentLifecycleInvalidTeamSizeException) {
-            bindingResult.rejectValue("teamSize", code);
-        } else if (exception instanceof TournamentLifecycleInvalidRegistrationWindowException) {
-            bindingResult.rejectValue("registrationClosesTime", code);
-        } else if (exception instanceof TournamentLifecycleInvalidJoinModeException) {
-            bindingResult.rejectValue("allowSoloSignup", code);
-        } else {
-            bindingResult.reject(
-                    "CreateTournamentForm.global",
-                    messageSource.getMessage(code, null, code, locale));
-        }
-    }
-
-    private static String lifecycleErrorCode(final TournamentLifecycleException exception) {
-        return switch (exception) {
-            case TournamentLifecycleInvalidBracketSizeException ignored ->
-                    "tournament.lifecycle.error.invalidBracketSize";
-            case TournamentLifecycleInvalidTeamSizeException ignored ->
-                    "tournament.lifecycle.error.invalidTeamSize";
-            case TournamentLifecycleInvalidJoinModeException ignored ->
-                    "tournament.lifecycle.error.invalidJoinMode";
-            case TournamentLifecycleInvalidRegistrationWindowException ignored ->
-                    "tournament.lifecycle.error.invalidRegistrationWindow";
-            case TournamentLifecycleInvalidScheduleException ignored ->
-                    "tournament.lifecycle.error.invalidSchedule";
-            case TournamentLifecycleInvalidFormatException ignored ->
-                    "tournament.lifecycle.error.invalidFormat";
-            case TournamentLifecycleNotEditableException ignored ->
-                    "tournament.lifecycle.error.notEditable";
-            case TournamentLifecycleNotCancellableException ignored ->
-                    "tournament.lifecycle.error.notCancellable";
-            default -> "tournament.lifecycle.error.invalidDetails";
-        };
-    }
-
-    private static String registrationErrorCode(final TournamentRegistrationException exception) {
-        return switch (exception) {
-            case TournamentRegistrationSoloSignupDisabledException ignored ->
-                    "tournament.registration.error.soloDisabled";
-            case TournamentRegistrationNotOpenException ignored ->
-                    "tournament.registration.error.notOpen";
-            case TournamentRegistrationAlreadyOnTeamException ignored ->
-                    "tournament.registration.error.alreadyOnTeam";
-            case TournamentRegistrationAlreadyAssignedException ignored ->
-                    "tournament.registration.error.alreadyAssigned";
-            case TournamentRegistrationNotInSoloPoolException ignored ->
-                    "tournament.registration.error.notInSoloPool";
-            case TournamentRegistrationSoloPoolFullException ignored ->
-                    "tournament.registration.error.soloPoolFull";
-            case TournamentRegistrationUnderCapacityException ignored ->
-                    "tournament.registration.error.underCapacity";
-            default -> "tournament.registration.error.notFound";
-        };
-    }
-
-    private void handleBracketException(
-            final TournamentBracketException exception,
-            final RedirectAttributes redirectAttributes) {
-        if (redirectAttributes != null) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", bracketErrorCode(exception));
-        }
-    }
-
-    private static String bracketErrorCode(final TournamentBracketException exception) {
-        return switch (exception) {
-            case TournamentBracketNotReadyForBracketException ignored ->
-                    "tournament.bracket.error.notReady";
-            case TournamentBracketAlreadyGeneratedException ignored ->
-                    "tournament.bracket.error.alreadyGenerated";
-            case TournamentBracketNotGeneratedException ignored ->
-                    "tournament.bracket.error.notGenerated";
-            case TournamentBracketPairingStrategyRequiredException ignored ->
-                    "tournament.bracket.error.pairingStrategyRequired";
-            case TournamentBracketInvalidPairingsException ignored ->
-                    "tournament.bracket.error.invalidPairings";
-            case TournamentBracketUnderCapacityException ignored ->
-                    "tournament.bracket.error.underCapacity";
-            case TournamentBracketMissingMatchScheduleException ignored ->
-                    "tournament.bracket.error.missingMatchSchedule";
-            case TournamentBracketInvalidRoundOrderException ignored ->
-                    "tournament.bracket.error.invalidRoundOrder";
-            case TournamentBracketNotInProgressException ignored ->
-                    "tournament.bracket.error.notInProgress";
-            case TournamentBracketMatchNotReadyException ignored ->
-                    "tournament.bracket.error.matchNotReady";
-            case TournamentBracketMatchAlreadyDecidedException ignored ->
-                    "tournament.bracket.error.matchAlreadyDecided";
-            case TournamentBracketWinnerNotInMatchException ignored ->
-                    "tournament.bracket.error.winnerNotInMatch";
-            default -> "tournament.bracket.error.notFound";
-        };
     }
 
     private static Map<Long, List<String>> membersByTeamId(

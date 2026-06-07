@@ -220,19 +220,4 @@ public class HostParticipationController {
                 .orElseGet(
                         () -> messageSource.getMessage("host.invites.error.generic", null, locale));
     }
-
-    private static String avatarLabel(final String username) {
-        if (username == null || username.isBlank()) {
-            return "?";
-        }
-        final String[] parts = username.trim().split("[^A-Za-z0-9]+");
-        if (parts.length >= 2) {
-            return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
-        }
-        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
-        if (compact.length() >= 2) {
-            return compact.substring(0, 2).toUpperCase();
-        }
-        return compact.isEmpty() ? "?" : compact.substring(0, 1).toUpperCase();
-    }
 }

@@ -724,10 +724,6 @@ final class EventPageSupport {
         return !endsAt.isAfter(Instant.now(clock));
     }
 
-    private boolean hasEventStarted(final Match match) {
-        return !match.getStartsAt().isAfter(Instant.now(clock));
-    }
-
     private boolean isEventInProgress(final Match match) {
         final Instant now = Instant.now(clock);
         return match.getEndsAt() != null
@@ -748,23 +744,6 @@ final class EventPageSupport {
         }
         final String errorKey = "reservation.error." + code;
         return messageSource.getMessage(errorKey, null, locale);
-    }
-
-    private static String avatarLabelForUsername(final String username) {
-        if (username == null || username.isBlank()) {
-            return "?";
-        }
-
-        final String[] segments = username.trim().split("[^A-Za-z0-9]+");
-        if (segments.length >= 2) {
-            return (segments[0].substring(0, 1) + segments[1].substring(0, 1)).toUpperCase();
-        }
-
-        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
-        if (compact.length() >= 2) {
-            return compact.substring(0, 2).toUpperCase();
-        }
-        return compact.substring(0, 1).toUpperCase();
     }
 
     private String joinErrorMessage(final String code, final Locale locale) {
