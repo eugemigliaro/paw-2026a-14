@@ -103,7 +103,7 @@ public class UserBanAppealController {
 
         try {
             moderationService.appealReport(
-                    activeBan.getModerationReport().getId(), reportAppealForm.getDetails());
+                    activeBan.getModerationReport().getId(), user, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
         } catch (final ModerationException e) {

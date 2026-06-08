@@ -57,6 +57,7 @@ public class TournamentBracketServiceImplTest {
     @Mock private TournamentMatchDao tournamentMatchDao;
     @Mock private UserSportRatingService userSportRatingService;
     @Mock private TournamentMailService tournamentMailService;
+    @Mock private SecurityService securityService;
 
     private TournamentBracketServiceImpl bracketService;
 
@@ -69,6 +70,7 @@ public class TournamentBracketServiceImplTest {
                         tournamentMatchDao,
                         userSportRatingService,
                         tournamentMailService,
+                        securityService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
                 .when(tournamentDataService.update(ArgumentMatchers.any()))
@@ -1242,6 +1244,7 @@ public class TournamentBracketServiceImplTest {
                 tournamentMatchDao,
                 userSportRatingService,
                 tournamentMailService,
+                securityService,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
@@ -1253,6 +1256,7 @@ public class TournamentBracketServiceImplTest {
                 tournamentMatchDao,
                 userSportRatingService,
                 tournamentMailService,
+                securityService,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
@@ -1317,12 +1321,16 @@ public class TournamentBracketServiceImplTest {
         }
     }
 
-    private static void authenticateAdminMod() {
+    private void authenticateAdminMod() {
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
                                 "admin",
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
+        Mockito.when(
+                        securityService.canActAsAdminMod(
+                                Mockito.argThat(user -> user != null && user.getId() == 99L)))
+                .thenReturn(true);
     }
 }

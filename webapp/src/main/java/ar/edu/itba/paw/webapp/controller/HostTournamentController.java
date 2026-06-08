@@ -158,11 +158,8 @@ public class HostTournamentController {
             final Locale locale) {
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, user)
+                        .findEditableTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!isEditable(tournament)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
-        }
         return createFormView(toForm(tournament), null, locale, editFormConfig(tournament, locale));
     }
 
@@ -177,16 +174,12 @@ public class HostTournamentController {
             final RedirectAttributes redirectAttributes) {
         final Tournament tournament =
                 tournamentService
-                        .findTournamentForHost(tournamentId, user)
+                        .findEditableTournamentForHost(tournamentId, user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         final TournamentFormConfig formConfig = editFormConfig(tournament, locale);
 
         if (bindingResult.hasErrors()) {
             return createFormView(createTournamentForm, null, locale, formConfig);
-        }
-
-        if (!isEditable(tournament)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
         final UpdateTournamentRequest request =
@@ -700,10 +693,6 @@ public class HostTournamentController {
         final RedirectView redirectView = new RedirectView(targetUrl, true);
         redirectView.setStatusCode(HttpStatus.SEE_OTHER);
         return new ModelAndView(redirectView);
-    }
-
-    private boolean isEditable(final Tournament tournament) {
-        return TournamentStatus.REGISTRATION == tournament.getStatus();
     }
 
     private static Map<Long, List<String>> membersByTeamId(

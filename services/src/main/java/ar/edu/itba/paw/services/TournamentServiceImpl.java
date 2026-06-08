@@ -19,11 +19,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,12 +29,12 @@ public class TournamentServiceImpl implements TournamentService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
-    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDataService tournamentDataService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentMailService tournamentMailService;
     private final ImageService imageService;
+    private final SecurityService securityService;
     private final Clock clock;
 
     public TournamentServiceImpl(
@@ -46,11 +42,13 @@ public class TournamentServiceImpl implements TournamentService {
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentMailService tournamentMailService,
             final ImageService imageService,
+            final SecurityService securityService,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentMailService = tournamentMailService;
         this.imageService = imageService;
+        this.securityService = securityService;
         this.clock = clock;
     }
 
@@ -95,6 +93,42 @@ public class TournamentServiceImpl implements TournamentService {
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .filter(tournament -> canMutate(tournament, host));
+    }
+
+    @Override
+    public Optional<Tournament> findEditableTournamentForHost(
+            final long tournamentId, final User host) {
+        return findTournamentForHost(tournamentId, host)
+                .filter(tournament -> TournamentStatus.REGISTRATION == tournament.getStatus());
+    }
+
+    @Override
+    public TournamentManagementPermissions getManagementPermissions(
+            final Tournament tournament, final User actingUser) {
+        final boolean canMutate = canMutate(tournament, actingUser);
+        final TournamentStatus status = tournament == null ? null : tournament.getStatus();
+        final boolean canCloseRegistration = TournamentStatus.REGISTRATION == status && canMutate;
+        final boolean canEditTournament = TournamentStatus.REGISTRATION == status && canMutate;
+        final boolean canCancelTournament =
+                status != null
+                        && TournamentStatus.COMPLETED != status
+                        && TournamentStatus.CANCELLED != status
+                        && canMutate;
+        final boolean canManageBracket = TournamentStatus.BRACKET_SETUP == status && canMutate;
+        final boolean canViewBracket =
+                TournamentStatus.IN_PROGRESS == status
+                        || TournamentStatus.COMPLETED == status
+                        || TournamentStatus.CANCELLED == status;
+        final boolean canDefineMatchDates = TournamentStatus.BRACKET_SETUP == status && canMutate;
+        final boolean canManageResults = TournamentStatus.IN_PROGRESS == status && canMutate;
+        return new TournamentManagementPermissions(
+                canCloseRegistration,
+                canEditTournament,
+                canCancelTournament,
+                canManageBracket,
+                canViewBracket,
+                canDefineMatchDates,
+                canManageResults);
     }
 
     @Override
@@ -352,7 +386,8 @@ public class TournamentServiceImpl implements TournamentService {
         if (tournament == null || actingUser == null || actingUser.getId() == null) {
             return false;
         }
-        return tournament.getHost().getId().equals(actingUser.getId()) || isAdminMod();
+        return tournament.getHost().getId().equals(actingUser.getId())
+                || securityService.canActAsAdminMod(actingUser);
     }
 
     private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
@@ -370,18 +405,6 @@ public class TournamentServiceImpl implements TournamentService {
         return TournamentStatus.REGISTRATION == tournament.getStatus()
                 && opensAt != null
                 && now.isBefore(opensAt);
-    }
-
-    private boolean isAdminMod() {
-        final Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .filter(Objects::nonNull)
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ADMIN_MOD_AUTHORITY::equals);
     }
 
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {

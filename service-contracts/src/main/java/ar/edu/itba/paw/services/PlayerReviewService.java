@@ -29,6 +29,8 @@ public interface PlayerReviewService {
     PaginatedResult<PlayerReview> findReviewsForUser(
             User reviewed, PlayerReviewFilter filter, int page, int pageSize);
 
+    PlayerReviewProfileState getProfileReviewState(User reviewer, User reviewed);
+
     boolean canReview(User reviewer, User reviewed);
 
     Set<Long> findReviewableUserIds(User reviewer);

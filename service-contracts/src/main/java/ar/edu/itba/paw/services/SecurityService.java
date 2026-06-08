@@ -8,5 +8,7 @@ public interface SecurityService {
 
     User currentUser();
 
+    boolean canActAsAdminMod(User actingUser);
+
     boolean isHost(Long matchId);
 }

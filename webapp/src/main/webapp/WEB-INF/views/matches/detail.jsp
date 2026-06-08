@@ -24,7 +24,7 @@
 			</c:choose>
 
 			<main class="page-shell page-shell--detail">
-				<section class="detail-top ${hostViewer ? 'detail-top--host-view' : ''}">
+				<section class="detail-top ${hostCanManage ? 'detail-top--host-view' : ''}">
 					<div class="detail-top__main">
 						<section
 							class="event-hero ${eventMediaClass} ${not empty eventBannerImageUrl ? 'event-hero--with-image' : ''}"
@@ -332,9 +332,9 @@
 						</section>
 					</div>
 
-					<aside class="detail-top__sidebar ${hostViewer ? 'detail-top__sidebar--host-view' : ''}">
+					<aside class="detail-top__sidebar ${hostCanManage ? 'detail-top__sidebar--host-view' : ''}">
 						<c:choose>
-							<c:when test="${hostViewer}">
+							<c:when test="${hostCanManage}">
 								<article class="panel host-panel">
 									<c:if test="${not empty hostActionNotice}">
 										<p class="booking-panel__notice booking-panel__notice--success">

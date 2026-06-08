@@ -1,12 +1,11 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationException;
+import ar.edu.itba.paw.services.MatchInvitationResult;
 import ar.edu.itba.paw.services.MatchParticipationService;
-import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
@@ -29,18 +28,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class HostParticipationController {
 
-    private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final UserService userService;
     private final MessageSource messageSource;
 
     @Autowired
     public HostParticipationController(
-            final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final UserService userService,
             final MessageSource messageSource) {
-        this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.userService = userService;
         this.messageSource = messageSource;
@@ -156,15 +152,14 @@ public class HostParticipationController {
             return redirectToMatch(matchId);
         }
 
-        final Match match = findMatchOrThrow(matchId);
-
         try {
-            final boolean includeSeries =
-                    inviteForm.isInviteSeries() && match.isRecurringOccurrence();
-            matchParticipationService.inviteUser(
-                    matchId, user, inviteForm.getEmail(), includeSeries);
+            final MatchInvitationResult invitationResult =
+                    matchParticipationService.inviteUserWithResult(
+                            matchId, user, inviteForm.getEmail(), inviteForm.isInviteSeries());
             redirectAttributes.addFlashAttribute(
-                    "hostAction", includeSeries ? "seriesInviteSent" : "inviteSent");
+                    "hostAction",
+                    invitationResult.isSeriesInvitation() ? "seriesInviteSent" : "inviteSent");
+            return redirectToMatch(matchId);
         } catch (final MatchException e) {
             final String errorKey = "host.invites.error." + e.getMessage();
             final String errorMsg = messageSource.getMessage(errorKey, null, locale);
@@ -194,12 +189,6 @@ public class HostParticipationController {
             redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
         }
         return redirectToMatch(matchId);
-    }
-
-    private Match findMatchOrThrow(final Long matchId) {
-        return matchService
-                .findMatchById(matchId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     private User findUserOrThrow(final Long userId) {

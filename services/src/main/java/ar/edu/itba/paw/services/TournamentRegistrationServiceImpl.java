@@ -18,11 +18,7 @@ import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class TournamentRegistrationServiceImpl implements TournamentRegistrationService {
 
-    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
-
+    private final SecurityService securityService;
     private final TournamentDataService tournamentDataService;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDataService tournamentTeamDataService;
@@ -40,10 +35,12 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     public TournamentRegistrationServiceImpl(
             final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
+            final SecurityService securityService,
             final TournamentTeamDataService tournamentTeamDataService,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
+        this.securityService = securityService;
         this.tournamentTeamDataService = tournamentTeamDataService;
         this.clock = clock;
     }
@@ -149,6 +146,49 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     }
 
     @Override
+    public TournamentRegistrationState getRegistrationState(
+            final Tournament tournament, final User user, final boolean canCloseRegistration) {
+        final Optional<TournamentSoloEntry> soloEntry = findSoloEntry(tournament, user);
+        final Optional<TournamentTeam> userTeam = findUserTeam(tournament, user);
+        final Instant now = Instant.now(clock);
+        final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
+        final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
+        final TournamentSoloEntryStatus soloStatus =
+                soloEntry.map(TournamentSoloEntry::getStatus).orElse(null);
+        final boolean canJoinSolo =
+                user != null
+                        && user.getId() != null
+                        && registrationOpen
+                        && tournament.isAllowSoloSignup()
+                        && !isSoloPoolFull(tournament)
+                        && userTeam.isEmpty()
+                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
+                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
+        final boolean canLeaveSolo =
+                user != null
+                        && user.getId() != null
+                        && registrationOpen
+                        && soloStatus == TournamentSoloEntryStatus.IN_POOL;
+        final boolean requiresLoginToJoin =
+                user == null && registrationOpen && tournament.isAllowSoloSignup();
+        final TournamentRegistrationReadiness readiness =
+                canCloseRegistration ? registrationReadiness(tournament) : null;
+        final boolean closeRegistrationBlocked =
+                readiness != null && readiness.isCancellationRisk();
+        final boolean closeRegistrationDisabled = !registrationOpen || closeRegistrationBlocked;
+        return new TournamentRegistrationState(
+                soloEntry,
+                userTeam,
+                readiness,
+                registrationOpen,
+                registrationNotStarted,
+                canJoinSolo,
+                canLeaveSolo,
+                requiresLoginToJoin,
+                closeRegistrationDisabled);
+    }
+
+    @Override
     public TournamentRegistrationReadiness getRegistrationReadiness(
             final long tournamentId, final User actingUser) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
@@ -157,6 +197,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             return new TournamentRegistrationReadiness(0, 0, 0, false);
         }
 
+        return registrationReadiness(tournament);
+    }
+
+    private TournamentRegistrationReadiness registrationReadiness(final Tournament tournament) {
+        final long tournamentId = tournament.getId();
         final int activeSoloEntries =
                 Math.toIntExact(tournamentSoloEntryDao.countActiveByTournament(tournamentId));
         final int existingTeamCount =
@@ -232,12 +277,24 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private boolean isRegistrationOpenNow(final Tournament tournament) {
         final Instant now = Instant.now(clock);
+        return isRegistrationOpenNow(tournament, now);
+    }
+
+    private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
         final Instant opensAt = tournament.getRegistrationOpensAt();
         final Instant closesAt = tournament.getRegistrationClosesAt();
-        return opensAt != null
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
                 && closesAt != null
                 && !now.isBefore(opensAt)
                 && now.isBefore(closesAt);
+    }
+
+    private boolean isRegistrationNotStarted(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && now.isBefore(opensAt);
     }
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
@@ -250,19 +307,29 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         if (tournament == null || actingUser == null || actingUser.getId() == null) {
             return false;
         }
-        return tournament.getHost().getId().equals(actingUser.getId()) || isAdminMod();
+        return tournament.getHost().getId().equals(actingUser.getId())
+                || securityService.canActAsAdminMod(actingUser);
     }
 
-    private boolean isAdminMod() {
-        final Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return false;
+    private Optional<TournamentSoloEntry> findSoloEntry(
+            final Tournament tournament, final User user) {
+        if (tournament == null
+                || tournament.getId() == null
+                || user == null
+                || user.getId() == null) {
+            return Optional.empty();
         }
-        return authentication.getAuthorities().stream()
-                .filter(Objects::nonNull)
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ADMIN_MOD_AUTHORITY::equals);
+        return tournamentSoloEntryDao.findByTournamentAndUser(tournament.getId(), user.getId());
+    }
+
+    private Optional<TournamentTeam> findUserTeam(final Tournament tournament, final User user) {
+        if (tournament == null
+                || tournament.getId() == null
+                || user == null
+                || user.getId() == null) {
+            return Optional.empty();
+        }
+        return tournamentTeamDataService.findUserTeam(tournament.getId(), user.getId());
     }
 
     private void validateUser(final User user) {

@@ -106,8 +106,7 @@ public class PublicProfileController {
                         new Object[] {targetUser.getUsername()},
                         targetUser.getUsername() + " profile picture",
                         resolvedLocale));
-        final boolean reportUserCanSubmit =
-                user != null && !user.getId().equals(targetUser.getId());
+        final boolean reportUserCanSubmit = moderationService.canReportUser(user, targetUser);
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
         final Optional<UserBan> activeBan = moderationService.findActiveBan(targetUser);
         mav.addObject("profileBanned", activeBan.isPresent());

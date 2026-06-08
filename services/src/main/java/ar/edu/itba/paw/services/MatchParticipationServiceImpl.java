@@ -49,6 +49,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private final MatchDataService matchDataService;
     private final MatchParticipantDataService matchParticipantDataService;
     private final UserService userService;
+    private final SecurityService securityService;
     private final Clock clock;
     private final MailDispatchService mailDispatchService;
     private final MatchNotificationService matchNotificationService;
@@ -62,6 +63,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 matchDataService,
                 matchParticipantDataService,
                 userService,
+                null,
                 clock,
                 new MailDispatchService() {},
                 null);
@@ -72,12 +74,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             final MatchDataService matchDataService,
             final MatchParticipantDataService matchParticipantDataService,
             final UserService userService,
+            final SecurityService securityService,
             final Clock clock,
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService) {
         this.matchDataService = matchDataService;
         this.matchParticipantDataService = matchParticipantDataService;
         this.userService = userService;
+        this.securityService = securityService;
         this.clock = clock;
         this.mailDispatchService = mailDispatchService;
         this.matchNotificationService = matchNotificationService;
@@ -242,7 +246,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(host);
         nonNullUser(targetUser);
         requireHost(match, host.getId());
-        requireApprovalBasedMatch(match);
+        requireApprovalManagedMatch(match);
 
         if (match.isRecurringOccurrence()
                 && matchParticipantDataService.isSeriesJoinRequest(matchId, targetUser)) {
@@ -278,7 +282,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         nonNullUser(host);
         nonNullUser(targetUser);
         requireHost(match, host.getId());
-        requireApprovalBasedMatch(match);
+        requireApprovalManagedMatch(match);
 
         if (!matchParticipantDataService.rejectRequest(matchId, targetUser)) {
             throw new MatchParticipationNoPendingRequestException();
@@ -299,7 +303,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return;
         }
 
-        requireHost(match, host.getId());
+        requireCanManageMatch(match, host);
 
         if (!matchParticipantDataService.removeParticipant(matchId, targetUser)) {
             throw new MatchParticipationNotParticipantException();
@@ -317,7 +321,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        requireApprovalBasedMatch(match);
+        requireApprovalManagedMatch(match);
         return matchParticipantDataService.findPendingRequests(matchId);
     }
 
@@ -357,6 +361,13 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Transactional
     public void inviteUser(
             final Long matchId, final User host, final String email, final boolean includeSeries) {
+        inviteUserWithResult(matchId, host, email, includeSeries);
+    }
+
+    @Override
+    @Transactional
+    public MatchInvitationResult inviteUserWithResult(
+            final Long matchId, final User host, final String email, final boolean includeSeries) {
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
@@ -372,10 +383,11 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
         if (includeSeries && match.isRecurringOccurrence()) {
             inviteUserToSeries(match, target);
-            return;
+            return MatchInvitationResult.series();
         }
 
         inviteUserToMatch(match, target);
+        return MatchInvitationResult.singleMatch();
     }
 
     private void inviteUserToMatch(final Match match, final User target) {
@@ -542,6 +554,19 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         }
     }
 
+    private void requireCanManageMatch(final Match match, final User actingUser) {
+        if (actingUser == null || actingUser.getId() == null) {
+            throw new MatchForbiddenActionException();
+        }
+        if (!isHost(match, actingUser.getId()) && !canActAsAdminMod(actingUser)) {
+            throw new MatchForbiddenActionException();
+        }
+    }
+
+    private boolean canActAsAdminMod(final User actingUser) {
+        return securityService != null && securityService.canActAsAdminMod(actingUser);
+    }
+
     private static boolean isHost(final Match match, final Long userId) {
         return userId != null && userId.equals(match.getHost().getId());
     }
@@ -561,10 +586,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         }
     }
 
-    private static void requireApprovalBasedMatch(final Match match) {
+    private static void requireApprovalManagedMatch(final Match match) {
         if (match.getVisibility() != EventVisibility.PUBLIC
                 || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
-            throw new MatchParticipationNotInviteOnlyException();
+            throw new MatchForbiddenActionException();
         }
     }
 

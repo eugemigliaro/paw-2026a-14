@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.SecurityService;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import java.lang.reflect.Method;
+import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SecurityServiceImpl implements SecurityService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SecurityServiceImpl.class);
+    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final MatchDataService matchDataService;
 
@@ -41,6 +43,24 @@ public class SecurityServiceImpl implements SecurityService {
         }
         final Object principal = auth.getPrincipal();
         return extractUserFromPrincipal(principal);
+    }
+
+    @Override
+    public boolean canActAsAdminMod(final User actingUser) {
+        if (actingUser == null || actingUser.getId() == null) {
+            return false;
+        }
+        final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        final User currentUser = extractUserFromPrincipal(auth.getPrincipal());
+        if (currentUser == null || !Objects.equals(currentUser.getId(), actingUser.getId())) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(authority -> ADMIN_MOD_AUTHORITY.equals(authority.getAuthority()));
     }
 
     private User extractUserFromPrincipal(final Object principal) {

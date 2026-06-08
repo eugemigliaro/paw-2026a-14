@@ -143,8 +143,8 @@ class UserModerationReportControllerTest {
                         null,
                         Instant.now(),
                         Instant.now());
-        Mockito.when(moderationService.findReportById(90L))
-                .thenReturn(Optional.of(reportFromOtherUser));
+        Mockito.when(moderationService.findReportByIdForReporter(90L, UserUtils.getUser(7L)))
+                .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/reports/mine/90")).andExpect(status().isNotFound());
     }

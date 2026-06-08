@@ -154,6 +154,7 @@ public class UserModerationReportController {
 
     @PostMapping("/{reportId:\\d+}/appeal")
     public ModelAndView appealReport(
+            @AuthenticatedUser final User user,
             @PathVariable("reportId") final Long reportId,
             @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
             final BindingResult bindingResult,
@@ -168,7 +169,7 @@ public class UserModerationReportController {
         }
 
         try {
-            moderationService.appealReport(reportId, reportAppealForm.getDetails());
+            moderationService.appealReport(reportId, user, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
         } catch (final ModerationException e) {

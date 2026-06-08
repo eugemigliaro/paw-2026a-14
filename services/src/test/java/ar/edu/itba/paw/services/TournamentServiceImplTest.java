@@ -43,6 +43,7 @@ public class TournamentServiceImplTest {
     @Mock private TournamentRegistrationService tournamentRegistrationService;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
+    @Mock private SecurityService securityService;
 
     private TournamentServiceImpl tournamentService;
 
@@ -54,6 +55,7 @@ public class TournamentServiceImplTest {
                         tournamentRegistrationService,
                         tournamentMailService,
                         imageService,
+                        securityService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         SecurityContextHolder.clearContext();
     }
@@ -1014,12 +1016,16 @@ public class TournamentServiceImplTest {
         return FIXED_NOW.plusSeconds(7200);
     }
 
-    private static void authenticateAdminMod() {
+    private void authenticateAdminMod() {
         SecurityContextHolder.getContext()
                 .setAuthentication(
                         new UsernamePasswordAuthenticationToken(
                                 "admin",
                                 null,
                                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
+        Mockito.when(
+                        securityService.canActAsAdminMod(
+                                Mockito.argThat(user -> user != null && user.getId() == 99L)))
+                .thenReturn(true);
     }
 }

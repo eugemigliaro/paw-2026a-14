@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -226,6 +227,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private boolean updateStoredMatch(
+            final Match match,
             final Long matchId,
             final User actingUser,
             final UpdateMatchRequest request,
@@ -234,6 +236,24 @@ public class MatchServiceImpl implements MatchService {
             final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
+        if (!isMatchHost(match, actingUser)) {
+            return matchDataService.updateMatch(
+                    matchId,
+                    request.getAddress(),
+                    request.getTitle(),
+                    request.getDescription(),
+                    startsAt,
+                    endsAt,
+                    request.getMaxPlayers(),
+                    request.getPricePerPlayer(),
+                    request.getSport(),
+                    request.getVisibility(),
+                    joinPolicy,
+                    status,
+                    bannerImageMetadata,
+                    request.getLatitude(),
+                    request.getLongitude());
+        }
         return matchDataService.updateMatch(
                 matchId,
                 actingUser,
@@ -298,6 +318,7 @@ public class MatchServiceImpl implements MatchService {
         }
         final boolean updated =
                 updateStoredMatch(
+                        match,
                         matchId,
                         actingUser,
                         request,
@@ -493,6 +514,7 @@ public class MatchServiceImpl implements MatchService {
                     targetStartsAt, targetEndsAt, new MatchUpdateInvalidScheduleException());
             final boolean updated =
                     updateStoredMatch(
+                            target,
                             target.getId(),
                             actingUser,
                             request,
@@ -522,11 +544,7 @@ public class MatchServiceImpl implements MatchService {
         final Match match =
                 matchDataService.findById(matchId).orElseThrow(() -> new MatchNotFoundException());
 
-        final User currentUser = securityService.currentUser();
-        if (!match.getHost().getId().equals(actingUser.getId())
-                && (currentUser == null || !currentUser.getId().equals(actingUser.getId()))) {
-            throw new MatchForbiddenActionException();
-        }
+        validateMatchCancellationAccess(match, actingUser);
 
         if (EventStatus.COMPLETED.equals(match.getStatus())) {
             throw new MatchForbiddenActionException();
@@ -536,7 +554,11 @@ public class MatchServiceImpl implements MatchService {
             return match;
         }
 
-        final boolean updated = matchDataService.cancelMatch(matchId, actingUser);
+        if (hasMatchEnded(match)) {
+            throw new MatchForbiddenActionException();
+        }
+
+        final boolean updated = cancelStoredMatch(match, actingUser);
         if (!updated) {
             throw new MatchForbiddenActionException();
         }
@@ -562,7 +584,7 @@ public class MatchServiceImpl implements MatchService {
 
         final List<Match> cancelledMatches = new ArrayList<>();
         for (final Match target : targets) {
-            final boolean updated = matchDataService.cancelMatch(target.getId(), actingUser);
+            final boolean updated = cancelStoredMatch(target, actingUser);
             if (!updated) {
                 throw new MatchForbiddenActionException();
             }
@@ -579,7 +601,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void validateSeriesUpdateAccess(final Match pivot, final User actingUser) {
-        validateMatchHostAccess(pivot, actingUser);
+        validateMatchManagementAccess(pivot, actingUser);
         if (!pivot.isRecurringOccurrence()) {
             throw new MatchNotRecurringException();
         }
@@ -587,7 +609,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void validateMatchUpdateAccess(final Match match, final User actingUser) {
-        validateMatchHostAccess(match, actingUser);
+        validateMatchManagementAccess(match, actingUser);
         validateEditableMatch(match);
     }
 
@@ -597,20 +619,41 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-    private void validateMatchHostAccess(final Match match, final User actingUser) {
-        if (!match.getHost().getId().equals(actingUser.getId())) {
+    private void validateMatchManagementAccess(final Match match, final User actingUser) {
+        if (!canManageMatch(match, actingUser)) {
+            throw new MatchForbiddenActionException();
+        }
+    }
+
+    private void validateMatchCancellationAccess(final Match match, final User actingUser) {
+        if (!canManageMatch(match, actingUser)) {
             throw new MatchForbiddenActionException();
         }
     }
 
     private void validateSeriesCancellationAccess(final Match pivot, final User actingUser) {
-        if (!pivot.getHost().getId().equals(actingUser.getId())) {
+        if (!canManageMatch(pivot, actingUser)) {
             throw new MatchForbiddenActionException();
         }
 
         if (!pivot.isRecurringOccurrence()) {
             throw new MatchNotRecurringException();
         }
+
+        if (!isMatchManagementLifecycleOpen(pivot)) {
+            throw new MatchForbiddenActionException();
+        }
+    }
+
+    private boolean cancelStoredMatch(final Match match, final User actingUser) {
+        if (isMatchHost(match, actingUser)) {
+            return matchDataService.cancelMatch(match.getId(), actingUser);
+        }
+        return matchDataService.cancelMatch(match.getId());
+    }
+
+    private boolean canManageMatch(final Match match, final User actingUser) {
+        return isMatchHost(match, actingUser) || securityService.canActAsAdminMod(actingUser);
     }
 
     private List<Match> editableFutureSeriesTargets(final Match pivot) {
@@ -694,6 +737,326 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public Optional<Match> findMatchById(final Long matchId) {
         return matchDataService.findById(matchId);
+    }
+
+    @Override
+    public Optional<Match> findVisibleMatchById(final Long matchId, final User viewer) {
+        return matchDataService.findById(matchId).filter(match -> canViewMatch(match, viewer));
+    }
+
+    @Override
+    public boolean canViewMatch(final Match match, final User viewer) {
+        if (match == null) {
+            return false;
+        }
+        if (securityService.canActAsAdminMod(viewer)) {
+            return true;
+        }
+        if (EventStatus.DRAFT == match.getStatus()) {
+            return isMatchHost(match, viewer);
+        }
+        if (EventVisibility.PRIVATE == match.getVisibility()
+                || EventStatus.CANCELLED == match.getStatus()) {
+            return hasMatchRelationship(match, viewer);
+        }
+        return EventVisibility.PUBLIC == match.getVisibility();
+    }
+
+    @Override
+    public MatchManagementPermissions getMatchManagementPermissions(
+            final Match match, final User viewer) {
+        if (match == null || viewer == null) {
+            return MatchManagementPermissions.none();
+        }
+
+        final boolean hostViewer = isMatchHost(match, viewer);
+        final boolean elevatedViewer = securityService.canActAsAdminMod(viewer);
+        final boolean canManage = hostViewer || elevatedViewer;
+        final boolean lifecycleAllowsManagement = isMatchManagementLifecycleOpen(match);
+        final boolean canManageCurrentMatch = canManage && lifecycleAllowsManagement;
+        final boolean recurringOccurrence = match.isRecurringOccurrence();
+
+        return new MatchManagementPermissions(
+                hostViewer,
+                canManage,
+                hostViewer && lifecycleAllowsManagement,
+                canManageCurrentMatch,
+                canManageCurrentMatch,
+                canManageCurrentMatch && recurringOccurrence,
+                canManageCurrentMatch && recurringOccurrence);
+    }
+
+    @Override
+    public MatchInteractionState getMatchInteractionState(
+            final Match match, final List<Match> seriesOccurrences, final User viewer) {
+        if (match == null) {
+            return emptyInteractionState(viewer);
+        }
+
+        final boolean hostViewer = isMatchHost(match, viewer);
+        final boolean authenticated = viewer != null;
+        final boolean confirmedParticipant =
+                authenticated
+                        && matchParticipantDataService.hasActiveReservation(match.getId(), viewer);
+        final boolean rawPendingJoinRequest =
+                authenticated
+                        && !hostViewer
+                        && EventJoinPolicy.APPROVAL_REQUIRED == match.getJoinPolicy()
+                        && matchParticipantDataService.hasPendingRequest(match.getId(), viewer);
+        final boolean invitedPlayer =
+                authenticated
+                        && !hostViewer
+                        && EventJoinPolicy.INVITE_ONLY == match.getJoinPolicy()
+                        && matchParticipantDataService.hasInvitation(match.getId(), viewer);
+        final List<Match> occurrences =
+                seriesOccurrences == null ? List.of() : List.copyOf(seriesOccurrences);
+        final SeriesReservationState seriesReservationState =
+                buildSeriesReservationState(match, occurrences, viewer, hostViewer);
+        final SeriesJoinRequestState seriesJoinRequestState =
+                hostViewer
+                        ? new SeriesJoinRequestState(false, false)
+                        : buildSeriesJoinRequestState(match, occurrences, viewer);
+
+        return new MatchInteractionState(
+                confirmedParticipant,
+                rawPendingJoinRequest && !seriesJoinRequestState.pending(),
+                invitedPlayer,
+                isMatchReservable(match, hostViewer),
+                confirmedParticipant && isReservationCancellable(match),
+                seriesReservationState.available(),
+                seriesReservationState.joined(),
+                seriesReservationState.cancellable(),
+                !hostViewer && isJoinRequestable(match) && !seriesJoinRequestState.pending(),
+                seriesJoinRequestState.available(),
+                seriesJoinRequestState.pending(),
+                !authenticated,
+                !authenticated,
+                !authenticated);
+    }
+
+    private static MatchInteractionState emptyInteractionState(final User viewer) {
+        if (viewer == null) {
+            return MatchInteractionState.anonymous();
+        }
+        return new MatchInteractionState(
+                false, false, false, false, false, false, false, false, false, false, false, false,
+                false, false);
+    }
+
+    private SeriesReservationState buildSeriesReservationState(
+            final Match match,
+            final List<Match> occurrences,
+            final User viewer,
+            final boolean hostViewer) {
+        if (!match.isRecurringOccurrence() || occurrences.isEmpty()) {
+            return new SeriesReservationState(false, false, false);
+        }
+
+        final Set<Long> activeFutureReservationMatchIds =
+                viewer == null
+                        ? Set.of()
+                        : Set.copyOf(
+                                matchParticipantDataService
+                                        .findActiveFutureReservationMatchIdsForSeries(
+                                                match.getSeries().getId(),
+                                                viewer,
+                                                Instant.now(clock)));
+        final SeriesReservationEvaluation evaluation =
+                evaluateSeriesReservationTargets(
+                        occurrences, viewer, activeFutureReservationMatchIds, hostViewer);
+        return new SeriesReservationState(
+                !evaluation.targetMatchIds().isEmpty(),
+                evaluation.joined(),
+                evaluation.activeFutureReservationCount() > 0);
+    }
+
+    private SeriesReservationEvaluation evaluateSeriesReservationTargets(
+            final List<Match> occurrences,
+            final User viewer,
+            final Set<Long> activeFutureReservationMatchIds,
+            final boolean hostViewer) {
+        final List<Long> targetMatchIds = new ArrayList<>();
+        int futureOpenOccurrenceCount = 0;
+        int joinedFutureOpenOccurrenceCount = 0;
+        int activeFutureReservationCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)) {
+                continue;
+            }
+
+            final boolean alreadyJoined =
+                    activeFutureReservationMatchIds.contains(occurrence.getId());
+            if (alreadyJoined) {
+                activeFutureReservationCount++;
+            }
+
+            if (!isSeriesReservationOpenOccurrence(occurrence, hostViewer)) {
+                continue;
+            }
+
+            futureOpenOccurrenceCount++;
+            if (alreadyJoined) {
+                joinedFutureOpenOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getAvailableSpots() <= 0) {
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean joined =
+                viewer != null
+                        && futureOpenOccurrenceCount > 0
+                        && joinedFutureOpenOccurrenceCount == futureOpenOccurrenceCount;
+        return new SeriesReservationEvaluation(
+                List.copyOf(targetMatchIds), joined, activeFutureReservationCount);
+    }
+
+    private static boolean isSeriesReservationOpenOccurrence(
+            final Match occurrence, final boolean hostViewer) {
+        return EventStatus.OPEN == occurrence.getStatus()
+                && (hostViewer
+                        || (occurrence.getVisibility() == EventVisibility.PUBLIC
+                                && occurrence.getJoinPolicy() == EventJoinPolicy.DIRECT));
+    }
+
+    private SeriesJoinRequestState buildSeriesJoinRequestState(
+            final Match match, final List<Match> occurrences, final User viewer) {
+        if (!match.isRecurringOccurrence()) {
+            return new SeriesJoinRequestState(false, false);
+        }
+
+        if (viewer != null
+                && matchParticipantDataService.hasPendingSeriesRequest(
+                        match.getSeries().getId(), viewer)) {
+            return new SeriesJoinRequestState(false, true);
+        }
+
+        final Instant now = Instant.now(clock);
+        final Set<Long> activeFutureReservationMatchIds =
+                viewer == null
+                        ? Set.of()
+                        : Set.copyOf(
+                                matchParticipantDataService
+                                        .findActiveFutureReservationMatchIdsForSeries(
+                                                match.getSeries().getId(), viewer, now));
+        final Set<Long> pendingFutureRequestMatchIds =
+                viewer == null
+                        ? Set.of()
+                        : Set.copyOf(
+                                matchParticipantDataService
+                                        .findPendingFutureRequestMatchIdsForSeries(
+                                                match.getSeries().getId(), viewer, now));
+        final SeriesJoinRequestEvaluation evaluation =
+                evaluateSeriesJoinRequestTargets(
+                        occurrences,
+                        viewer,
+                        activeFutureReservationMatchIds,
+                        pendingFutureRequestMatchIds);
+        return new SeriesJoinRequestState(
+                !evaluation.targetMatchIds().isEmpty(), evaluation.pending());
+    }
+
+    private SeriesJoinRequestEvaluation evaluateSeriesJoinRequestTargets(
+            final List<Match> occurrences,
+            final User viewer,
+            final Set<Long> activeFutureReservationMatchIds,
+            final Set<Long> pendingFutureRequestMatchIds) {
+        final List<Long> targetMatchIds = new ArrayList<>();
+        int futureOpenApprovalOccurrenceCount = 0;
+        int pendingFutureOpenApprovalOccurrenceCount = 0;
+        final Instant now = Instant.now(clock);
+
+        for (final Match occurrence : occurrences) {
+            if (!occurrence.getStartsAt().isAfter(now)
+                    || !isSeriesJoinRequestOpenOccurrence(occurrence)) {
+                continue;
+            }
+
+            futureOpenApprovalOccurrenceCount++;
+            if (activeFutureReservationMatchIds.contains(occurrence.getId())) {
+                continue;
+            }
+
+            if (pendingFutureRequestMatchIds.contains(occurrence.getId())) {
+                pendingFutureOpenApprovalOccurrenceCount++;
+                continue;
+            }
+
+            if (occurrence.getAvailableSpots() <= 0) {
+                continue;
+            }
+
+            targetMatchIds.add(occurrence.getId());
+        }
+
+        final boolean pending =
+                viewer != null
+                        && futureOpenApprovalOccurrenceCount > 0
+                        && pendingFutureOpenApprovalOccurrenceCount
+                                == futureOpenApprovalOccurrenceCount;
+        return new SeriesJoinRequestEvaluation(List.copyOf(targetMatchIds), pending);
+    }
+
+    private static boolean isSeriesJoinRequestOpenOccurrence(final Match occurrence) {
+        return occurrence.getVisibility() == EventVisibility.PUBLIC
+                && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                && EventStatus.OPEN == occurrence.getStatus();
+    }
+
+    private boolean isMatchReservable(final Match match, final boolean hostViewer) {
+        return EventStatus.OPEN == match.getStatus()
+                && (hostViewer
+                        || (match.getVisibility() == EventVisibility.PUBLIC
+                                && match.getJoinPolicy() == EventJoinPolicy.DIRECT))
+                && !hasMatchStarted(match)
+                && match.getAvailableSpots() > 0;
+    }
+
+    private boolean isJoinRequestable(final Match match) {
+        return match.getVisibility() == EventVisibility.PUBLIC
+                && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                && EventStatus.OPEN == match.getStatus()
+                && !hasMatchStarted(match)
+                && match.getAvailableSpots() > 0;
+    }
+
+    private boolean isReservationCancellable(final Match match) {
+        return EventStatus.OPEN == match.getStatus() && !hasMatchStarted(match);
+    }
+
+    private boolean hasMatchRelationship(final Match match, final User viewer) {
+        return isMatchHost(match, viewer)
+                || (viewer != null
+                        && (matchParticipantDataService.hasActiveReservation(match.getId(), viewer)
+                                || matchParticipantDataService.hasInvitation(
+                                        match.getId(), viewer)));
+    }
+
+    private static boolean isMatchHost(final Match match, final User viewer) {
+        return viewer != null
+                && match.getHost() != null
+                && Objects.equals(viewer.getId(), match.getHost().getId());
+    }
+
+    private boolean isMatchManagementLifecycleOpen(final Match match) {
+        return EventStatus.COMPLETED != match.getStatus()
+                && EventStatus.CANCELLED != match.getStatus()
+                && !hasMatchEnded(match);
+    }
+
+    private boolean hasMatchEnded(final Match match) {
+        final Instant endsAt = match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
+        return !endsAt.isAfter(Instant.now(clock));
+    }
+
+    private boolean hasMatchStarted(final Match match) {
+        return !match.getStartsAt().isAfter(Instant.now(clock));
     }
 
     @Override
@@ -1070,4 +1433,13 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private record OccurrenceWindow(Instant startsAt, Instant endsAt) {}
+
+    private record SeriesReservationState(boolean available, boolean joined, boolean cancellable) {}
+
+    private record SeriesReservationEvaluation(
+            List<Long> targetMatchIds, boolean joined, int activeFutureReservationCount) {}
+
+    private record SeriesJoinRequestState(boolean available, boolean pending) {}
+
+    private record SeriesJoinRequestEvaluation(List<Long> targetMatchIds, boolean pending) {}
 }

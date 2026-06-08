@@ -18,6 +18,15 @@ public interface MatchService {
 
     Optional<Match> findMatchById(Long matchId);
 
+    Optional<Match> findVisibleMatchById(Long matchId, User viewer);
+
+    boolean canViewMatch(Match match, User viewer);
+
+    MatchManagementPermissions getMatchManagementPermissions(Match match, User viewer);
+
+    MatchInteractionState getMatchInteractionState(
+            Match match, List<Match> seriesOccurrences, User viewer);
+
     Optional<Match> findPublicMatchById(Long matchId);
 
     MatchActionCapabilities actionCapabilities(Match match, User viewer);

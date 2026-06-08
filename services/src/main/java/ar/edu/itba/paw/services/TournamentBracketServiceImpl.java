@@ -35,9 +35,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,13 +48,13 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     TournamentStatus.IN_PROGRESS,
                     TournamentStatus.COMPLETED,
                     TournamentStatus.CANCELLED);
-    private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDataService tournamentDataService;
     private final TournamentTeamDataService tournamentTeamDataService;
     private final TournamentMatchDao tournamentMatchDao;
     private final UserSportRatingService userSportRatingService;
     private final TournamentMailService tournamentMailService;
+    private final SecurityService securityService;
     private final Clock clock;
 
     public TournamentBracketServiceImpl(
@@ -66,12 +63,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             final TournamentMatchDao tournamentMatchDao,
             final UserSportRatingService userSportRatingService,
             final TournamentMailService tournamentMailService,
+            final SecurityService securityService,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
         this.tournamentTeamDataService = tournamentTeamDataService;
         this.tournamentMatchDao = tournamentMatchDao;
         this.userSportRatingService = userSportRatingService;
         this.tournamentMailService = tournamentMailService;
+        this.securityService = securityService;
         this.clock = clock;
     }
 
@@ -209,7 +208,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 matches,
                 viewerTeam,
                 focusedMatch(matches, viewerTeam),
-                tournamentTeamDataService.findMembersByTournament(tournamentId));
+                tournamentTeamDataService.findMembersByTournament(tournamentId),
+                resultRecordableByMatchId(tournament, viewer, matches));
     }
 
     @Override
@@ -408,7 +408,8 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         if (tournament == null || actingUser == null || actingUser.getId() == null) {
             return false;
         }
-        return tournament.getHost().getId().equals(actingUser.getId()) || isAdminMod();
+        return tournament.getHost().getId().equals(actingUser.getId())
+                || securityService.canActAsAdminMod(actingUser);
     }
 
     private boolean canReadBracket(final Tournament tournament, final User viewer) {
@@ -419,16 +420,25 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 && canMutate(tournament, viewer);
     }
 
-    private boolean isAdminMod() {
-        final Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return false;
+    private Map<Long, Boolean> resultRecordableByMatchId(
+            final Tournament tournament, final User viewer, final List<TournamentMatch> matches) {
+        final boolean canManageResults =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus()
+                        && canMutate(tournament, viewer);
+        final Map<Long, Boolean> result = new HashMap<>();
+        for (final TournamentMatch match : matches) {
+            if (match == null || match.getId() == null) {
+                continue;
+            }
+            result.put(match.getId(), canManageResults && isResultRecordable(match));
         }
-        return authentication.getAuthorities().stream()
-                .filter(Objects::nonNull)
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ADMIN_MOD_AUTHORITY::equals);
+        return result;
+    }
+
+    private boolean isResultRecordable(final TournamentMatch match) {
+        return match.getTeamA() != null
+                && match.getTeamB() != null
+                && match.getWinnerTeam() == null;
     }
 
     private void requireBracketSetup(final Tournament tournament) {

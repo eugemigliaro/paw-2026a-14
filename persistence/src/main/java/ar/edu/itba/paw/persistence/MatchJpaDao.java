@@ -155,6 +155,83 @@ public class MatchJpaDao implements MatchDao {
             return false;
         }
 
+        updateMatchFields(
+                match,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageMetadata,
+                latitude,
+                longitude);
+        return true;
+    }
+
+    @Override
+    public boolean updateMatch(
+            final Long matchId,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final ImageMetadata bannerImageMetadata,
+            final Double latitude,
+            final Double longitude) {
+        final Match match = em.find(Match.class, matchId);
+
+        if (match == null) {
+            return false;
+        }
+
+        updateMatchFields(
+                match,
+                address,
+                title,
+                description,
+                startsAt,
+                endsAt,
+                maxPlayers,
+                pricePerPlayer,
+                sport,
+                visibility,
+                joinPolicy,
+                status,
+                bannerImageMetadata,
+                latitude,
+                longitude);
+        return true;
+    }
+
+    private void updateMatchFields(
+            final Match match,
+            final String address,
+            final String title,
+            final String description,
+            final Instant startsAt,
+            final Instant endsAt,
+            final int maxPlayers,
+            final BigDecimal pricePerPlayer,
+            final Sport sport,
+            final EventVisibility visibility,
+            final EventJoinPolicy joinPolicy,
+            final EventStatus status,
+            final ImageMetadata bannerImageMetadata,
+            final Double latitude,
+            final Double longitude) {
         match.setAddress(address);
         match.setTitle(title);
         match.setDescription(description);
@@ -170,7 +247,6 @@ public class MatchJpaDao implements MatchDao {
         match.setLatitude(latitude);
         match.setLongitude(longitude);
         match.setUpdatedAt(Instant.now());
-        return true;
     }
 
     @Override
@@ -181,9 +257,25 @@ public class MatchJpaDao implements MatchDao {
             return false;
         }
 
+        cancelMatch(match);
+        return true;
+    }
+
+    @Override
+    public boolean cancelMatch(final Long matchId) {
+        final Match match = em.find(Match.class, matchId);
+
+        if (match == null) {
+            return false;
+        }
+
+        cancelMatch(match);
+        return true;
+    }
+
+    private void cancelMatch(final Match match) {
         match.setStatus(EventStatus.CANCELLED);
         match.setUpdatedAt(Instant.now());
-        return true;
     }
 
     @Override

@@ -77,4 +77,55 @@ class SecurityServiceImplTest {
 
         Assertions.assertTrue(securityService.isHost(10L));
     }
+
+    @Test
+    void canActAsAdminModReturnsTrueForMatchingAdminPrincipal() {
+        // Arrange
+        final User user = UserUtils.getUser(99L);
+        final TestPrincipal principal = new TestPrincipal(user);
+        final var token =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD")));
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        // Exercise
+        final boolean result = securityService.canActAsAdminMod(UserUtils.getUser(99L));
+
+        // Assert
+        Assertions.assertTrue(result);
+    }
+
+    @Test
+    void canActAsAdminModReturnsFalseForMatchingRegularPrincipal() {
+        // Arrange
+        final User user = UserUtils.getUser(99L);
+        final TestPrincipal principal = new TestPrincipal(user);
+        final var token =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        // Exercise
+        final boolean result = securityService.canActAsAdminMod(UserUtils.getUser(99L));
+
+        // Assert
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    void canActAsAdminModReturnsFalseForDetachedDifferentActor() {
+        // Arrange
+        final User user = UserUtils.getUser(99L);
+        final TestPrincipal principal = new TestPrincipal(user);
+        final var token =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD")));
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        // Exercise
+        final boolean result = securityService.canActAsAdminMod(UserUtils.getUser(100L));
+
+        // Assert
+        Assertions.assertFalse(result);
+    }
 }

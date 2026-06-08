@@ -417,7 +417,8 @@ public class ModerationServiceImplTest {
                                 Mockito.eq(77L), Mockito.eq("Please reconsider"), Mockito.any()))
                 .thenReturn(true);
 
-        final ModerationReport appealed = moderationService.appealReport(77L, "Please reconsider");
+        final ModerationReport appealed =
+                moderationService.appealReport(77L, UserUtils.getUser(88L), "Please reconsider");
 
         Assertions.assertEquals(
                 77L, appealed.getId(), "The appealed report must be returned after storage");
@@ -452,7 +453,9 @@ public class ModerationServiceImplTest {
 
         Assertions.assertThrows(
                 ModerationException.class,
-                () -> moderationService.appealReport(77L, "Second appeal attempt"),
+                () ->
+                        moderationService.appealReport(
+                                77L, UserUtils.getUser(88L), "Second appeal attempt"),
                 "A second appeal must be rejected regardless of its content");
     }
 

@@ -40,6 +40,12 @@ public interface ModerationService {
 
     Optional<ModerationReport> findReportById(Long reportId);
 
+    Optional<ModerationReport> findReportByIdForReporter(Long reportId, User reporter);
+
+    boolean canReportUser(User reporter, User targetUser);
+
+    boolean canAppealReport(ModerationReport report, User reporter);
+
     ModerationReport markReportUnderReview(Long reportId, User adminUser);
 
     ModerationReport resolveReport(
@@ -50,7 +56,7 @@ public interface ModerationService {
             ReportStatus nextStatus,
             int banDurationDays);
 
-    ModerationReport appealReport(Long reportId, String appealReason);
+    ModerationReport appealReport(Long reportId, User reporter, String appealReason);
 
     ModerationReport finalizeReportAppeal(
             Long reportId, User adminUser, AppealDecision appealDecision);

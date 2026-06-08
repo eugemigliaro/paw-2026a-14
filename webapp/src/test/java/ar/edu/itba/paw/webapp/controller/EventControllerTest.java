@@ -21,6 +21,8 @@ import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchActionCapabilities;
+import ar.edu.itba.paw.services.MatchInteractionState;
+import ar.edu.itba.paw.services.MatchManagementPermissions;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -323,6 +325,12 @@ class EventControllerTest {
                                 default -> Optional.empty();
                             };
                         });
+        Mockito.when(
+                        matchService.findVisibleMatchById(
+                                ArgumentMatchers.anyLong(), ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation ->
+                                matchService.findMatchById(invocation.getArgument(0, Long.class)));
 
         Mockito.when(matchService.findSeriesOccurrences(ArgumentMatchers.anyLong()))
                 .thenAnswer(
@@ -382,6 +390,27 @@ class EventControllerTest {
                             final Match match = invocation.getArgument(0);
                             final User viewer = invocation.getArgument(1);
                             return actionCapabilities(match, viewer);
+                        });
+        Mockito.when(
+                        matchService.getMatchManagementPermissions(
+                                ArgumentMatchers.any(), ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            final Match match = invocation.getArgument(0);
+                            final User viewer = invocation.getArgument(1);
+                            return managementPermissions(match, viewer);
+                        });
+        Mockito.when(
+                        matchService.getMatchInteractionState(
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            final Match match = invocation.getArgument(0);
+                            final List<Match> seriesOccurrences = invocation.getArgument(1);
+                            final User viewer = invocation.getArgument(2);
+                            return interactionState(match, seriesOccurrences, viewer);
                         });
 
         matchReservationService = Mockito.mock(MatchReservationService.class);
@@ -1250,6 +1279,93 @@ class EventControllerTest {
                 requestToJoin,
                 editable && match.isRecurringOccurrence(),
                 editable && match.isRecurringOccurrence());
+    }
+
+    private MatchManagementPermissions managementPermissions(final Match match, final User viewer) {
+        final boolean host =
+                viewer != null
+                        && match.getHost() != null
+                        && viewer.getId().equals(match.getHost().getId());
+        final MatchActionCapabilities capabilities = actionCapabilities(match, viewer);
+        return new MatchManagementPermissions(
+                host,
+                host,
+                host,
+                capabilities.isCanEdit(),
+                capabilities.isCanCancel(),
+                capabilities.isCanEditSeries(),
+                capabilities.isCanCancelSeries());
+    }
+
+    private MatchInteractionState interactionState(
+            final Match match, final List<Match> seriesOccurrences, final User viewer) {
+        final MatchActionCapabilities capabilities = actionCapabilities(match, viewer);
+        final boolean authenticated = viewer != null;
+        final boolean host =
+                authenticated
+                        && match.getHost() != null
+                        && viewer.getId().equals(match.getHost().getId());
+        final boolean confirmedParticipant =
+                authenticated
+                        && ((currentUserHasReservation
+                                        && (Long.valueOf(42L).equals(match.getId())
+                                                || Long.valueOf(51L).equals(match.getId())))
+                                || (currentUserHasSeriesReservation
+                                        && match.isRecurringOccurrence()));
+        final boolean pendingJoinRequest =
+                authenticated
+                        && currentUserHasJoinRequest
+                        && (Long.valueOf(52L).equals(match.getId())
+                                || Long.valueOf(53L).equals(match.getId())
+                                || Long.valueOf(56L).equals(match.getId()));
+        final boolean seriesJoinRequestPending =
+                authenticated
+                        && currentUserHasSeriesJoinRequest
+                        && match.isRecurringOccurrence()
+                        && Long.valueOf(700L).equals(match.getSeries().getId());
+        final boolean invitedPlayer =
+                authenticated
+                        && !host
+                        && (Long.valueOf(51L).equals(match.getId())
+                                || Long.valueOf(50L).equals(match.getId()));
+        final boolean recurring = match.isRecurringOccurrence();
+        final boolean seriesHasAvailableFutureOccurrence =
+                recurring
+                        && seriesOccurrences.stream()
+                                .anyMatch(
+                                        occurrence ->
+                                                occurrence.getStatus() == EventStatus.OPEN
+                                                        && occurrence
+                                                                .getStartsAt()
+                                                                .isAfter(FIXED_NOW)
+                                                        && occurrence.getAvailableSpots() > 0);
+        final boolean directSeriesReservationAvailable =
+                recurring
+                        && (host || match.getJoinPolicy() == EventJoinPolicy.DIRECT)
+                        && seriesHasAvailableFutureOccurrence
+                        && !confirmedParticipant;
+        final boolean seriesJoinRequestAvailable =
+                recurring
+                        && !host
+                        && match.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED
+                        && seriesHasAvailableFutureOccurrence
+                        && !pendingJoinRequest
+                        && !seriesJoinRequestPending;
+        return new MatchInteractionState(
+                confirmedParticipant,
+                pendingJoinRequest,
+                invitedPlayer,
+                authenticated && capabilities.isCanReserve(),
+                authenticated && capabilities.isCanCancelReservation(),
+                directSeriesReservationAvailable,
+                currentUserHasSeriesReservation && recurring,
+                authenticated && currentUserHasSeriesReservation && recurring,
+                authenticated && capabilities.isCanRequestToJoin() && !pendingJoinRequest,
+                authenticated && seriesJoinRequestAvailable,
+                seriesJoinRequestPending,
+                !authenticated && capabilities.isCanReserve(),
+                !authenticated && directSeriesReservationAvailable,
+                !authenticated && seriesJoinRequestAvailable);
     }
 
     private static MessageSource messageSource() {
