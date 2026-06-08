@@ -4,14 +4,6 @@ import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.registration.EmailPendingVerificationException;
-import ar.edu.itba.paw.services.exceptions.registration.EmailTakenException;
-import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.PasswordInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.UsernameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.UsernameTakenException;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
@@ -104,57 +96,26 @@ public class AuthController {
             return registerView(registerForm, locale);
         }
 
-        try {
-            final VerificationRequestResult result =
-                    accountAuthService.register(
-                            new RegisterAccountRequest(
-                                    registerForm.getEmail(),
-                                    registerForm.getUsername(),
-                                    registerForm.getName(),
-                                    registerForm.getLastName(),
-                                    registerForm.getPhone(),
-                                    registerForm.getPassword()));
-            LOGGER.info("Registration verification requested locale={}", locale);
-            return checkEmailView(
-                    locale,
-                    messageSource.getMessage(
-                            "auth.checkEmail.registration.summary",
-                            new Object[] {result.getEmail()},
-                            locale),
-                    "/login",
-                    messageSource.getMessage("auth.backToLogin", null, locale),
-                    messageSource.getMessage("auth.registration.requested", null, locale),
-                    result.getExpiresAt());
-        } catch (final EmailTakenException exception) {
-            // TODO: move these checks to the form validator. Do not call register with invalid
-            // data.
-            // Also, consider assignig specific error codes to the exceptions instead of using their
-            // type to determine the error.
-            LOGGER.debug("Registration rejected: email already taken");
-            bindingResult.rejectValue("email", "auth.registration.error.emailTaken");
-        } catch (final EmailPendingVerificationException exception) {
-            LOGGER.debug("Registration rejected: email pending verification");
-            bindingResult.rejectValue("email", "auth.registration.error.emailPending");
-        } catch (final UsernameTakenException exception) {
-            LOGGER.debug("Registration rejected: username already taken");
-            bindingResult.rejectValue("username", "auth.registration.error.usernameTaken");
-        } catch (final UsernameInvalidException exception) {
-            LOGGER.debug("Registration rejected: username invalid");
-            bindingResult.rejectValue("username", "auth.registration.error.usernameInvalid");
-        } catch (final PasswordInvalidException exception) {
-            LOGGER.debug("Registration rejected: password invalid");
-            bindingResult.rejectValue("password", "auth.registration.error.passwordInvalid");
-        } catch (final NameInvalidException exception) {
-            LOGGER.debug("Registration rejected: name invalid");
-            bindingResult.rejectValue("name", "auth.registration.error.nameInvalid");
-        } catch (final LastNameInvalidException exception) {
-            LOGGER.debug("Registration rejected: lastName invalid");
-            bindingResult.rejectValue("lastName", "auth.registration.error.lastNameInvalid");
-        } catch (final PhoneInvalidException exception) {
-            LOGGER.debug("Registration rejected: phone invalid");
-            bindingResult.rejectValue("phone", "auth.registration.error.phoneInvalid");
-        }
-        return registerView(registerForm, locale);
+        final VerificationRequestResult result =
+                accountAuthService.register(
+                        new RegisterAccountRequest(
+                                registerForm.getEmail(),
+                                registerForm.getUsername(),
+                                registerForm.getName(),
+                                registerForm.getLastName(),
+                                registerForm.getPhone(),
+                                registerForm.getPassword()));
+        LOGGER.info("Registration verification requested locale={}", locale);
+        return checkEmailView(
+                locale,
+                messageSource.getMessage(
+                        "auth.checkEmail.registration.summary",
+                        new Object[] {result.getEmail()},
+                        locale),
+                "/login",
+                messageSource.getMessage("auth.backToLogin", null, locale),
+                messageSource.getMessage("auth.registration.requested", null, locale),
+                result.getExpiresAt());
     }
 
     @PostMapping("/register/resend-verification")
@@ -203,7 +164,6 @@ public class AuthController {
             return forgotPasswordView(forgotPasswordForm, locale);
         }
 
-        // TODO: this method is not catching exceptions.
         final Optional<VerificationRequestResult> result =
                 accountAuthService.requestPasswordReset(forgotPasswordForm.getEmail());
         LOGGER.info("Password reset requested locale={}", locale);

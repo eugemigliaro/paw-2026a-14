@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
 import ar.edu.itba.paw.services.MatchParticipationService;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -70,13 +70,13 @@ class PlayerParticipationControllerTest {
     @Test
     void postSeriesJoinRequestFailureRedirectsWithJoinErrorCode() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        Mockito.doThrow(new MatchParticipationSeriesAlreadyPendingException("Already requested"))
+        Mockito.doThrow(new MatchParticipationSeriesAlreadyPendingException())
                 .when(matchParticipationService)
                 .requestToJoinSeries(ArgumentMatchers.eq(52L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/52/recurring-join-requests"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/matches/52?joinError=series_already_pending"));
+                .andExpect(redirectedUrl("/matches/52?joinError=seriesAlreadyPending"));
     }
 
     @Test

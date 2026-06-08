@@ -11,6 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.match.MatchNotFoundException;
+import ar.edu.itba.paw.models.exceptions.match.MatchNotRecurringException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateNotEditableException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -19,13 +24,6 @@ import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationForbiddenException;
-import ar.edu.itba.paw.services.exceptions.matchCancelation.MatchCancellationNotFoundException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateForbiddenException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotEditableException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotFoundException;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.MatchUpdateNotRecurringException;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
@@ -38,6 +36,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewReactionConv
 import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceEndModeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -171,6 +170,7 @@ class HostControllerTest {
                         .setValidator(validator)
                         .setConversionService(formattingConversionServiceWithSportConverter())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
+                        .setControllerAdvice(new AccessExceptionHandler())
                         .build();
     }
 
@@ -225,14 +225,14 @@ class HostControllerTest {
                             final User actingUser = invocation.getArgument(1);
                             final Match match = findFixtureMatch(matchId);
                             if (match == null) {
-                                throw new MatchUpdateNotFoundException("Missing match");
+                                throw new MatchNotFoundException();
                             }
                             if (actingUser.getId() != 7L) {
-                                throw new MatchUpdateForbiddenException("Forbidden");
+                                throw new MatchForbiddenActionException();
                             }
                             if (match.getStatus() == EventStatus.COMPLETED
                                     || match.getStatus() == EventStatus.CANCELLED) {
-                                throw new MatchUpdateNotEditableException("Not editable");
+                                throw new MatchUpdateNotEditableException();
                             }
                             return match;
                         });
@@ -248,7 +248,7 @@ class HostControllerTest {
                             final Match match =
                                     matchService.findEditableMatchForHost(matchId, actingUser);
                             if (!match.isRecurringOccurrence()) {
-                                throw new MatchUpdateNotRecurringException("Not recurring");
+                                throw new MatchNotRecurringException();
                             }
                             return match;
                         });
@@ -265,14 +265,13 @@ class HostControllerTest {
                             final User actingUser = invocation.getArgument(1);
                             final UpdateMatchRequest request = invocation.getArgument(2);
                             if (matchId != 42L && matchId != 51L) {
-                                throw new MatchUpdateNotFoundException("Missing match");
+                                throw new MatchNotFoundException();
                             }
                             if (actingUser.getId() != 7L) {
-                                throw new MatchUpdateForbiddenException("Forbidden");
+                                throw new MatchForbiddenActionException();
                             }
                             if (request.getMaxPlayers() < 2) {
-                                throw new MatchUpdateCapacityBelowConfirmedException(
-                                        "Capacity too low");
+                                throw new MatchUpdateCapacityBelowConfirmedException();
                             }
                             return buildUpdatedMatch(matchId, actingUser, request);
                         });
@@ -289,14 +288,13 @@ class HostControllerTest {
                             final User actingUser = invocation.getArgument(1);
                             final UpdateMatchRequest request = invocation.getArgument(2);
                             if (matchId != 46L && matchId != 47L) {
-                                throw new MatchUpdateNotFoundException("Missing match");
+                                throw new MatchNotFoundException();
                             }
                             if (actingUser.getId() != 7L) {
-                                throw new MatchUpdateForbiddenException("Forbidden");
+                                throw new MatchForbiddenActionException();
                             }
                             if (request.getMaxPlayers() < 2) {
-                                throw new MatchUpdateCapacityBelowConfirmedException(
-                                        "Capacity too low");
+                                throw new MatchUpdateCapacityBelowConfirmedException();
                             }
                             return java.util.List.of(
                                     buildUpdatedMatch(matchId, actingUser, request));
@@ -309,10 +307,10 @@ class HostControllerTest {
                             final Long matchId = invocation.getArgument(0);
                             final User actingUser = invocation.getArgument(1);
                             if (matchId != 42L && matchId != 47L) {
-                                throw new MatchCancellationNotFoundException("Missing match");
+                                throw new MatchNotFoundException();
                             }
                             if (actingUser.getId() != 7L) {
-                                throw new MatchCancellationForbiddenException("Forbidden");
+                                throw new MatchForbiddenActionException();
                             }
                             return realMatch;
                         });
@@ -326,10 +324,10 @@ class HostControllerTest {
                             final Long matchId = invocation.getArgument(0);
                             final User actingUser = invocation.getArgument(1);
                             if (matchId != 46L && matchId != 47L) {
-                                throw new MatchCancellationNotFoundException("Missing match");
+                                throw new MatchNotFoundException();
                             }
                             if (actingUser.getId() != 7L) {
-                                throw new MatchCancellationForbiddenException("Forbidden");
+                                throw new MatchForbiddenActionException();
                             }
                             return java.util.List.of(recurringSecondOccurrence);
                         });
@@ -779,10 +777,10 @@ class HostControllerTest {
     }
 
     @Test
-    void getHostEditRouteForNonHostReturnsNotFound() throws Exception {
+    void getHostEditRouteForNonHostReturnsForbidden() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
-        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isForbidden());
     }
 
     @Test
@@ -1048,10 +1046,10 @@ class HostControllerTest {
     }
 
     @Test
-    void postHostCancelForNonHostReturnsNotFound() throws Exception {
+    void postHostCancelForNonHostReturnsForbidden() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
 
-        mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isNotFound());
+        mockMvc.perform(post("/host/matches/42/cancel")).andExpect(status().isForbidden());
     }
 
     @Test

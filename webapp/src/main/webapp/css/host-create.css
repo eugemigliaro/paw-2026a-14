@@ -12,12 +12,19 @@
 	display: grid;
 	gap: 1.5rem;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: start;
 }
 
-.location-picker__current-location {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
+.create-form__column {
+	align-content: start;
+	display: grid;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+.create-form__global-error {
+	grid-column: 1 / -1;
+	margin: 0;
 }
 
 .form-card,
@@ -211,6 +218,10 @@
 	display: block;
 }
 
+.upload-card__error {
+	margin-top: 0.9rem;
+}
+
 .location-picker {
 	background: #f8faf8;
 	border: 1px solid rgba(0, 100, 90, 0.14);
@@ -339,6 +350,32 @@
 	width: 3rem;
 }
 
+.upload-card__dropzone.has-image-preview {
+	grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.image-upload-preview--banner {
+	aspect-ratio: 4 / 3;
+	background: #eef3ef;
+	border: 1px solid rgba(28, 46, 43, 0.08);
+	border-radius: 12px;
+	box-shadow: 0 14px 28px -24px rgba(24, 46, 42, 0.5);
+	display: block;
+	overflow: hidden;
+	width: 5.75rem;
+}
+
+.image-upload-preview--banner[hidden] {
+	display: none;
+}
+
+.image-upload-preview--banner .image-upload-preview__image {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
 .upload-card__dropzone-icon svg {
 	fill: none;
 	height: 1.45rem;
@@ -417,6 +454,10 @@
 }
 
 @media (max-width: 760px) {
+	.create-form {
+		grid-template-columns: 1fr;
+	}
+
 	.form-card__grid,
 	.form-card__grid--three {
 		grid-template-columns: 1fr;

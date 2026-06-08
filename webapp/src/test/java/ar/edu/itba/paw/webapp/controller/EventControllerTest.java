@@ -11,6 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesNotJoinedException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -19,8 +24,6 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
-import ar.edu.itba.paw.services.exceptions.matchParticipation.MatchParticipationException;
-import ar.edu.itba.paw.services.exceptions.matchReservation.MatchReservationException;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -60,10 +63,10 @@ class EventControllerTest {
     private MatchParticipationService matchParticipationService;
     private PlayerReviewService playerReviewService;
 
-    private MatchReservationException reservationFailure;
-    private MatchParticipationException reservationCancellationFailure;
-    private MatchReservationException seriesReservationFailure;
-    private MatchReservationException seriesCancellationFailure;
+    private MatchException reservationFailure;
+    private MatchException reservationCancellationFailure;
+    private MatchException seriesReservationFailure;
+    private MatchException seriesCancellationFailure;
     private boolean currentUserHasReservation;
     private boolean currentUserHasSeriesReservation;
     private boolean currentUserHasJoinRequest;
@@ -415,8 +418,7 @@ class EventControllerTest {
                                 throw reservationFailure;
                             }
                             if (user == null) {
-                                throw new MatchReservationException(
-                                        "User must be authenticated to reserve a spot");
+                                throw new MatchParticipationNotJoinedException();
                             }
                             return null;
                         })
@@ -430,8 +432,7 @@ class EventControllerTest {
                                 throw seriesReservationFailure;
                             }
                             if (user == null) {
-                                throw new MatchReservationException(
-                                        "User must be authenticated to reserve a spot");
+                                throw new MatchParticipationNotJoinedException();
                             }
                             return null;
                         })
@@ -446,8 +447,7 @@ class EventControllerTest {
                                 throw seriesCancellationFailure;
                             }
                             if (user == null) {
-                                throw new MatchReservationException(
-                                        "User must be authenticated to reserve a spot");
+                                throw new MatchParticipationNotJoinedException();
                             }
                             return null;
                         })
@@ -464,8 +464,7 @@ class EventControllerTest {
                             final Long matchId = invocation.getArgument(0);
                             final User user = invocation.getArgument(1);
                             if (user == null) {
-                                throw new MatchParticipationException(
-                                        "User must be authenticated to check pending requests");
+                                throw new MatchParticipationNotJoinedException();
                             }
                             return currentUserHasJoinRequest
                                     && user.getId() == 9L
@@ -1135,7 +1134,7 @@ class EventControllerTest {
     @Test
     void postReservationRequestWhenAlreadyReservedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationFailure = new MatchReservationException("Already reserved");
+        reservationFailure = new MatchParticipationAlreadyJoinedException();
 
         mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1186,7 +1185,7 @@ class EventControllerTest {
     @Test
     void postReservationCancelWithNoActiveReservationShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationCancellationFailure = new MatchParticipationException("No active reservation");
+        reservationCancellationFailure = new MatchParticipationNotJoinedException();
 
         mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1215,7 +1214,7 @@ class EventControllerTest {
     @Test
     void postSeriesReservationRequestWhenAlreadyJoinedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesReservationFailure = new MatchReservationException("Already joined");
+        seriesReservationFailure = new MatchParticipationSeriesAlreadyJoinedException();
 
         mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1243,7 +1242,7 @@ class EventControllerTest {
     @Test
     void postSeriesReservationCancelWithNoFutureReservationsShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesCancellationFailure = new MatchReservationException("No future reservations");
+        seriesCancellationFailure = new MatchParticipationSeriesNotJoinedException();
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())

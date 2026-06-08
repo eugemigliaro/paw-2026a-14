@@ -349,6 +349,33 @@
 	text-align: left;
 }
 
+.account-profile-media--change.has-image-preview .account-profile-media__change-content {
+	grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.image-upload-preview--profile {
+	aspect-ratio: 1;
+	background: #eef3ef;
+	border: 1px solid rgba(28, 46, 43, 0.08);
+	border-radius: 999px;
+	box-shadow: 0 14px 28px -24px rgba(24, 46, 42, 0.5);
+	display: block;
+	height: 3.75rem;
+	overflow: hidden;
+	width: 3.75rem;
+}
+
+.image-upload-preview--profile[hidden] {
+	display: none;
+}
+
+.image-upload-preview--profile .image-upload-preview__image {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
 .account-profile-media--change .upload-card__dropzone-icon {
 	border-radius: 12px;
 	height: 2.4rem;

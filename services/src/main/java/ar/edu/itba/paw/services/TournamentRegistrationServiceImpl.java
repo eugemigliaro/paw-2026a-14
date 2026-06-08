@@ -5,14 +5,16 @@ import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentNotFoundException;
+import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.tournamentRegistration.*;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -30,19 +32,19 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
-    private final TournamentDao tournamentDao;
+    private final TournamentDataService tournamentDataService;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
-    private final TournamentTeamDao tournamentTeamDao;
+    private final TournamentTeamDataService tournamentTeamDataService;
     private final Clock clock;
 
     public TournamentRegistrationServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
-            final TournamentTeamDao tournamentTeamDao,
+            final TournamentTeamDataService tournamentTeamDataService,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
-        this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentTeamDataService = tournamentTeamDataService;
         this.clock = clock;
     }
 
@@ -54,13 +56,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowSoloSignup()) {
-            throw new TournamentRegistrationSoloSignupDisabledException(
-                    "Solo signup is disabled for this tournament");
+            throw new TournamentRegistrationSoloSignupDisabledException();
         }
 
-        if (tournamentTeamDao.findUserTeam(tournamentId, user.getId()).isPresent()) {
-            throw new TournamentRegistrationAlreadyOnTeamException(
-                    "User is already on a team in this tournament");
+        if (tournamentTeamDataService.findUserTeam(tournamentId, user.getId()).isPresent()) {
+            throw new TournamentRegistrationAlreadyOnTeamException();
         }
 
         final Optional<TournamentSoloEntry> existing =
@@ -71,14 +71,12 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 return soloEntry;
             }
             if (TournamentSoloEntryStatus.ASSIGNED == soloEntry.getStatus()) {
-                throw new TournamentRegistrationAlreadyAssignedException(
-                        "User is already assigned to a team in this tournament");
+                throw new TournamentRegistrationAlreadyAssignedException();
             }
         }
 
         if (isSoloPoolFull(tournament)) {
-            throw new TournamentRegistrationSoloPoolFullException(
-                    "Solo pool is full for this tournament");
+            throw new TournamentRegistrationSoloPoolFullException();
         }
 
         if (existing.isEmpty()) {
@@ -105,10 +103,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 tournamentSoloEntryDao
                         .findByTournamentAndUser(tournamentId, user.getId())
                         .filter(entry -> TournamentSoloEntryStatus.IN_POOL == entry.getStatus())
-                        .orElseThrow(
-                                () ->
-                                        new TournamentRegistrationNotInSoloPoolException(
-                                                "User is not in the solo pool for this tournament"));
+                        .orElseThrow(() -> new TournamentRegistrationNotInSoloPoolException());
 
         soloEntry.setStatus(TournamentSoloEntryStatus.LEFT);
         soloEntry.setAssignedTeam(null);
@@ -135,7 +130,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         if (user == null || user.getId() == null) {
             return Optional.empty();
         }
-        return tournamentTeamDao.findUserTeam(tournamentId, user.getId());
+        return tournamentTeamDataService.findUserTeam(tournamentId, user.getId());
     }
 
     @Override
@@ -150,7 +145,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     @Override
     public List<TournamentTeamMember> listTeamMembers(final long tournamentId) {
         findTournamentOrThrow(tournamentId);
-        return tournamentTeamDao.findMembersByTournament(tournamentId);
+        return tournamentTeamDataService.findMembersByTournament(tournamentId);
     }
 
     @Override
@@ -165,7 +160,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final int activeSoloEntries =
                 Math.toIntExact(tournamentSoloEntryDao.countActiveByTournament(tournamentId));
         final int existingTeamCount =
-                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+                Math.toIntExact(tournamentTeamDataService.countByTournament(tournamentId));
         final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
         final int soloTeamCount =
                 Math.min(activeSoloEntries / tournament.getTeamSize(), availableTeamSlots);
@@ -184,28 +179,27 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final List<TournamentSoloEntry> activeEntries =
                 tournamentSoloEntryDao.findActiveByTournament(tournamentId);
         final int existingTeamCount =
-                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+                Math.toIntExact(tournamentTeamDataService.countByTournament(tournamentId));
         final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
         final int soloTeamCount =
                 Math.min(activeEntries.size() / tournament.getTeamSize(), availableTeamSlots);
 
         final int finalTeamCount = existingTeamCount + soloTeamCount;
         if (finalTeamCount < 2) {
-            throw new TournamentRegistrationUnderCapacityException(
-                    "Tournament does not have enough teams to start");
+            throw new TournamentRegistrationUnderCapacityException();
         }
 
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
         for (int teamIndex = 0; teamIndex < soloTeamCount; teamIndex++) {
             final TournamentTeam team =
-                    tournamentTeamDao.create(
+                    tournamentTeamDataService.create(
                             tournament, null, TournamentTeamOrigin.SOLO_POOL, null);
 
             final int firstEntryIndex = teamIndex * tournament.getTeamSize();
             for (int playerOffset = 0; playerOffset < tournament.getTeamSize(); playerOffset++) {
                 final TournamentSoloEntry soloEntry =
                         activeEntries.get(firstEntryIndex + playerOffset);
-                tournamentTeamDao.addMember(team, soloEntry.getUser(), false);
+                tournamentTeamDataService.addMember(team, soloEntry.getUser(), false);
                 soloEntry.setStatus(TournamentSoloEntryStatus.ASSIGNED);
                 soloEntry.setAssignedTeam(team);
                 tournamentSoloEntryDao.update(soloEntry);
@@ -219,24 +213,20 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         tournament.setStatus(TournamentStatus.BRACKET_SETUP);
         tournament.setRegistrationClosedAt(now);
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        return tournamentDataService.update(tournament);
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
-                .orElseThrow(
-                        () ->
-                                new TournamentRegistrationTournamentNotFoundException(
-                                        "Tournament not found"));
+                .orElseThrow(() -> new TournamentNotFoundException());
     }
 
     private void requireRegistrationOpen(final Tournament tournament) {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()
                 || !isRegistrationOpenNow(tournament)) {
-            throw new TournamentRegistrationNotOpenException(
-                    "Registration is not open for this tournament");
+            throw new TournamentRegistrationNotOpenException();
         }
     }
 
@@ -252,8 +242,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
         if (!canMutate(tournament, actingUser)) {
-            throw new TournamentRegistrationForbiddenException(
-                    "You are not allowed to modify this tournament");
+            throw new TournamentForbiddenActionException();
         }
     }
 
@@ -278,8 +267,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateUser(final User user) {
         if (user == null || user.getId() == null) {
-            throw new TournamentRegistrationInvalidUserException(
-                    "User must be authenticated to perform this action");
+            throw new IllegalArgumentException("exception.user.notNull");
         }
     }
 

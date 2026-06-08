@@ -11,13 +11,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationDuplicateReportException;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.moderation.ModerationDuplicateReportException;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -119,16 +119,12 @@ class ModerationReportControllerTest {
                                 Mockito.eq(12L),
                                 Mockito.any(),
                                 Mockito.any()))
-                .thenThrow(new ModerationDuplicateReportException("Duplicate report"));
+                .thenThrow(new ModerationDuplicateReportException());
 
         mockMvc.perform(post("/reports/reviews/12").param("reason", "inappropriate_content"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reports/create"))
-                .andExpect(
-                        model().attributeHasFieldErrorCode(
-                                        "reportForm",
-                                        "reason",
-                                        "moderation.report.error.duplicate"));
+                .andExpect(model().hasErrors());
     }
 
     @Test

@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.UserRole;
-import ar.edu.itba.paw.persistence.UserDao;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
@@ -20,7 +20,7 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminBootstrapServiceImpl.class);
 
-    private final UserDao userDao;
+    private final UserDataService userDataService;
     private final Clock clock;
     private final String email;
     private final String username;
@@ -30,7 +30,7 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
     private final PasswordEncoder passwordEncoder;
 
     public AdminBootstrapServiceImpl(
-            final UserDao userDao,
+            final UserDataService userDataService,
             final Clock clock,
             @Value("${bootstrap.admin.email:}") final String email,
             @Value("${bootstrap.admin.username:}") final String username,
@@ -38,7 +38,7 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
             @Value("${bootstrap.admin.lastName:}") final String lastName,
             @Value("${bootstrap.admin.password:}") final String password,
             final PasswordEncoder passwordEncoder) {
-        this.userDao = Objects.requireNonNull(userDao);
+        this.userDataService = Objects.requireNonNull(userDataService);
         this.clock = Objects.requireNonNull(clock);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.email = email == null ? "" : email.trim().toLowerCase();
@@ -59,18 +59,18 @@ public class AdminBootstrapServiceImpl implements AdminBootstrapService {
             LOGGER.info("Admin bootstrap skipped because configuration is incomplete");
             return;
         }
-        if (userDao.findAccountByEmail(email).isPresent()) {
+        if (userDataService.findAccountByEmail(email).isPresent()) {
             LOGGER.info("Admin bootstrap skipped because account already exists email={}", email);
             return;
         }
-        if (userDao.findByUsername(username).isPresent()) {
+        if (userDataService.findByUsername(username).isPresent()) {
             LOGGER.warn("Admin bootstrap skipped due to username collision username={}", username);
             return;
         }
 
         String passwordHash = passwordEncoder.encode(password);
 
-        userDao.createAccount(
+        userDataService.createAccount(
                 email,
                 username,
                 name,

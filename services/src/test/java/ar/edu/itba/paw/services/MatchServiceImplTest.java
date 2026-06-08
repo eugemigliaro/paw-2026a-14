@@ -5,6 +5,8 @@ import ar.edu.itba.paw.models.MatchSeries;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.*;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.*;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -14,10 +16,8 @@ import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
-import ar.edu.itba.paw.persistence.MatchDao;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
-import ar.edu.itba.paw.services.exceptions.matchCancelation.*;
-import ar.edu.itba.paw.services.exceptions.matchUpdate.*;
+import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.MatchUtils;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -44,8 +44,8 @@ import org.springframework.context.MessageSource;
 @ExtendWith(MockitoExtension.class)
 public class MatchServiceImplTest {
 
-    @Mock private MatchDao matchDao;
-    @Mock private MatchParticipantDao matchParticipantDao;
+    @Mock private MatchDataService matchDataService;
+    @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private MessageSource messageSource;
     @Mock private Clock clock;
     @Mock private SecurityService securityService;
@@ -63,16 +63,16 @@ public class MatchServiceImplTest {
         mailDispatchService = new RecordingMailDispatchService();
         matchNotificationService =
                 Mockito.spy(
-                        new MatchNotificationServiceImpl(matchParticipantDao, mailDispatchService));
+                        new MatchNotificationServiceImpl(
+                                matchParticipantDataService, mailDispatchService));
         matchService =
                 new MatchServiceImpl(
-                        matchDao,
+                        matchDataService,
                         imageService,
-                        matchParticipantDao,
+                        matchParticipantDataService,
                         matchNotificationService,
                         securityService,
-                        new RecurringMatchAsyncService(matchDao),
-                        messageSource,
+                        new RecurringMatchAsyncService(matchDataService),
                         clock);
         matchService = Mockito.spy(matchService);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
@@ -92,13 +92,12 @@ public class MatchServiceImplTest {
         this.matchNotificationService = matchNotificationService;
         matchService =
                 new MatchServiceImpl(
-                        matchDao,
+                        matchDataService,
                         imageService,
-                        matchParticipantDao,
+                        matchParticipantDataService,
                         matchNotificationService,
                         securityService,
-                        new RecurringMatchAsyncService(matchDao),
-                        messageSource,
+                        new RecurringMatchAsyncService(matchDataService),
                         clock);
     }
 
@@ -111,7 +110,7 @@ public class MatchServiceImplTest {
         final Instant expectedEndExclusive =
                 searchEnd.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant();
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 "football",
                                 List.of(Sport.FOOTBALL),
                                 EventTimeFilter.ALL,
@@ -126,7 +125,7 @@ public class MatchServiceImplTest {
                                 10))
                 .thenReturn(List.of(match));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 "football",
                                 List.of(Sport.FOOTBALL),
                                 EventTimeFilter.ALL,
@@ -161,7 +160,7 @@ public class MatchServiceImplTest {
     public void testSearchPublicMatchesWithNullQuery() {
         final Match match = createTestMatch(1L, "Padel", "padel");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -176,7 +175,7 @@ public class MatchServiceImplTest {
                                 12))
                 .thenReturn(List.of(match));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -200,7 +199,7 @@ public class MatchServiceImplTest {
         final Match footballMatch = createTestMatch(1L, "Football", "football");
         final Match tennisMatch = createTestMatch(2L, "Tennis", "tennis");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -215,7 +214,7 @@ public class MatchServiceImplTest {
                                 12))
                 .thenReturn(List.of(footballMatch, tennisMatch));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.FOOTBALL, Sport.TENNIS, Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -250,7 +249,7 @@ public class MatchServiceImplTest {
         final BigDecimal minPrice = new BigDecimal("10");
         final BigDecimal maxPrice = new BigDecimal("25");
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -265,7 +264,7 @@ public class MatchServiceImplTest {
                                 12))
                 .thenReturn(List.of(match));
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -297,7 +296,7 @@ public class MatchServiceImplTest {
     public void testSearchPublicMatchesClampsOutOfRangePageToLastAvailablePage() {
         final Match match = createTestMatch(4L, "Last Page Match", "padel");
         Mockito.when(
-                        matchDao.countPublicMatches(
+                        matchDataService.countPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -307,7 +306,7 @@ public class MatchServiceImplTest {
                                 null))
                 .thenReturn(13);
         Mockito.when(
-                        matchDao.findPublicMatches(
+                        matchDataService.findPublicMatches(
                                 null,
                                 List.of(Sport.PADEL),
                                 EventTimeFilter.ALL,
@@ -347,7 +346,7 @@ public class MatchServiceImplTest {
         final Instant now = FIXED_NOW.plusSeconds(3600);
         final Match expectedMatch = createTestMatch(1L, "Test Match", "football");
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 UserUtils.getUser(1L),
                                 "Test Address",
                                 "Test Match",
@@ -395,7 +394,7 @@ public class MatchServiceImplTest {
         final Instant expectedEndsAt = Instant.parse("2099-04-10T22:30:00Z");
         final Match expectedMatch = createTestMatch(1L, "Argentina Match", "football");
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 UserUtils.getUser(1L),
                                 "Test Address",
                                 "Argentina Match",
@@ -521,7 +520,7 @@ public class MatchServiceImplTest {
                         null,
                         null);
         Mockito.when(
-                        matchDao.createMatchSeries(
+                        matchDataService.createMatchSeries(
                                 host,
                                 RecurrenceFrequency.WEEKLY,
                                 startsAt,
@@ -531,7 +530,7 @@ public class MatchServiceImplTest {
                                 3))
                 .thenReturn(77L);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -551,7 +550,7 @@ public class MatchServiceImplTest {
                                 1))
                 .thenReturn(firstOccurrence);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -571,7 +570,7 @@ public class MatchServiceImplTest {
                                 2))
                 .thenReturn(secondOccurrence);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -682,7 +681,7 @@ public class MatchServiceImplTest {
                         null,
                         null);
         Mockito.when(
-                        matchDao.createMatchSeries(
+                        matchDataService.createMatchSeries(
                                 host,
                                 RecurrenceFrequency.WEEKLY,
                                 startsAt,
@@ -692,7 +691,7 @@ public class MatchServiceImplTest {
                                 null))
                 .thenReturn(88L);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -712,7 +711,7 @@ public class MatchServiceImplTest {
                                 1))
                 .thenReturn(firstOccurrence);
         Mockito.when(
-                        matchDao.createMatch(
+                        matchDataService.createMatch(
                                 host,
                                 "Test Address",
                                 "Weekly Padel",
@@ -824,7 +823,7 @@ public class MatchServiceImplTest {
                                                 EventStatus.OPEN,
                                                 null)));
 
-        Assertions.assertEquals("match.schedule.error.startsAtPast", exception.getMessage());
+        Assertions.assertEquals("match.schedule.error.invalid", exception.getMessage());
     }
 
     @Test
@@ -858,10 +857,10 @@ public class MatchServiceImplTest {
 
     @Test
     public void testUpdateMatchRejectsMissingMatch() {
-        Mockito.when(matchDao.findById(13L)).thenReturn(Optional.empty());
+        Mockito.when(matchDataService.findById(13L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchUpdateNotFoundException.class,
+                MatchNotFoundException.class,
                 () ->
                         matchService.updateMatch(
                                 13L,
@@ -885,10 +884,10 @@ public class MatchServiceImplTest {
     @Test
     public void testUpdateMatchRejectsNonOwner() {
         final Match existingMatch = createTestMatch(14L, "Test Match", "football");
-        Mockito.when(matchDao.findById(14L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchDataService.findById(14L)).thenReturn(Optional.of(existingMatch));
 
         Assertions.assertThrows(
-                MatchUpdateForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () ->
                         matchService.updateMatch(
                                 14L,
@@ -936,7 +935,7 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(17L)).thenReturn(Optional.of(completedMatch));
+        Mockito.when(matchDataService.findById(17L)).thenReturn(Optional.of(completedMatch));
 
         Assertions.assertThrows(
                 MatchUpdateNotEditableException.class,
@@ -987,7 +986,7 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(17L)).thenReturn(Optional.of(startedMatch));
+        Mockito.when(matchDataService.findById(17L)).thenReturn(Optional.of(startedMatch));
 
         Assertions.assertThrows(
                 MatchUpdateNotEditableException.class,
@@ -1014,7 +1013,7 @@ public class MatchServiceImplTest {
     @Test
     public void testUpdateMatchRejectsPastStartTime() {
         final Match existingMatch = createTestMatch(15L, "Test Match", "football");
-        Mockito.when(matchDao.findById(15L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchDataService.findById(15L)).thenReturn(Optional.of(existingMatch));
 
         Assertions.assertThrows(
                 MatchUpdateInvalidScheduleException.class,
@@ -1041,7 +1040,7 @@ public class MatchServiceImplTest {
     @Test
     public void testUpdateMatchRejectsEndTimeBeforeStartTime() {
         final Match existingMatch = createTestMatch(10L, "Test Match", "football");
-        Mockito.when(matchDao.findById(10L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(existingMatch));
 
         Assertions.assertThrows(
                 MatchUpdateInvalidScheduleException.class,
@@ -1068,8 +1067,8 @@ public class MatchServiceImplTest {
     @Test
     public void testUpdateMatchRejectsCapacityBelowConfirmedParticipants() {
         final Match existingMatch = createTestMatch(11L, "Test Match", "football");
-        Mockito.when(matchDao.findById(11L)).thenReturn(Optional.of(existingMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(11L))
+        Mockito.when(matchDataService.findById(11L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(11L))
                 .thenReturn(List.of(UserUtils.getUser(2L), UserUtils.getUser(3L)));
 
         Assertions.assertThrows(
@@ -1098,7 +1097,7 @@ public class MatchServiceImplTest {
     public void testUpdateMatchRejectsCapacityAboveMaximum() {
         // 1. Arrange
         final Match existingMatch = createTestMatch(11L, "Test Match", "football");
-        Mockito.when(matchDao.findById(11L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchDataService.findById(11L)).thenReturn(Optional.of(existingMatch));
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
@@ -1152,12 +1151,13 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(12L))
+        Mockito.when(matchDataService.findById(12L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(12L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(12L))
+                .thenReturn(List.of());
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 12L,
                                 host,
                                 "Updated Address",
@@ -1215,14 +1215,15 @@ public class MatchServiceImplTest {
         final RecordingMatchNotificationService notifications =
                 new RecordingMatchNotificationService();
         useMatchNotificationService(notifications);
-        Mockito.when(matchDao.findById(18L))
+        Mockito.when(matchDataService.findById(18L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(18L)).thenReturn(List.of());
-        Mockito.when(matchParticipantDao.findInvitedUsers(18L)).thenReturn(invitedUsers);
-        Mockito.when(matchParticipantDao.cancelPendingInvitations(18L)).thenReturn(1);
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(18L))
+                .thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findInvitedUsers(18L)).thenReturn(invitedUsers);
+        Mockito.when(matchParticipantDataService.cancelPendingInvitations(18L)).thenReturn(1);
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 18L,
                                 host,
                                 "Test Address",
@@ -1281,14 +1282,15 @@ public class MatchServiceImplTest {
         final RecordingMatchNotificationService notifications =
                 new RecordingMatchNotificationService();
         useMatchNotificationService(notifications);
-        Mockito.when(matchDao.findById(19L))
+        Mockito.when(matchDataService.findById(19L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(19L)).thenReturn(List.of());
-        Mockito.when(matchParticipantDao.findPendingRequests(19L)).thenReturn(pendingUsers);
-        Mockito.when(matchParticipantDao.cancelPendingRequests(19L)).thenReturn(1);
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(19L))
+                .thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findPendingRequests(19L)).thenReturn(pendingUsers);
+        Mockito.when(matchParticipantDataService.cancelPendingRequests(19L)).thenReturn(1);
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 19L,
                                 UserUtils.getUser(1L),
                                 "Test Address",
@@ -1341,10 +1343,10 @@ public class MatchServiceImplTest {
         // 1. Arrange
         final Match existingMatch =
                 createTestMatch(20L, "Request Match", "football", "public", "approval_required");
-        Mockito.when(matchDao.findById(20L)).thenReturn(Optional.of(existingMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(20L))
+        Mockito.when(matchDataService.findById(20L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(20L))
                 .thenReturn(List.of(UserUtils.getUser(2L), UserUtils.getUser(3L)));
-        Mockito.when(matchParticipantDao.countPendingRequests(20L)).thenReturn(2);
+        Mockito.when(matchParticipantDataService.countPendingRequests(20L)).thenReturn(2);
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
@@ -1384,15 +1386,16 @@ public class MatchServiceImplTest {
         final RecordingMatchNotificationService notifications =
                 new RecordingMatchNotificationService();
         useMatchNotificationService(notifications);
-        Mockito.when(matchDao.findById(24L))
+        Mockito.when(matchDataService.findById(24L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(24L)).thenReturn(List.of());
-        Mockito.when(matchParticipantDao.countPendingRequests(24L)).thenReturn(2);
-        Mockito.when(matchParticipantDao.findPendingRequests(24L)).thenReturn(pendingUsers);
-        Mockito.when(matchParticipantDao.approveAllPendingRequests(24L)).thenReturn(2);
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(24L))
+                .thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.countPendingRequests(24L)).thenReturn(2);
+        Mockito.when(matchParticipantDataService.findPendingRequests(24L)).thenReturn(pendingUsers);
+        Mockito.when(matchParticipantDataService.approveAllPendingRequests(24L)).thenReturn(2);
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 24L,
                                 user1,
                                 "Test Address",
@@ -1443,10 +1446,11 @@ public class MatchServiceImplTest {
     @Test
     public void testUpdateMatchRejectsWhenOwnedUpdateTouchesNoRows() {
         final Match existingMatch = createTestMatch(16L, "Old Title", "football");
-        Mockito.when(matchDao.findById(16L)).thenReturn(Optional.of(existingMatch));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(16L)).thenReturn(List.of());
+        Mockito.when(matchDataService.findById(16L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(16L))
+                .thenReturn(List.of());
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 16L,
                                 UserUtils.getUser(1L),
                                 "Updated Address",
@@ -1466,7 +1470,7 @@ public class MatchServiceImplTest {
                 .thenReturn(false);
 
         Assertions.assertThrows(
-                MatchUpdateForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () ->
                         matchService.updateMatch(
                                 16L,
@@ -1489,20 +1493,20 @@ public class MatchServiceImplTest {
 
     @Test
     public void testCancelMatchRejectsMissingMatch() {
-        Mockito.when(matchDao.findById(21L)).thenReturn(Optional.empty());
+        Mockito.when(matchDataService.findById(21L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchCancellationNotFoundException.class,
+                MatchNotFoundException.class,
                 () -> matchService.cancelMatch(21L, UserUtils.getUser(1L)));
     }
 
     @Test
     public void testCancelMatchRejectsNonOwner() {
         final Match existingMatch = createTestMatch(22L, "Test Match", "football");
-        Mockito.when(matchDao.findById(22L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchDataService.findById(22L)).thenReturn(Optional.of(existingMatch));
 
         Assertions.assertThrows(
-                MatchCancellationForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () -> matchService.cancelMatch(22L, UserUtils.getUser(1L)));
     }
 
@@ -1533,10 +1537,10 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(29L)).thenReturn(Optional.of(completedMatch));
+        Mockito.when(matchDataService.findById(29L)).thenReturn(Optional.of(completedMatch));
 
         Assertions.assertThrows(
-                MatchCancellationForbiddenException.class,
+                MatchForbiddenActionException.class,
                 () -> matchService.cancelMatch(29L, UserUtils.getUser(1L)));
     }
 
@@ -1569,10 +1573,10 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(23L))
+        Mockito.when(matchDataService.findById(23L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(cancelledMatch));
-        Mockito.when(matchDao.cancelMatch(23L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(23L, host)).thenReturn(true);
 
         final Match result = matchService.cancelMatch(23L, host);
 
@@ -1634,10 +1638,10 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(47L))
+        Mockito.when(matchDataService.findById(47L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(cancelledMatch));
-        Mockito.when(matchDao.cancelMatch(47L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(47L, host)).thenReturn(true);
 
         // Exercise
         final Match result = matchService.cancelMatch(47L, host);
@@ -1660,7 +1664,7 @@ public class MatchServiceImplTest {
 
         final List<Match> expectedMatches = List.of(invited, joined, hosted);
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDataService.findDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.any(),
@@ -1677,7 +1681,7 @@ public class MatchServiceImplTest {
                                 Mockito.anyInt()))
                 .thenReturn(expectedMatches);
         Mockito.when(
-                        matchDao.countDashboardMatches(
+                        matchDataService.countDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.any(),
@@ -1723,7 +1727,7 @@ public class MatchServiceImplTest {
         final List<Match> expected = List.of(createTestMatch(2L, "M2", "football"));
 
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDataService.findDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.eq(false),
@@ -1740,7 +1744,7 @@ public class MatchServiceImplTest {
                                 Mockito.eq(5))) // limit = 5
                 .thenReturn(expected);
         Mockito.when(
-                        matchDao.countDashboardMatches(
+                        matchDataService.countDashboardMatches(
                                 Mockito.eq(user),
                                 Mockito.eq(Boolean.TRUE),
                                 Mockito.eq(false),
@@ -1842,22 +1846,24 @@ public class MatchServiceImplTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         null);
-        Mockito.when(matchDao.findById(46L))
+        Mockito.when(matchDataService.findById(46L))
                 .thenReturn(Optional.of(pivotOccurrence))
                 .thenReturn(Optional.of(updatedPivot));
-        Mockito.when(matchDao.findById(47L)).thenReturn(Optional.of(updatedFuture));
-        Mockito.when(matchDao.findSeriesOccurrences(600L))
+        Mockito.when(matchDataService.findById(47L)).thenReturn(Optional.of(updatedFuture));
+        Mockito.when(matchDataService.findSeriesOccurrences(600L))
                 .thenReturn(
                         List.of(
                                 pastOccurrence,
                                 pivotOccurrence,
                                 futureOccurrence,
                                 cancelledOccurrence));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(46L)).thenReturn(List.of());
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(47L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(46L))
+                .thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(47L))
+                .thenReturn(List.of());
         final User host = UserUtils.getUser(1L);
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 46L,
                                 host,
                                 "Updated Address",
@@ -1876,7 +1882,7 @@ public class MatchServiceImplTest {
                                 null))
                 .thenReturn(true);
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 47L,
                                 host,
                                 "Updated Address",
@@ -1941,11 +1947,13 @@ public class MatchServiceImplTest {
                         EventJoinPolicy.DIRECT,
                         EventStatus.OPEN,
                         null);
-        Mockito.when(matchDao.findById(46L)).thenReturn(Optional.of(pivotOccurrence));
-        Mockito.when(matchDao.findSeriesOccurrences(600L))
+        Mockito.when(matchDataService.findById(46L)).thenReturn(Optional.of(pivotOccurrence));
+        Mockito.when(matchDataService.findSeriesOccurrences(600L))
                 .thenReturn(List.of(inconsistentFutureOccurrence, pivotOccurrence));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(47L)).thenReturn(List.of());
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(46L)).thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(47L))
+                .thenReturn(List.of());
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(46L))
+                .thenReturn(List.of());
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
@@ -1957,11 +1965,11 @@ public class MatchServiceImplTest {
     public void testUpdateSeriesFromOccurrenceRejectsNonRecurringMatch() {
         // 1. Arrange
         final Match singleMatch = createTestMatch(46L, "Single Padel", "padel");
-        Mockito.when(matchDao.findById(46L)).thenReturn(Optional.of(singleMatch));
+        Mockito.when(matchDataService.findById(46L)).thenReturn(Optional.of(singleMatch));
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                MatchUpdateNotRecurringException.class,
+                MatchNotRecurringException.class,
                 () ->
                         matchService.updateSeriesFromOccurrence(
                                 46L,
@@ -2034,11 +2042,11 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(612000),
                         EventStatus.CANCELLED,
                         3);
-        Mockito.when(matchDao.findById(46L))
+        Mockito.when(matchDataService.findById(46L))
                 .thenReturn(Optional.of(pivotOccurrence))
                 .thenReturn(Optional.of(cancelledPivot));
-        Mockito.when(matchDao.findById(47L)).thenReturn(Optional.of(cancelledFuture));
-        Mockito.when(matchDao.findSeriesOccurrences(600L))
+        Mockito.when(matchDataService.findById(47L)).thenReturn(Optional.of(cancelledFuture));
+        Mockito.when(matchDataService.findSeriesOccurrences(600L))
                 .thenReturn(
                         List.of(
                                 pastOccurrence,
@@ -2046,8 +2054,8 @@ public class MatchServiceImplTest {
                                 futureOccurrence,
                                 cancelledOccurrence));
         final User host = UserUtils.getUser(1L);
-        Mockito.when(matchDao.cancelMatch(46L, host)).thenReturn(true);
-        Mockito.when(matchDao.cancelMatch(47L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(46L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(47L, host)).thenReturn(true);
 
         // 2. Exercise
         final List<Match> result = matchService.cancelSeriesFromOccurrence(46L, host);
@@ -2127,12 +2135,13 @@ public class MatchServiceImplTest {
                         FIXED_NOW.plusSeconds(1216800),
                         EventStatus.CANCELLED,
                         4);
-        Mockito.when(matchDao.findById(46L))
+        Mockito.when(matchDataService.findById(46L))
                 .thenReturn(Optional.of(pivotOccurrence))
                 .thenReturn(Optional.of(cancelledPivot));
-        Mockito.when(matchDao.findById(45L)).thenReturn(Optional.of(cancelledEarlierFuture));
-        Mockito.when(matchDao.findById(47L)).thenReturn(Optional.of(cancelledLaterFuture));
-        Mockito.when(matchDao.findSeriesOccurrences(600L))
+        Mockito.when(matchDataService.findById(45L))
+                .thenReturn(Optional.of(cancelledEarlierFuture));
+        Mockito.when(matchDataService.findById(47L)).thenReturn(Optional.of(cancelledLaterFuture));
+        Mockito.when(matchDataService.findSeriesOccurrences(600L))
                 .thenReturn(
                         List.of(
                                 pastOccurrence,
@@ -2141,9 +2150,9 @@ public class MatchServiceImplTest {
                                 laterFutureOccurrence,
                                 cancelledOccurrence));
         final User host = UserUtils.getUser(1L);
-        Mockito.when(matchDao.cancelMatch(45L, host)).thenReturn(true);
-        Mockito.when(matchDao.cancelMatch(46L, host)).thenReturn(true);
-        Mockito.when(matchDao.cancelMatch(47L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(45L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(46L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(47L, host)).thenReturn(true);
 
         // 2. Exercise
         final List<Match> result = matchService.cancelSeriesFromOccurrence(46L, host);
@@ -2185,7 +2194,7 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(24L)).thenReturn(Optional.of(existingMatch));
+        Mockito.when(matchDataService.findById(24L)).thenReturn(Optional.of(existingMatch));
 
         final Match result = matchService.cancelMatch(24L, UserUtils.getUser(1L));
 
@@ -2222,12 +2231,12 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(25L))
+        Mockito.when(matchDataService.findById(25L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(updatedMatch));
         final User host = UserUtils.getUser(1L);
         Mockito.when(
-                        matchDao.updateMatch(
+                        matchDataService.updateMatch(
                                 25L,
                                 host,
                                 "Updated Address",
@@ -2298,10 +2307,10 @@ public class MatchServiceImplTest {
                         null,
                         null,
                         null);
-        Mockito.when(matchDao.findById(26L))
+        Mockito.when(matchDataService.findById(26L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(cancelledMatch));
-        Mockito.when(matchDao.cancelMatch(26L, UserUtils.getUser(1L))).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(26L, UserUtils.getUser(1L))).thenReturn(true);
 
         final Match result = matchService.cancelMatch(26L, UserUtils.getUser(1L));
 
@@ -2311,10 +2320,10 @@ public class MatchServiceImplTest {
 
     @Test
     public void testUpdateMatchFailureSendsNoMail() {
-        Mockito.when(matchDao.findById(27L)).thenReturn(Optional.empty());
+        Mockito.when(matchDataService.findById(27L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchUpdateException.class,
+                MatchNotFoundException.class,
                 () ->
                         matchService.updateMatch(
                                 27L,
@@ -2340,10 +2349,10 @@ public class MatchServiceImplTest {
 
     @Test
     public void testCancelMatchFailureSendsNoMail() {
-        Mockito.when(matchDao.findById(28L)).thenReturn(Optional.empty());
+        Mockito.when(matchDataService.findById(28L)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(
-                MatchCancellationException.class,
+                MatchNotFoundException.class,
                 () -> matchService.cancelMatch(28L, UserUtils.getUser(1L)));
 
         Assertions.assertTrue(mailDispatchService.actions.isEmpty());
@@ -2465,7 +2474,8 @@ public class MatchServiceImplTest {
     @Test
     public void testFindPublicMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(8L, "Late Football", "football");
-        Mockito.when(matchDao.findPublicMatchById(8L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchDataService.findPublicMatchById(8L))
+                .thenReturn(Optional.of(expectedMatch));
 
         final Optional<Match> result = matchService.findPublicMatchById(8L);
 
@@ -2476,7 +2486,7 @@ public class MatchServiceImplTest {
     @Test
     public void testFindMatchByIdDelegates() {
         final Match expectedMatch = createTestMatch(9L, "Private Football", "football");
-        Mockito.when(matchDao.findById(9L)).thenReturn(Optional.of(expectedMatch));
+        Mockito.when(matchDataService.findById(9L)).thenReturn(Optional.of(expectedMatch));
 
         final Optional<Match> result = matchService.findMatchById(9L);
 
@@ -2488,7 +2498,7 @@ public class MatchServiceImplTest {
     public void testFindConfirmedParticipantsDelegates() {
         final List<User> expectedParticipants =
                 List.of(UserUtils.getUser(2L), UserUtils.getUser(3L));
-        Mockito.when(matchParticipantDao.findConfirmedParticipants(8L))
+        Mockito.when(matchParticipantDataService.findConfirmedParticipants(8L))
                 .thenReturn(expectedParticipants);
 
         final List<User> result = matchService.findConfirmedParticipants(8L);
@@ -2503,7 +2513,7 @@ public class MatchServiceImplTest {
         final Match hosted = createTestMatch(10L, "Host Match", "padel");
         final User u = UserUtils.getUser(9L);
         Mockito.when(
-                        matchDao.findDashboardMatches(
+                        matchDataService.findDashboardMatches(
                                 u,
                                 true,
                                 true,
@@ -2520,7 +2530,7 @@ public class MatchServiceImplTest {
                                 9))
                 .thenReturn(List.of(hosted));
         Mockito.when(
-                        matchDao.countDashboardMatches(
+                        matchDataService.countDashboardMatches(
                                 u,
                                 true,
                                 true,
@@ -2602,7 +2612,7 @@ public class MatchServiceImplTest {
     @Test
     public void findSeriesOccurrencesPageDelegatesToDao() {
         final PaginatedResult<Match> expected = new PaginatedResult<>(List.of(), 0, 1, 5);
-        Mockito.when(matchDao.findSeriesOccurrencesPage(600L, 1, 5)).thenReturn(expected);
+        Mockito.when(matchDataService.findSeriesOccurrencesPage(600L, 1, 5)).thenReturn(expected);
 
         final PaginatedResult<Match> result = matchService.findSeriesOccurrencesPage(600L, 1, 5);
 

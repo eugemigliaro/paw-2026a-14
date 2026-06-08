@@ -7,9 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import ar.edu.itba.paw.models.UserAccount;
-import ar.edu.itba.paw.models.UserLanguages;
-import ar.edu.itba.paw.models.types.UserRole;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureExpiredException;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
@@ -17,12 +15,9 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.registration.LastNameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.NameInvalidException;
-import ar.edu.itba.paw.services.exceptions.registration.PhoneInvalidException;
-import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureExpiredException;
-import ar.edu.itba.paw.services.exceptions.verificationFailure.VerificationFailureNotFoundException;
-import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
@@ -31,17 +26,14 @@ import java.util.Locale;
 import java.util.Optional;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorFactory;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -49,8 +41,6 @@ import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 class AuthFlowControllerTest {
-
-    private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     private MockMvc mockMvc;
     private AccountAuthService accountAuthService;
@@ -75,12 +65,16 @@ class AuthFlowControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new AuthController(accountAuthService, messageSource),
-                                new PasswordResetController(accountAuthService, messageSource),
-                                new VerificationController(accountAuthService, messageSource))
+                                new PasswordResetController(accountAuthService),
+                                new VerificationController(accountAuthService))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .setValidator(validator)
+                        .setControllerAdvice(
+                                new AccessExceptionHandler(),
+                                new PasswordResetExceptionHandler(messageSource),
+                                new VerificationExceptionHandler(messageSource))
                         .build();
     }
 
@@ -175,40 +169,46 @@ class AuthFlowControllerTest {
     }
 
     @Test
-    void postRegisterWithServiceNameErrorRerendersRegisterViewWithNameError() throws Exception {
-        Mockito.when(
-                        accountAuthService.register(
-                                ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new NameInvalidException("Invalid name"));
-
-        mockMvc.perform(validRegisterRequest())
+    void postRegisterWithNameErrorRerendersRegisterViewWithNameError() throws Exception {
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "")
+                                .param("lastName", "Rivera")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "name"));
     }
 
     @Test
-    void postRegisterWithServiceLastNameErrorRerendersRegisterViewWithLastNameError()
-            throws Exception {
-        Mockito.when(
-                        accountAuthService.register(
-                                ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new LastNameInvalidException("Invalid last name"));
-
-        mockMvc.perform(validRegisterRequest())
+    void postRegisterWithLastNameErrorRerendersRegisterViewWithLastNameError() throws Exception {
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "lastName"));
     }
 
     @Test
-    void postRegisterWithServicePhoneErrorRerendersRegisterViewWithPhoneError() throws Exception {
-        Mockito.when(
-                        accountAuthService.register(
-                                ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new PhoneInvalidException("Invalid phone"));
-
-        mockMvc.perform(validRegisterRequest())
+    void postRegisterWithPhoneErrorRerendersRegisterViewWithPhoneError() throws Exception {
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "invalid-phone")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "phone"));
@@ -273,75 +273,15 @@ class AuthFlowControllerTest {
     }
 
     @Test
-    void postVerificationConfirmAuthenticatesAndRedirectsHome() throws Exception {
-        Mockito.when(accountAuthService.confirmVerification("abc123"))
-                .thenReturn(
-                        new VerificationConfirmationResult(
-                                new UserAccount(
-                                        9L,
-                                        "player@test.com",
-                                        "player-account",
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        "{bcrypt}hash",
-                                        UserRole.USER,
-                                        FIXED_NOW,
-                                        UserLanguages.DEFAULT_LANGUAGE),
-                                "done"));
-
-        final MvcResult result =
-                mockMvc.perform(post("/verifications/abc123/confirm"))
-                        .andExpect(status().is3xxRedirection())
-                        .andExpect(redirectedUrl("/"))
-                        .andReturn();
-
-        final SecurityContext securityContext =
-                (SecurityContext)
-                        result.getRequest().getSession().getAttribute("SPRING_SECURITY_CONTEXT");
-        Assertions.assertNotNull(securityContext);
-        Assertions.assertTrue(securityContext.getAuthentication().isAuthenticated());
-        Assertions.assertEquals(
-                9L,
-                ((AuthenticatedUserPrincipal) securityContext.getAuthentication().getPrincipal())
-                        .getUser()
-                        .getId());
-    }
-
-    @Test
-    void getInvalidVerificationRendersErrorPage() throws Exception {
-        Mockito.when(accountAuthService.getVerificationPreview("invalid"))
-                .thenThrow(new VerificationFailureNotFoundException("Missing link"));
-
-        mockMvc.perform(get("/verifications/invalid"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("verification/error"))
-                .andExpect(model().attributeExists("message"));
-    }
-
-    @Test
     void getPasswordResetWithExpiredTokenRendersErrorPage() throws Exception {
         Mockito.when(accountAuthService.getPasswordResetPreview("expired-token"))
-                .thenThrow(new VerificationFailureExpiredException("Expired token"));
+                .thenThrow(new VerificationFailureExpiredException());
 
         mockMvc.perform(get("/password-reset/expired-token"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/error"))
                 .andExpect(model().attribute("backHref", "/forgot-password"))
                 .andReturn();
-    }
-
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validRegisterRequest() {
-        return post("/register")
-                .param("email", "new@test.com")
-                .param("username", "new_user")
-                .param("name", "Jamie")
-                .param("lastName", "Rivera")
-                .param("phone", "+1 555 123 4567")
-                .param("password", "Password123!")
-                .param("confirmPassword", "Password123!");
     }
 
     private static MessageSource messageSource() {

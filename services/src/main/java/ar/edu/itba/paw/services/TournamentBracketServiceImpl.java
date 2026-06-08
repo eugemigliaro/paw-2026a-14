@@ -6,14 +6,18 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.*;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateInvalidLocationException;
+import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateInvalidScheduleException;
+import ar.edu.itba.paw.models.exceptions.tournament.*;
+import ar.edu.itba.paw.models.exceptions.tournamentBracket.*;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentMatchDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.tournamentBracket.*;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -49,22 +53,22 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                     TournamentStatus.CANCELLED);
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
-    private final TournamentDao tournamentDao;
-    private final TournamentTeamDao tournamentTeamDao;
+    private final TournamentDataService tournamentDataService;
+    private final TournamentTeamDataService tournamentTeamDataService;
     private final TournamentMatchDao tournamentMatchDao;
     private final UserSportRatingService userSportRatingService;
     private final TournamentMailService tournamentMailService;
     private final Clock clock;
 
     public TournamentBracketServiceImpl(
-            final TournamentDao tournamentDao,
-            final TournamentTeamDao tournamentTeamDao,
+            final TournamentDataService tournamentDataService,
+            final TournamentTeamDataService tournamentTeamDataService,
             final TournamentMatchDao tournamentMatchDao,
             final UserSportRatingService userSportRatingService,
             final TournamentMailService tournamentMailService,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
-        this.tournamentTeamDao = tournamentTeamDao;
+        this.tournamentDataService = tournamentDataService;
+        this.tournamentTeamDataService = tournamentTeamDataService;
         this.tournamentMatchDao = tournamentMatchDao;
         this.userSportRatingService = userSportRatingService;
         this.tournamentMailService = tournamentMailService;
@@ -82,8 +86,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final List<TournamentMatch> existingMatches =
                 tournamentMatchDao.findByTournament(tournamentId);
         if (!existingMatches.isEmpty()) {
-            throw new TournamentBracketAlreadyGeneratedException(
-                    "Tournament bracket has already been generated");
+            throw new TournamentBracketAlreadyGeneratedException();
         }
 
         final List<TournamentTeam> teams = orderedTeamsForStrategy(tournament);
@@ -102,7 +105,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
         validateCanMutate(tournament, actingUser);
         requireBracketSetup(tournament);
-        return tournamentTeamDao.findByTournament(tournamentId);
+        return tournamentTeamDataService.findByTournament(tournamentId);
     }
 
     @Override
@@ -115,8 +118,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         validateCanMutate(tournament, actingUser);
         requireBracketSetup(tournament);
         if (pairingStrategy == null) {
-            throw new TournamentBracketPairingStrategyRequiredException(
-                    "Pairing strategy is required");
+            throw new TournamentBracketPairingStrategyRequiredException();
         }
         tournament.setPairingStrategy(pairingStrategy);
         tournament.setUpdatedAt(Instant.now(clock));
@@ -131,17 +133,15 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         validateCanMutate(tournament, actingUser);
         requireBracketSetup(tournament);
         if (tournament.getPairingStrategy() != TournamentPairingStrategy.MANUAL) {
-            throw new TournamentBracketInvalidPairingsException(
-                    "Invalid pairings for the current pairing strategy");
+            throw new TournamentBracketInvalidPairingsException();
         }
         if (!tournamentMatchDao.findByTournament(tournamentId).isEmpty()) {
-            throw new TournamentBracketAlreadyGeneratedException(
-                    "Tournament bracket has already been generated");
+            throw new TournamentBracketAlreadyGeneratedException();
         }
         final List<TournamentTeam> teams =
-                tournamentTeamDao.findByTournamentUnordered(tournamentId);
+                tournamentTeamDataService.findByTournamentUnordered(tournamentId);
         validateManualPairings(teams, orderedTeamIds);
-        tournamentTeamDao.saveSeedOrder(teams, orderedTeamIds);
+        tournamentTeamDataService.saveSeedOrder(teams, orderedTeamIds);
         tournament.setUpdatedAt(Instant.now(clock));
     }
 
@@ -157,8 +157,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
         final List<TournamentMatch> matches = tournamentMatchDao.findByTournament(tournamentId);
         if (matches.isEmpty()) {
-            throw new TournamentBracketNotGeneratedException(
-                    "Tournament bracket has not been generated");
+            throw new TournamentBracketNotGeneratedException();
         }
 
         final Map<Long, TournamentMatchScheduleRequest> schedulesByMatch =
@@ -170,8 +169,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         for (final TournamentMatch match : matches) {
             final TournamentMatchScheduleRequest schedule = schedulesByMatch.get(match.getId());
             if (schedule == null) {
-                throw new TournamentBracketMissingMatchScheduleException(
-                        "Match schedule is required");
+                throw new TournamentBracketMissingMatchScheduleException();
             }
             validateSchedule(schedule, now);
             applySchedule(match, schedule, now);
@@ -189,21 +187,21 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     public TournamentBracketView getBracket(final long tournamentId, final User viewer) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
         if (!canReadBracket(tournament, viewer)) {
-            throw new TournamentBracketForbiddenException(
-                    "You do not have permission to manage this bracket");
+            throw new TournamentForbiddenActionException();
         }
 
-        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournamentId);
+        final List<TournamentTeam> teams = tournamentTeamDataService.findByTournament(tournamentId);
         final List<TournamentMatch> matches = tournamentMatchDao.findByTournament(tournamentId);
         if (matches.isEmpty()) {
-            throw new TournamentBracketNotGeneratedException(
-                    "Tournament bracket has not been generated");
+            throw new TournamentBracketNotGeneratedException();
         }
 
         final TournamentTeam viewerTeam =
                 viewer == null || viewer.getId() == null
                         ? null
-                        : tournamentTeamDao.findUserTeam(tournamentId, viewer.getId()).orElse(null);
+                        : tournamentTeamDataService
+                                .findUserTeam(tournamentId, viewer.getId())
+                                .orElse(null);
 
         return new TournamentBracketView(
                 tournament,
@@ -211,7 +209,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 matches,
                 viewerTeam,
                 focusedMatch(matches, viewerTeam),
-                tournamentTeamDao.findMembersByTournament(tournamentId));
+                tournamentTeamDataService.findMembersByTournament(tournamentId));
     }
 
     @Override
@@ -388,25 +386,21 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
-                .orElseThrow(
-                        () ->
-                                new TournamentBracketTournamentNotFoundException(
-                                        "Tournament not found"));
+                .orElseThrow(() -> new TournamentNotFoundException());
     }
 
     private TournamentMatch findMatchOrThrow(final long tournamentId, final long matchId) {
         return tournamentMatchDao
                 .findByTournamentAndId(tournamentId, matchId)
-                .orElseThrow(() -> new TournamentBracketMatchNotFoundException("Match not found"));
+                .orElseThrow(() -> new MatchNotFoundException());
     }
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
         if (!canMutate(tournament, actingUser)) {
-            throw new TournamentBracketForbiddenException(
-                    "You do not have permission to manage this bracket");
+            throw new TournamentForbiddenActionException();
         }
     }
 
@@ -439,37 +433,34 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     private void requireBracketSetup(final Tournament tournament) {
         if (TournamentStatus.BRACKET_SETUP != tournament.getStatus()) {
-            throw new TournamentBracketNotReadyForBracketException(
-                    "Tournament is not ready for bracket generation");
+            throw new TournamentBracketNotReadyForBracketException();
         }
     }
 
     private void requireInProgress(final Tournament tournament) {
         if (TournamentStatus.IN_PROGRESS != tournament.getStatus()) {
-            throw new TournamentBracketNotInProgressException("Tournament is not in progress");
+            throw new TournamentBracketNotInProgressException();
         }
     }
 
     private void validateSupportedBracketSize(final Tournament tournament) {
         if (!SUPPORTED_BRACKET_SIZES.contains(tournament.getBracketSize())) {
-            throw new TournamentBracketNotReadyForBracketException(
-                    "Tournament is not ready for bracket generation");
+            throw new TournamentBracketNotReadyForBracketException();
         }
     }
 
     private void validateTeamCount(final Tournament tournament, final List<TournamentTeam> teams) {
         if (teams.size() < 2) {
-            throw new TournamentBracketUnderCapacityException(
-                    "Not enough teams to generate a bracket");
+            throw new TournamentBracketUnderCapacityException();
         }
         if (teams.size() > tournament.getBracketSize()) {
-            throw new TournamentBracketNotReadyForBracketException(
-                    "Tournament is not ready for bracket generation");
+            throw new TournamentBracketNotReadyForBracketException();
         }
     }
 
     private List<TournamentTeam> orderedTeamsForStrategy(final Tournament tournament) {
-        final List<TournamentTeam> teams = tournamentTeamDao.findByTournament(tournament.getId());
+        final List<TournamentTeam> teams =
+                tournamentTeamDataService.findByTournament(tournament.getId());
         final TournamentPairingStrategy strategy =
                 tournament.getPairingStrategy() == null
                         ? TournamentPairingStrategy.RANDOM
@@ -497,7 +488,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             return seedOrder(teams);
         }
         final Map<Long, List<User>> membersByTeam =
-                tournamentTeamDao.findMembersByTournament(tournament.getId()).stream()
+                tournamentTeamDataService.findMembersByTournament(tournament.getId()).stream()
                         .collect(
                                 Collectors.groupingBy(
                                         member -> member.getTeam().getId(),
@@ -573,8 +564,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         for (final TournamentTeam team : teams) {
             final Integer seed = team.getSeedPosition();
             if (seed == null || seed <= 0 || !seen.add(seed)) {
-                throw new TournamentBracketInvalidPairingsException(
-                        "Invalid pairings for the current pairing strategy");
+                throw new TournamentBracketInvalidPairingsException();
             }
         }
     }
@@ -582,16 +572,14 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     private void validateManualPairings(
             final List<TournamentTeam> teams, final List<Long> orderedTeamIds) {
         if (orderedTeamIds == null || orderedTeamIds.size() != teams.size()) {
-            throw new TournamentBracketInvalidPairingsException(
-                    "Invalid pairings for the current pairing strategy");
+            throw new TournamentBracketInvalidPairingsException();
         }
         final Set<Long> availableTeamIds =
                 teams.stream().map(TournamentTeam::getId).collect(Collectors.toSet());
         final Set<Long> seen = new HashSet<>();
         for (final Long teamId : orderedTeamIds) {
             if (teamId == null || !availableTeamIds.contains(teamId) || !seen.add(teamId)) {
-                throw new TournamentBracketInvalidPairingsException(
-                        "Invalid pairings for the current pairing strategy");
+                throw new TournamentBracketInvalidPairingsException();
             }
         }
     }
@@ -616,10 +604,10 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Map<Long, TournamentMatchScheduleRequest> schedulesByMatch = new HashMap<>();
         for (final TournamentMatchScheduleRequest schedule : schedules) {
             if (schedule == null || schedule.getMatchId() <= 0) {
-                throw new TournamentBracketInvalidScheduleException("Invalid schedule for match");
+                throw new MatchUpdateInvalidScheduleException();
             }
             if (schedulesByMatch.put(schedule.getMatchId(), schedule) != null) {
-                throw new TournamentBracketInvalidScheduleException("Duplicate schedule for match");
+                throw new MatchUpdateInvalidScheduleException();
             }
         }
         return schedulesByMatch;
@@ -631,10 +619,10 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         final Set<Long> matchIds =
                 matches.stream().map(TournamentMatch::getId).collect(Collectors.toSet());
         if (!matchIds.containsAll(schedulesByMatch.keySet())) {
-            throw new TournamentBracketInvalidScheduleException("Invalid schedule for match");
+            throw new MatchUpdateInvalidScheduleException();
         }
         if (!schedulesByMatch.keySet().containsAll(matchIds)) {
-            throw new TournamentBracketMissingMatchScheduleException("Missing schedule for match");
+            throw new TournamentBracketMissingMatchScheduleException();
         }
     }
 
@@ -644,21 +632,21 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                 || resolveEndsAt(schedule) == null
                 || !resolveEndsAt(schedule).isAfter(resolveStartsAt(schedule))
                 || isBlank(schedule.getAddress())) {
-            throw new TournamentBracketInvalidScheduleException("Invalid schedule for match");
+            throw new MatchUpdateInvalidScheduleException();
         }
         if (resolveStartsAt(schedule).isBefore(now)) {
-            throw new TournamentBracketInvalidScheduleException("Schedule starts before now");
+            throw new MatchUpdateInvalidScheduleException();
         }
         if ((schedule.getLatitude() == null) != (schedule.getLongitude() == null)) {
-            throw new TournamentBracketInvalidScheduleException("Invalid location for match");
+            throw new MatchUpdateInvalidLocationException();
         }
         if (schedule.getLatitude() != null
                 && (schedule.getLatitude() < -90 || schedule.getLatitude() > 90)) {
-            throw new TournamentBracketInvalidScheduleException("Invalid location for match");
+            throw new MatchUpdateInvalidLocationException();
         }
         if (schedule.getLongitude() != null
                 && (schedule.getLongitude() < -180 || schedule.getLongitude() > 180)) {
-            throw new TournamentBracketInvalidScheduleException("Invalid location for match");
+            throw new MatchUpdateInvalidLocationException();
         }
     }
 
@@ -692,8 +680,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
             if (schedule != null
                     && resolveStartsAt(schedule) != null
                     && resolveStartsAt(schedule).isBefore(previousRoundLatestEnd)) {
-                throw new TournamentBracketInvalidRoundOrderException(
-                        "Invalid round order for match");
+                throw new TournamentBracketInvalidRoundOrderException();
             }
         }
     }
@@ -713,18 +700,17 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
 
     private void validateMatchReadyForDecision(final TournamentMatch match) {
         if (match.getTeamA() == null || match.getTeamB() == null) {
-            throw new TournamentBracketMatchNotReadyException("Match is not ready for decision");
+            throw new TournamentBracketMatchNotReadyException();
         }
         if (match.getWinnerTeam() != null) {
-            throw new TournamentBracketMatchAlreadyDecidedException(
-                    "Match has already been decided");
+            throw new TournamentBracketMatchAlreadyDecidedException();
         }
     }
 
     private TournamentTeam winnerTeam(
             final TournamentMatch match, final TournamentWinnerDeclarationRequest request) {
         if (request == null) {
-            throw new TournamentBracketWinnerNotInMatchException("Winner is not in the match");
+            throw new TournamentBracketWinnerNotInMatchException();
         }
         if (sameId(match.getTeamA(), request.getWinnerTeamId())) {
             return match.getTeamA();
@@ -732,7 +718,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
         if (sameId(match.getTeamB(), request.getWinnerTeamId())) {
             return match.getTeamB();
         }
-        throw new TournamentBracketWinnerNotInMatchException("Winner is not in the match");
+        throw new TournamentBracketWinnerNotInMatchException();
     }
 
     private boolean propagateWinner(
@@ -784,7 +770,7 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
     }
 
     private Map<Long, List<User>> membersByTeam(final long tournamentId) {
-        return tournamentTeamDao.findMembersByTournament(tournamentId).stream()
+        return tournamentTeamDataService.findMembersByTournament(tournamentId).stream()
                 .collect(
                         Collectors.groupingBy(
                                 member -> member.getTeam().getId(),

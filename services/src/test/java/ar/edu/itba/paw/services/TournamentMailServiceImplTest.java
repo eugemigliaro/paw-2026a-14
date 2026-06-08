@@ -10,7 +10,7 @@ import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
@@ -30,7 +30,7 @@ public class TournamentMailServiceImplTest {
 
     private static final Instant NOW = Instant.parse("2026-04-05T00:00:00Z");
 
-    @Mock private TournamentTeamDao tournamentTeamDao;
+    @Mock private TournamentTeamDataService tournamentTeamDataService;
 
     private RecordingMailDispatchService mailDispatchService;
     private TournamentMailServiceImpl tournamentMailService;
@@ -39,7 +39,7 @@ public class TournamentMailServiceImplTest {
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
         tournamentMailService =
-                new TournamentMailServiceImpl(tournamentTeamDao, mailDispatchService);
+                new TournamentMailServiceImpl(tournamentTeamDataService, mailDispatchService);
     }
 
     @Test
@@ -49,7 +49,7 @@ public class TournamentMailServiceImplTest {
         final User firstUser = UserUtils.getUser(2L);
         final User secondUser = UserUtils.getUser(3L);
         final TournamentTeam firstTeam = team(20L, tournament, "Team A");
-        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
                 .thenReturn(
                         List.of(
                                 member(30L, firstTeam, firstUser),
@@ -74,7 +74,7 @@ public class TournamentMailServiceImplTest {
         final TournamentTeam winner = team(20L, tournament, "Team A");
         final TournamentTeam loser = team(21L, tournament, "Team B");
         final TournamentMatch match = match(40L, tournament, winner, loser);
-        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
                 .thenReturn(List.of(member(30L, winner, participant)));
 
         // 2. Exercise
@@ -91,7 +91,7 @@ public class TournamentMailServiceImplTest {
         final Tournament tournament = tournament(10L, TournamentStatus.COMPLETED);
         final User participant = UserUtils.getUser(2L);
         final TournamentTeam champion = team(20L, tournament, "Champions");
-        Mockito.when(tournamentTeamDao.findMembersByTournament(10L))
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
                 .thenReturn(List.of(member(30L, champion, participant)));
 
         // 2. Exercise

@@ -115,6 +115,7 @@
 				});
 				if (fileInput) {
 					fileInput.value = "";
+					fileInput.dispatchEvent(new Event("change", { bubbles: true }));
 				}
 				fileChanged = false;
 				actionsBar.classList.remove("account-edit-actions__confirm--visible");

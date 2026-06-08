@@ -10,4 +10,8 @@ public interface ImageUpload {
     long getContentLength();
 
     InputStream getContentStream() throws IOException;
+
+    default String getOriginalFilename() {
+        return null;
+    }
 }

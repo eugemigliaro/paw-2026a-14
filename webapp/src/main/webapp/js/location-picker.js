@@ -32,11 +32,9 @@
 		var defaultZoom = clampZoom(container.dataset.defaultZoom);
 		var initialLat = latInput.value ? Number(latInput.value) : null;
 		var initialLon = lonInput.value ? Number(lonInput.value) : null;
-		var currentBtn = container.querySelector('[data-location-current]');
 		var zoomInBtn = container.querySelector('[data-location-zoom-in]');
 		var zoomOutBtn = container.querySelector('[data-location-zoom-out]');
 		var clearBtn = container.querySelector('[data-location-clear]');
-		var geolocationAvailable = window.isSecureContext && !!navigator.geolocation;
 
 		var map = L.map(mapEl, {
 			minZoom: MIN_ZOOM,
@@ -123,18 +121,6 @@
 		if (zoomOutBtn) {
 			zoomOutBtn.addEventListener('click', function () {
 				map.zoomOut();
-			});
-		}
-		if (currentBtn) {
-			if (!geolocationAvailable) {
-				currentBtn.hidden = true;
-			} else {
-				currentBtn.addEventListener('click', function () {
-					map.locate({ setView: true, maxZoom: MAX_ZOOM });
-				});
-			}
-			map.on('locationfound', function (e) {
-				placeMarker(e.latlng);
 			});
 		}
 		if (clearBtn) {
