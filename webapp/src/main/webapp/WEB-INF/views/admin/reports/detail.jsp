@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -19,18 +20,18 @@
 					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
 				</header>
 
-				<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetTypeCode}" />
-				<spring:message var="reasonLabel"     code="admin.reports.reason.${report.reasonCode}" />
-				<spring:message var="statusLabel"     code="admin.reports.status.${report.statusCode}" />
+				<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetType.dbValue}" />
+				<spring:message var="reasonLabel"     code="admin.reports.reason.${report.reason.dbValue}" />
+				<spring:message var="statusLabel"     code="admin.reports.status.${report.status.dbValue}" />
 
 				<ui:card className="report-section">
 					<div class="section-head">
 						<h2 class="field__label"><spring:message code="admin.reports.section.original" /></h2>
 						<div class="report-section__badges">
-							<span class="report-type-badge report-type-badge--${report.targetTypeCode}">
+							<span class="report-type-badge report-type-badge--${report.targetType.dbValue}">
 								<c:out value="${targetTypeLabel}" />
 							</span>
-							<span class="report-status-badge report-status-badge--${report.statusCode}">
+							<span class="report-status-badge report-status-badge--${report.status.dbValue}">
 								<c:out value="${statusLabel}" />
 							</span>
 						</div>
@@ -43,7 +44,19 @@
 						</div>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.target" /></dt>
-							<dd><c:out value="${report.targetKey}" /></dd>
+							<dd>
+								<c:choose>
+									<c:when test="${targetSummary.found and targetSummary.targetType.dbValue eq 'review'}">
+										<spring:message code="moderation.target.review.label" arguments="${targetSummary.displayName}" />
+									</c:when>
+									<c:when test="${targetSummary.found}">
+										<c:out value="${targetSummary.displayName}" />
+									</c:when>
+									<c:otherwise>
+										<spring:message code="moderation.target.${targetSummary.targetType.dbValue}.fallback" arguments="${targetSummary.targetId}" />
+									</c:otherwise>
+								</c:choose>
+							</dd>
 						</div>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="moderation.report.reason" /></dt>
@@ -57,7 +70,7 @@
 						</c:if>
 						<div class="report-section-field report-section-field__row">
 							<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
-							<dd><c:out value="${report.createdAtLabel}" /></dd>
+							<dd><c:out value="${tf:dateTime(report.createdAtDateTime)}" /></dd>
 						</div>
 					</dl>
 				</ui:card>
@@ -68,8 +81,8 @@
 							<h2 class="field__label"><spring:message code="admin.reports.section.resolution" /></h2>
 						</div>
 
-						<c:if test="${not empty report.resolutionCode}">
-							<spring:message var="resolutionLabel" code="reports.mine.resolution.${report.resolutionCode}" />
+						<c:if test="${not empty report.resolution}">
+							<spring:message var="resolutionLabel" code="reports.mine.resolution.${report.resolution.dbValue}" />
 							<dl class="stack report-section__top">
 								<div class="report-section-field report-section-field__row">
 									<dt class="detail-label"><spring:message code="admin.reports.resolution" /></dt>
@@ -87,22 +100,22 @@
 										<dd><c:out value="${reviewerUsername}" /></dd>
 									</div>
 								</c:if>
-								<c:if test="${not empty report.reviewedAtLabel}">
+								<c:if test="${not empty report.reviewedAt}">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.reviewedAt" /></dt>
-										<dd><c:out value="${report.reviewedAtLabel}" /></dd>
+										<dd><c:out value="${tf:dateTime(report.reviewedAtDateTime)}" /></dd>
 									</div>
 								</c:if>
 								<c:if test="${not empty userBan}">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.ban.until" /></dt>
-										<dd><c:out value="${userBan.bannedUntilLabel}" /></dd>
+										<dd><c:out value="${tf:dateTime(userBan.bannedUntilDateTime)}" /></dd>
 									</div>
 								</c:if>
 							</dl>
 						</c:if>
 
-						<c:if test="${report.statusCode eq 'pending' or report.statusCode eq 'under_review'}">
+						<c:if test="${report.status.dbValue eq 'pending' or report.status.dbValue eq 'under_review'}">
 							<div class="stack">
 								<form:form method="post" modelAttribute="resolutionForm" cssClass="stack">
 									<form:errors path="" cssClass="notice notice--error" element="div" />
@@ -115,13 +128,13 @@
 									</div>
 
 									<div class="report-resolution__actions">
-										<c:if test="${report.targetTypeCode eq 'match' or report.targetTypeCode eq 'review'}">
+										<c:if test="${report.targetType.dbValue eq 'match' or report.targetType.dbValue eq 'review'}">
 											<c:url var="deleteContentHref" value="/admin/reports/${report.id}/delete-content" />
 											<spring:message var="deleteContentLabel" code="admin.reports.action.deleteContent" />
 												<ui:button label="${deleteContentLabel}" type="submit" variant="danger" submitAction="${deleteContentHref}" />
 										</c:if>
 
-										<c:if test="${report.targetTypeCode eq 'user'}">
+										<c:if test="${report.targetType.dbValue eq 'user'}">
 											<div class="report-section-field__row">
 												<c:url var="banUserHref" value="/admin/reports/${report.id}/ban-user" />
 												<spring:message var="banUserLabel" code="admin.reports.action.banUser" />
@@ -157,10 +170,10 @@
 										<dt class="detail-label"><spring:message code="admin.reports.appeal" /></dt>
 										<dd class="body-copy"><c:out value="${report.appealReason}" /></dd>
 									</div>
-									<c:if test="${not empty report.appealedAtLabel}">
+									<c:if test="${not empty report.appealedAt}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="admin.reports.appeal.appealedAt" /></dt>
-											<dd><c:out value="${report.appealedAtLabel}" /></dd>
+											<dd><c:out value="${tf:dateTime(report.appealedAtDateTime)}" /></dd>
 										</div>
 									</c:if>
 								</dl>
@@ -179,7 +192,7 @@
 						</div>
 
 						<c:choose>
-							<c:when test="${report.appealed}">
+							<c:when test="${report.status.dbValue eq 'appealed'}">
 								<c:url var="finalizeAppealHref" value="/admin/reports/${report.id}/finalize-appeal" />
 								<form:form method="post" modelAttribute="appealResolutionForm" action="${finalizeAppealHref}" cssClass="stack report-section__top">
 									<form:errors path="" cssClass="notice notice--error" element="div" />
@@ -211,8 +224,8 @@
 									</div>
 								</form:form>
 							</c:when>
-							<c:when test="${not empty report.appealDecisionCode}">
-								<spring:message var="appealDecisionLabel" code="admin.reports.appealDecision.${report.appealDecisionCode}" />
+							<c:when test="${not empty report.appealDecision}">
+								<spring:message var="appealDecisionLabel" code="admin.reports.appealDecision.${report.appealDecision.dbValue}" />
 								<dl class="stack report-section__top">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="admin.reports.appeal.resolution.label" /></dt>
@@ -224,10 +237,10 @@
 											<dd><c:out value="${report.appealResolvedBy.username}" /></dd>
 										</div>
 									</c:if>
-									<c:if test="${not empty report.appealResolvedAtLabel}">
+									<c:if test="${not empty report.appealResolvedAt}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="admin.reports.appealResolvedAt" /></dt>
-											<dd><c:out value="${report.appealResolvedAtLabel}" /></dd>
+											<dd><c:out value="${tf:dateTime(report.appealResolvedAtDateTime)}" /></dd>
 										</div>
 									</c:if>
 								</dl>

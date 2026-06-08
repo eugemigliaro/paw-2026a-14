@@ -9,8 +9,10 @@ import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.utils.DistanceUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -34,16 +36,19 @@ public class TournamentServiceImpl implements TournamentService {
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final TournamentDataService tournamentDataService;
+    private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentMailService tournamentMailService;
     private final ImageService imageService;
     private final Clock clock;
 
     public TournamentServiceImpl(
             final TournamentDataService tournamentDataService,
+            final TournamentRegistrationService tournamentRegistrationService,
             final TournamentMailService tournamentMailService,
             final ImageService imageService,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
+        this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentMailService = tournamentMailService;
         this.imageService = imageService;
         this.clock = clock;
@@ -109,31 +114,38 @@ public class TournamentServiceImpl implements TournamentService {
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
         final DateRange dateRange = DateRange.of(startDate, endDate);
 
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        tournamentDataService.countPublicTournaments(
-                                query,
-                                sport,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice),
-                (offset, safePageSize) ->
-                        tournamentDataService.findPublicTournaments(
-                                query,
-                                sport,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                sortFilter,
-                                latitude,
-                                longitude,
-                                offset,
-                                safePageSize));
+        final PaginatedResult<Tournament> result =
+                paginate(
+                        page,
+                        pageSize,
+                        DEFAULT_PAGE_SIZE,
+                        safePageSize ->
+                                tournamentDataService.countPublicTournaments(
+                                        query,
+                                        sport,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice),
+                        (offset, safePageSize) ->
+                                tournamentDataService.findPublicTournaments(
+                                        query,
+                                        sport,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice,
+                                        sortFilter,
+                                        latitude,
+                                        longitude,
+                                        offset,
+                                        safePageSize));
+
+        if (sort == EventSort.DISTANCE && hasCoordinates(latitude, longitude)) {
+            hydrateDistances(result.getItems(), latitude, longitude);
+        }
+
+        return result;
     }
 
     @Override
@@ -248,6 +260,81 @@ public class TournamentServiceImpl implements TournamentService {
         return updatedTournament;
     }
 
+    @Override
+    public TournamentViewerCapabilities viewerCapabilities(
+            final Tournament tournament, final User viewer) {
+        if (tournament == null) {
+            return new TournamentViewerCapabilities(
+                    false, false, false, false, false, false, false, false, false, false, true,
+                    false);
+        }
+
+        final Instant now = Instant.now(clock);
+        final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
+        final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
+        final boolean canMutate = canMutate(tournament, viewer);
+        final boolean canCloseRegistration =
+                TournamentStatus.REGISTRATION == tournament.getStatus() && canMutate;
+        final boolean canEditTournament =
+                TournamentStatus.REGISTRATION == tournament.getStatus() && canMutate;
+        final boolean canCancelTournament =
+                TournamentStatus.COMPLETED != tournament.getStatus()
+                        && TournamentStatus.CANCELLED != tournament.getStatus()
+                        && canMutate;
+        final boolean canManageBracket =
+                TournamentStatus.BRACKET_SETUP == tournament.getStatus() && canMutate;
+        final boolean canManageResults =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus() && canMutate;
+        final boolean canViewBracket =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus()
+                        || TournamentStatus.COMPLETED == tournament.getStatus()
+                        || TournamentStatus.CANCELLED == tournament.getStatus();
+
+        final boolean authenticatedViewer = viewer != null && viewer.getId() != null;
+        final TournamentSoloEntryStatus soloStatus =
+                tournamentRegistrationService
+                        .findSoloEntry(tournament.getId(), viewer)
+                        .map(entry -> entry.getStatus())
+                        .orElse(null);
+        final boolean userHasTeam =
+                tournamentRegistrationService.findUserTeam(tournament.getId(), viewer).isPresent();
+        final boolean canJoinSolo =
+                authenticatedViewer
+                        && registrationOpen
+                        && tournament.isAllowSoloSignup()
+                        && !tournamentRegistrationService.isSoloPoolFull(tournament.getId())
+                        && !userHasTeam
+                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
+                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
+        final boolean canLeaveSolo =
+                authenticatedViewer
+                        && registrationOpen
+                        && soloStatus == TournamentSoloEntryStatus.IN_POOL;
+        final boolean requiresLoginToJoin =
+                !authenticatedViewer && registrationOpen && tournament.isAllowSoloSignup();
+        final boolean closeRegistrationBlockedByCapacity =
+                canCloseRegistration
+                        && tournamentRegistrationService
+                                .getRegistrationReadiness(tournament.getId(), viewer)
+                                .isCancellationRisk();
+        final boolean closeRegistrationDisabled =
+                !registrationOpen || closeRegistrationBlockedByCapacity;
+
+        return new TournamentViewerCapabilities(
+                canJoinSolo,
+                canLeaveSolo,
+                requiresLoginToJoin,
+                registrationNotStarted,
+                canCloseRegistration,
+                canEditTournament,
+                canCancelTournament,
+                canManageBracket,
+                canManageResults,
+                canViewBracket,
+                closeRegistrationDisabled,
+                closeRegistrationBlockedByCapacity);
+    }
+
     private Tournament findByIdOrThrow(final long tournamentId) {
         return tournamentDataService
                 .findById(tournamentId)
@@ -266,6 +353,23 @@ public class TournamentServiceImpl implements TournamentService {
             return false;
         }
         return tournament.getHost().getId().equals(actingUser.getId()) || isAdminMod();
+    }
+
+    private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        final Instant closesAt = tournament.getRegistrationClosesAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && closesAt != null
+                && !now.isBefore(opensAt)
+                && now.isBefore(closesAt);
+    }
+
+    private boolean isRegistrationNotStarted(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && now.isBefore(opensAt);
     }
 
     private boolean isAdminMod() {
@@ -300,8 +404,9 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateRequest(final CreateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("exception.tournament.invalidRequest");
+            throw new IllegalArgumentException("invalidRequest");
         }
+        validateSport(request.getSport());
         validateCommonFields(
                 request.getSport(),
                 request.getTitle(),
@@ -329,8 +434,9 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("exception.tournament.invalidRequest");
+            throw new IllegalArgumentException("invalidRequest");
         }
+        validateSport(request.getSport());
         validateCommonFields(
                 request.getSport(),
                 request.getTitle(),
@@ -363,10 +469,10 @@ public class TournamentServiceImpl implements TournamentService {
             final Double latitude,
             final Double longitude) {
         if (sport == null || isBlank(title) || isBlank(address)) {
-            throw new TournamentLifecycleException("exception.tournament.invalidRequest");
+            throw new TournamentLifecycleException("invalidRequest");
         }
         if (pricePerPlayer != null && pricePerPlayer.signum() < 0) {
-            throw new TournamentLifecycleException("exception.tournament.invalidRequest");
+            throw new TournamentLifecycleException("invalidRequest");
         }
         if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
             throw new TournamentLifecycleInvalidScheduleException();
@@ -379,6 +485,12 @@ public class TournamentServiceImpl implements TournamentService {
         }
         if (longitude != null && (longitude < -180 || longitude > 180)) {
             throw new TournamentLifecycleInvalidLocationException();
+        }
+    }
+
+    private void validateSport(final Sport sport) {
+        if (sport == null) {
+            throw new TournamentLifecycleException("invalidSport");
         }
     }
 
@@ -431,6 +543,20 @@ public class TournamentServiceImpl implements TournamentService {
     private void validateFutureRegistrationClose(final Instant registrationClosesAt) {
         if (!registrationClosesAt.isAfter(Instant.now(clock))) {
             throw new TournamentLifecycleInvalidRegistrationWindowException();
+        }
+    }
+
+    private void hydrateDistances(
+            final List<Tournament> tournaments, final Double latitude, final Double longitude) {
+        for (Tournament tournament : tournaments) {
+            if (tournament.getLatitude() != null && tournament.getLongitude() != null) {
+                tournament.setDistanceKmFromViewer(
+                        DistanceUtils.distanceKm(
+                                latitude,
+                                longitude,
+                                tournament.getLatitude(),
+                                tournament.getLongitude()));
+            }
         }
     }
 

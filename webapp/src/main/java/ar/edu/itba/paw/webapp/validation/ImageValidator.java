@@ -16,7 +16,7 @@ public class ImageValidator implements ConstraintValidator<ValidImage, Multipart
     @Override
     public boolean isValid(final MultipartFile image, final ConstraintValidatorContext context) {
 
-        if (image == null) {
+        if (image == null || image.isEmpty()) {
             return true;
         }
 

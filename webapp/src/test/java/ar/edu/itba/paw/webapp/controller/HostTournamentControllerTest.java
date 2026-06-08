@@ -34,17 +34,18 @@ import ar.edu.itba.paw.services.UpdateTournamentRequest;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
+import ar.edu.itba.paw.webapp.form.BracketPublishForm;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
-import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -217,6 +218,20 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void postCreateWithOtherSportReturnsForm() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(
+                UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
+        failIfTournamentCreationIsAttempted();
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(createPost("City Football Cup", Sport.OTHER.getDbValue(), "1", true, true))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attributeHasFieldErrors("createTournamentForm", "sport"));
+    }
+
+    @Test
     void postCloseRegistrationByNonHostReturnsForbidden() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
@@ -344,6 +359,41 @@ class HostTournamentControllerTest {
     }
 
     @Test
+    void postEditWithOtherSportReturnsForm() throws Exception {
+        // 1. Arrange
+        final User host = UserUtils.getUser(7L);
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findTournamentForHost(Mockito.eq(77L), Mockito.any()))
+                .thenReturn(Optional.of(tournament(77L, host, TournamentStatus.REGISTRATION)));
+        failIfTournamentCreationIsAttempted();
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/host/tournaments/77/edit")
+                                .locale(Locale.ENGLISH)
+                                .param("title", "Title")
+                                .param("sport", Sport.OTHER.getDbValue())
+                                .param("description", "Updated tournament")
+                                .param("address", "Updated Club")
+                                .param("registrationOpensDate", "2030-04-01")
+                                .param("registrationOpensTime", "09:00")
+                                .param("registrationClosesDate", "2030-04-09")
+                                .param("registrationClosesTime", "20:00")
+                                .param("startDate", "2030-04-10")
+                                .param("startTime", "18:00")
+                                .param("endDate", "2030-04-10")
+                                .param("endTime", "21:00")
+                                .param("bracketSize", "16")
+                                .param("teamSize", "2")
+                                .param("pricePerPlayer", "15.00")
+                                .param("allowSoloSignup", "true")
+                                .param("_allowTeamDraft", "on"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attributeHasFieldErrors("createTournamentForm", "sport"));
+    }
+
+    @Test
     void postCancelTournamentByHostRedirectsToTournamentDetail() throws Exception {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
@@ -452,14 +502,14 @@ class HostTournamentControllerTest {
                 mockMvc.perform(get("/host/tournaments/77/bracket/setup"))
                         .andExpect(status().isOk())
                         .andExpect(view().name("host/tournaments/bracket-setup"))
-                        .andExpect(model().attributeExists("bracketPage"))
+                        .andExpect(model().attributeExists("bracketView"))
+                        .andExpect(model().attribute("bracketGenerated", true))
                         .andReturn();
-        final TournamentBracketViewModel bracketPage =
-                (TournamentBracketViewModel) result.getModelAndView().getModel().get("bracketPage");
-        Assertions.assertNotNull(bracketPage);
-        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
-        Assertions.assertEquals(
-                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
+        final Object teams = result.getModelAndView().getModel().get("bracketTeams");
+        final Object membersByTeamId =
+                result.getModelAndView().getModel().get("bracketMembersByTeamId");
+        Assertions.assertEquals(List.of(firstTeam, secondTeam), teams);
+        Assertions.assertEquals(List.of("user11", "user12"), ((Map<?, ?>) membersByTeamId).get(1L));
     }
 
     @Test
@@ -486,15 +536,14 @@ class HostTournamentControllerTest {
         // 2. Exercise + 3. Assert
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
 
-        final TournamentBracketViewModel bracketPage =
-                (TournamentBracketViewModel) result.getModelAndView().getModel().get("bracketPage");
-        Assertions.assertNotNull(bracketPage);
-        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
-        Assertions.assertEquals("Team One", bracketPage.getTeamRosters().get(0).getTeamName());
+        Assertions.assertEquals(false, result.getModelAndView().getModel().get("bracketGenerated"));
         Assertions.assertEquals(
-                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
-        Assertions.assertEquals("Team Two", bracketPage.getTeamRosters().get(1).getTeamName());
-        Assertions.assertEquals("user13", bracketPage.getTeamRosters().get(1).getMembersLabel());
+                List.of(firstTeam, secondTeam),
+                result.getModelAndView().getModel().get("bracketTeams"));
+        final Object membersByTeamId =
+                result.getModelAndView().getModel().get("bracketMembersByTeamId");
+        Assertions.assertEquals(List.of("user11", "user12"), ((Map<?, ?>) membersByTeamId).get(1L));
+        Assertions.assertEquals(List.of("user13"), ((Map<?, ?>) membersByTeamId).get(2L));
     }
 
     @Test
@@ -519,31 +568,29 @@ class HostTournamentControllerTest {
                                 java.util.List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final String expectedDate = LocalDate.now(PlatformTime.ZONE).plusDays(1).toString();
+        final LocalDate expectedDate = LocalDate.now(PlatformTime.ZONE).plusDays(1);
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
 
         // 3. Assert
-        final TournamentBracketViewModel bracketPage =
-                (TournamentBracketViewModel) result.getModelAndView().getModel().get("bracketPage");
-        Assertions.assertNotNull(bracketPage);
+        final BracketPublishForm bracketPublishForm =
+                (BracketPublishForm) result.getModelAndView().getModel().get("bracketPublishForm");
+        Assertions.assertNotNull(bracketPublishForm);
         Assertions.assertEquals(
-                expectedDate, bracketPage.getRounds().get(0).getMatches().get(0).getStartDate());
+                expectedDate, bracketPublishForm.getSchedules().get(0).getStartDate());
         Assertions.assertEquals(
-                "18:00", bracketPage.getRounds().get(0).getMatches().get(0).getStartTime());
+                LocalTime.of(18, 0), bracketPublishForm.getSchedules().get(0).getStartTime());
         Assertions.assertEquals(
-                expectedDate, bracketPage.getRounds().get(0).getMatches().get(0).getEndDate());
+                expectedDate, bracketPublishForm.getSchedules().get(0).getEndDate());
+        Assertions.assertNull(bracketPublishForm.getSchedules().get(0).getEndTime());
         Assertions.assertEquals(
-                "", bracketPage.getRounds().get(0).getMatches().get(0).getEndTime());
+                expectedDate, bracketPublishForm.getSchedules().get(1).getStartDate());
         Assertions.assertEquals(
-                expectedDate, bracketPage.getRounds().get(1).getMatches().get(0).getStartDate());
+                LocalTime.of(19, 0), bracketPublishForm.getSchedules().get(1).getStartTime());
         Assertions.assertEquals(
-                "19:00", bracketPage.getRounds().get(1).getMatches().get(0).getStartTime());
-        Assertions.assertEquals(
-                expectedDate, bracketPage.getRounds().get(1).getMatches().get(0).getEndDate());
-        Assertions.assertEquals(
-                "", bracketPage.getRounds().get(1).getMatches().get(0).getEndTime());
+                expectedDate, bracketPublishForm.getSchedules().get(1).getEndDate());
+        Assertions.assertNull(bracketPublishForm.getSchedules().get(1).getEndTime());
     }
 
     @Test

@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.EventCardViewModelUtils.toCard;
 import static ar.edu.itba.paw.webapp.utils.MatchFilterQueryUtils.toggleValue;
 
 import ar.edu.itba.paw.models.Match;
@@ -17,13 +16,12 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
+import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
-import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -186,22 +184,21 @@ public class FeedController {
                             selectedPriceRange.maxPrice(),
                             exploreLocation != null ? exploreLocation.latitude() : null,
                             exploreLocation != null ? exploreLocation.longitude() : null);
-            mav.addObject(
-                    "feedPage",
-                    buildTournamentFeedPageViewModel(
-                            user,
-                            searchForm.getQ(),
-                            searchForm.getType(),
-                            selectedSort,
-                            selectedSports,
-                            selectedDateRange,
-                            selectedStartDateValue,
-                            selectedEndDateValue,
-                            selectedPriceRange,
-                            result,
-                            locale,
-                            email,
-                            exploreLocation));
+            addTournamentFeedAttributes(
+                    mav,
+                    user,
+                    searchForm.getQ(),
+                    searchForm.getType(),
+                    selectedSort,
+                    selectedSports,
+                    selectedDateRange,
+                    selectedStartDateValue,
+                    selectedEndDateValue,
+                    selectedPriceRange,
+                    result,
+                    locale,
+                    email,
+                    exploreLocation);
         } else {
             final PaginatedResult<Match> result =
                     matchService.searchPublicMatches(
@@ -216,22 +213,21 @@ public class FeedController {
                             selectedPriceRange.maxPrice(),
                             exploreLocation != null ? exploreLocation.latitude() : null,
                             exploreLocation != null ? exploreLocation.longitude() : null);
-            mav.addObject(
-                    "feedPage",
-                    buildMatchFeedPageViewModel(
-                            user,
-                            searchForm.getQ(),
-                            searchForm.getType(),
-                            selectedSort,
-                            selectedSports,
-                            selectedDateRange,
-                            selectedStartDateValue,
-                            selectedEndDateValue,
-                            selectedPriceRange,
-                            result,
-                            locale,
-                            email,
-                            exploreLocation));
+            addMatchFeedAttributes(
+                    mav,
+                    user,
+                    searchForm.getQ(),
+                    searchForm.getType(),
+                    selectedSort,
+                    selectedSports,
+                    selectedDateRange,
+                    selectedStartDateValue,
+                    selectedEndDateValue,
+                    selectedPriceRange,
+                    result,
+                    locale,
+                    email,
+                    exploreLocation);
         }
         mav.addObject("nearMeAvailable", exploreLocation != null);
         mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
@@ -266,7 +262,8 @@ public class FeedController {
         return new ModelAndView("redirect:" + redirect.build().encode().toUriString());
     }
 
-    private FeedPageViewModel buildMatchFeedPageViewModel(
+    private void addMatchFeedAttributes(
+            final ModelAndView mav,
             final User currentUser,
             final String query,
             final EventType selectedType,
@@ -281,13 +278,8 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        return new FeedPageViewModel(
-                "",
-                messageSource.getMessage("feed.hero.title", null, locale),
-                messageSource.getMessage("feed.hero.description", null, locale),
-                messageSource.getMessage("feed.search.placeholder", null, locale),
-                messageSource.getMessage("feed.search.button", null, locale),
-                List.of(),
+        addFeedPageAttributes(
+                mav,
                 buildFilterGroups(
                         query,
                         selectedType,
@@ -299,22 +291,20 @@ public class FeedController {
                         selectedPriceRange,
                         locale,
                         email),
-                result.getItems().stream()
-                        .map(
-                                match ->
-                                        toCard(
-                                                match,
-                                                locale,
-                                                currentUser,
-                                                messageSource.getMessage(
-                                                        "event.spotsLeft",
-                                                        new Object[] {match.getAvailableSpots()},
-                                                        locale),
-                                                distanceLabel(match, exploreLocation, locale),
-                                                messageSource,
-                                                matchParticipationService,
-                                                matchReservationService))
-                        .toList(),
+                result.getItems(),
+                EventType.MATCH,
+                EventCardAttributeUtils.matchSpotsBadgeLabels(
+                        result.getItems(), locale, messageSource),
+                EventCardAttributeUtils.matchDistanceLabels(
+                        result.getItems(),
+                        exploreLocation == null ? null : exploreLocation.latitude(),
+                        exploreLocation == null ? null : exploreLocation.longitude(),
+                        locale),
+                EventCardAttributeUtils.matchRelationshipBadgeCodes(
+                        result.getItems(),
+                        currentUser,
+                        matchParticipationService,
+                        matchReservationService),
                 result.getPage(),
                 result.getTotalPages(),
                 PaginationUtils.buildPaginationItems(
@@ -351,10 +341,12 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null);
+                        : null,
+                locale);
     }
 
-    private FeedPageViewModel buildTournamentFeedPageViewModel(
+    private void addTournamentFeedAttributes(
+            final ModelAndView mav,
             final User currentUser,
             final String query,
             final EventType selectedType,
@@ -369,13 +361,8 @@ public class FeedController {
             final String email,
             final ExploreLocation exploreLocation) {
 
-        return new FeedPageViewModel(
-                "",
-                messageSource.getMessage("feed.hero.title", null, locale),
-                messageSource.getMessage("feed.hero.description", null, locale),
-                messageSource.getMessage("feed.search.placeholder", null, locale),
-                messageSource.getMessage("feed.search.button", null, locale),
-                List.of(),
+        addFeedPageAttributes(
+                mav,
                 buildFilterGroups(
                         query,
                         selectedType,
@@ -387,19 +374,17 @@ public class FeedController {
                         selectedPriceRange,
                         locale,
                         email),
-                result.getItems().stream()
-                        .map(
-                                tournament ->
-                                        toCard(
-                                                tournament,
-                                                locale,
-                                                currentUser,
-                                                messageSource.getMessage(
-                                                        "tournament.card.badge", null, locale),
-                                                tournamentStatusLabel(tournament, locale),
-                                                distanceLabel(tournament, exploreLocation, locale),
-                                                messageSource))
-                        .toList(),
+                result.getItems(),
+                EventType.TOURNAMENT,
+                EventCardAttributeUtils.tournamentBadgeLabels(
+                        result.getItems(), locale, messageSource),
+                EventCardAttributeUtils.tournamentDistanceLabels(
+                        result.getItems(),
+                        exploreLocation == null ? null : exploreLocation.latitude(),
+                        exploreLocation == null ? null : exploreLocation.longitude(),
+                        locale),
+                EventCardAttributeUtils.tournamentRelationshipBadgeCodes(
+                        result.getItems(), currentUser),
                 result.getPage(),
                 result.getTotalPages(),
                 PaginationUtils.buildPaginationItems(
@@ -436,7 +421,45 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null);
+                        : null,
+                locale);
+    }
+
+    private void addFeedPageAttributes(
+            final ModelAndView mav,
+            final List<FilterGroupViewModel> filterGroups,
+            final List<?> featuredEvents,
+            final EventType featuredEventType,
+            final Map<Long, String> eventBadgeLabels,
+            final Map<Long, String> eventDistanceLabels,
+            final Map<Long, List<String>> eventRelationshipBadgeCodes,
+            final int page,
+            final int totalPages,
+            final List<?> paginationItems,
+            final String previousPageHref,
+            final String nextPageHref,
+            final Locale locale) {
+        mav.addObject("feedEyebrow", "");
+        mav.addObject("feedTitle", messageSource.getMessage("feed.hero.title", null, locale));
+        mav.addObject(
+                "feedDescription", messageSource.getMessage("feed.hero.description", null, locale));
+        mav.addObject(
+                "feedSearchPlaceholder",
+                messageSource.getMessage("feed.search.placeholder", null, locale));
+        mav.addObject(
+                "feedSearchButtonLabel",
+                messageSource.getMessage("feed.search.button", null, locale));
+        mav.addObject("feedFilterGroups", filterGroups);
+        mav.addObject("featuredEvents", featuredEvents);
+        mav.addObject("featuredEventType", featuredEventType);
+        mav.addObject("eventBadgeLabels", eventBadgeLabels);
+        mav.addObject("eventDistanceLabels", eventDistanceLabels);
+        mav.addObject("eventRelationshipBadgeCodes", eventRelationshipBadgeCodes);
+        mav.addObject("feedCurrentPage", page);
+        mav.addObject("feedTotalPages", totalPages);
+        mav.addObject("feedPaginationItems", paginationItems);
+        mav.addObject("feedPreviousPageHref", previousPageHref);
+        mav.addObject("feedNextPageHref", nextPageHref);
     }
 
     private List<SelectOptionViewModel> buildSortOptions(
@@ -663,81 +686,6 @@ public class FeedController {
                                         null,
                                         isSportSelected(selectedSports, Sport.OTHER)))));
         return List.copyOf(groups);
-    }
-
-    private static String distanceLabel(
-            final Match match, final ExploreLocation exploreLocation, final Locale locale) {
-        if (match == null || exploreLocation == null || !match.hasCoordinates()) {
-            return null;
-        }
-        final double distanceKm =
-                distanceInKilometers(
-                        exploreLocation.latitude(),
-                        exploreLocation.longitude(),
-                        match.getLatitude(),
-                        match.getLongitude());
-        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        final NumberFormat formatter = NumberFormat.getNumberInstance(resolvedLocale);
-        if (distanceKm < 1) {
-            formatter.setMaximumFractionDigits(0);
-            return formatter.format(Math.max(1, Math.round(distanceKm * 1000))) + " m";
-        }
-        formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
-        formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
-        return formatter.format(distanceKm) + " km";
-    }
-
-    private static String distanceLabel(
-            final Tournament tournament,
-            final ExploreLocation exploreLocation,
-            final Locale locale) {
-        if (tournament == null || exploreLocation == null || !tournament.hasCoordinates()) {
-            return null;
-        }
-        final double distanceKm =
-                distanceInKilometers(
-                        exploreLocation.latitude(),
-                        exploreLocation.longitude(),
-                        tournament.getLatitude(),
-                        tournament.getLongitude());
-        final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
-        final NumberFormat formatter = NumberFormat.getNumberInstance(resolvedLocale);
-        if (distanceKm < 1) {
-            formatter.setMaximumFractionDigits(0);
-            return formatter.format(Math.max(1, Math.round(distanceKm * 1000))) + " m";
-        }
-        formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
-        formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
-        return formatter.format(distanceKm) + " km";
-    }
-
-    private String tournamentStatusLabel(final Tournament tournament, final Locale locale) {
-        if (tournament == null || tournament.getStatus() == null) {
-            return null;
-        }
-        return messageSource.getMessage(
-                "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
-    }
-
-    private static double
-            distanceInKilometers( // TODO: add as an attribute to Match and Tournament and compute
-                    // it in the service layer
-                    final double fromLatitude,
-                    final double fromLongitude,
-                    final double toLatitude,
-                    final double toLongitude) {
-        final double earthRadiusKm = 6371.0088;
-        final double fromLatRad = Math.toRadians(fromLatitude);
-        final double toLatRad = Math.toRadians(toLatitude);
-        final double deltaLatRad = Math.toRadians(toLatitude - fromLatitude);
-        final double deltaLonRad = Math.toRadians(toLongitude - fromLongitude);
-        final double a =
-                Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2)
-                        + Math.cos(fromLatRad)
-                                * Math.cos(toLatRad)
-                                * Math.sin(deltaLonRad / 2)
-                                * Math.sin(deltaLonRad / 2);
-        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private static ExploreLocation exploreLocation(final HttpSession session) {

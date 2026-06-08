@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <!DOCTYPE html>
@@ -22,10 +23,11 @@
 							<div class="public-profile-actions">
 								<c:if test="${not empty profileEditHref}">
 									<c:url var="profileEditAction" value="${profileEditHref}" />
+									<spring:message var="profileEditLabel" code="profile.public.edit" />
 									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
 								</c:if>
 								<c:if test="${reportUserCanSubmit}">
-									<c:url var="reportUserHref" value="/reports/users/${profilePage.username}" />
+									<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
 									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
 									<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
 								</c:if>
@@ -35,7 +37,7 @@
 					<div class="public-profile-hero">
 						<div class="public-profile-avatar-panel">
 							<div class="public-profile-avatar-panel__content">
-								<c:url var="profileImageSrc" value="${profilePage.profileImageUrl}" />
+								<c:url var="profileImageSrc" value="${profileImageUrl}" />
 								<img
 									class="public-profile-avatar-panel__image"
 									src="${profileImageSrc}"
@@ -48,7 +50,7 @@
 						<div class="public-profile-summary">
 							<c:if test="${profileBanned}">
 								<div class="notice notice--error">
-									<strong><c:out value="${profileBannedLabel}" /></strong>
+									<strong><spring:message code="profile.public.banned" /></strong>
 									<c:if test="${not empty profileBannedUntil}">
 										<span> · <c:out value="${profileBannedUntil}" /></span>
 									</c:if>
@@ -63,19 +65,19 @@
 									<spring:message code="profile.public.username" />:
 								</span>
 								<span class="public-profile-summary__value">
-									<c:out value="${profilePage.username}" />
+									<c:out value="${targetUser.username}" />
 								</span>
 							</p>
 
 							<p class="public-profile-summary__line">
 								<span class="field__label">
-									<c:out value="${profileFullNameLabel}" />:
+									<spring:message code="profile.public.fullName" />:
 								</span>
 								<span class="public-profile-summary__value">
-									<c:out value="${profilePage.name}" />
-									<c:if test="${not empty profilePage.lastName}">
+									<c:out value="${targetUser.name}" />
+									<c:if test="${not empty targetUser.lastName}">
 										<c:out value=" " />
-										<c:out value="${profilePage.lastName}" />
+										<c:out value="${targetUser.lastName}" />
 									</c:if>
 								</span>
 							</p>
@@ -83,19 +85,19 @@
 							<div class="public-profile-summary__line public-profile-summary__line--inline">
 								<span class="public-profile-summary__pair">
 									<span class="field__label">
-										<c:out value="${profileEmailLabel}" />:
+										<spring:message code="profile.public.email" />:
 									</span>
 									<span class="public-profile-summary__value">
-										<c:out value="${profilePage.email}" />
+										<c:out value="${targetUser.email}" />
 									</span>
 								</span>
-								<c:if test="${not empty profilePage.phone}">
+								<c:if test="${not empty targetUser.phone}">
 									<span class="public-profile-summary__pair">
 										<span class="field__label">
-											<c:out value="${profilePhoneLabel}" />:
+											<spring:message code="profile.public.phone" />:
 										</span>
 										<span class="public-profile-summary__value">
-											<c:out value="${profilePage.phone}" />
+											<c:out value="${targetUser.phone}" />
 										</span>
 									</span>
 								</c:if>
@@ -106,17 +108,17 @@
 				</section>
 				<section class="panel public-profile-panel public-profile-ratings">
 					<header class="public-profile-ratings__header">
-						<h2 class="public-profile-ratings__title"><c:out value="${profileRatingsTitle}" /></h2>
+						<h2 class="public-profile-ratings__title"><spring:message code="profile.ratings.title" /></h2>
 					</header>
 					<c:choose>
 						<c:when test="${empty profileRatings}">
-							<p class="public-profile-ratings__empty"><c:out value="${profileRatingsEmpty}" /></p>
+							<p class="public-profile-ratings__empty"><spring:message code="profile.ratings.empty" /></p>
 						</c:when>
 						<c:otherwise>
 							<ul class="public-profile-ratings__list">
 								<c:forEach var="rating" items="${profileRatings}">
 									<li class="public-profile-ratings__item">
-										<span class="public-profile-ratings__sport"><c:out value="${rating.sportLabel}" /></span>
+										<span class="public-profile-ratings__sport"><spring:message code="sport.${rating.sport.dbValue}" /></span>
 										<span class="public-profile-ratings__elo"><c:out value="${rating.elo}" /></span>
 									</li>
 								</c:forEach>
@@ -426,20 +428,20 @@
 										<li class="public-profile-review-list__item">
 										<div class="public-profile-review-list__meta">
 											<c:choose>
-												<c:when test="${not empty review.reviewerProfileHref}">
-													<c:url var="reviewerProfileHref" value="${review.reviewerProfileHref}" />
+												<c:when test="${not empty review.reviewer.username}">
+													<c:url var="reviewerProfileHref" value="/users/${review.reviewer.username}" />
 													<a class="public-profile-review-list__reviewer" href="${reviewerProfileHref}">
-														<c:out value="${review.reviewerUsername}" />
+														<c:out value="${review.reviewer.username}" />
 													</a>
 												</c:when>
 												<c:otherwise>
-													<strong class="public-profile-review-list__reviewer"><c:out value="${review.reviewerUsername}" /></strong>
+													<strong class="public-profile-review-list__reviewer"><spring:message code="profile.reviews.unknownReviewer" /></strong>
 												</c:otherwise>
 											</c:choose>
-											<span class="public-profile-review-list__reaction public-profile-review-list__reaction--${review.reaction}">
-												<span class="public-profile-review-icon public-profile-review-icon--${review.reaction}" aria-hidden="true">
+											<span class="public-profile-review-list__reaction public-profile-review-list__reaction--${review.reaction.dbValue}">
+												<span class="public-profile-review-icon public-profile-review-icon--${review.reaction.dbValue}" aria-hidden="true">
 													<c:choose>
-														<c:when test="${review.reaction eq 'like'}">
+														<c:when test="${review.reaction.dbValue eq 'like'}">
 															<icon:thumbsUp />
 														</c:when>
 														<c:otherwise>
@@ -447,10 +449,12 @@
 														</c:otherwise>
 													</c:choose>
 												</span>
-												<c:out value="${review.reactionLabel}" />
+												<spring:message code="profile.reviews.reaction.${review.reaction.dbValue}" />
 											</span>
-											<c:if test="${not empty review.updatedAtLabel}">
-												<span class="public-profile-review-list__date"><c:out value="${review.updatedAtLabel}" /></span>
+											<c:if test="${not empty review.updatedAt}">
+												<span class="public-profile-review-list__date">
+													<c:out value="${tf:date(review.updatedAtDateTime)}" />
+												</span>
 											</c:if>
 										</div>
 										<c:if test="${not empty review.comment}">
@@ -458,7 +462,7 @@
 										</c:if>
 										<c:if test="${not empty pageContext.request.userPrincipal}">
 											<div class="public-profile-actions">
-												<c:url var="reportReviewHref" value="/reports/reviews/${review.reviewId}" />
+												<c:url var="reportReviewHref" value="/reports/reviews/${review.id}" />
 												<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
 												<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
 											</div>

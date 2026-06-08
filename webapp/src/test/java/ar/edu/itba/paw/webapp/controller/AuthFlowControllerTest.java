@@ -26,7 +26,6 @@ import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import javax.validation.ConstraintValidator;
@@ -251,7 +250,7 @@ class AuthFlowControllerTest {
     @Test
     void postPasswordResetSuccessRedirectsToLogin() throws Exception {
         Mockito.when(accountAuthService.resetPassword("reset-token", "NewPassword123!"))
-                .thenReturn(new VerificationConfirmationResult(10L, "Password reset"));
+                .thenReturn(new VerificationConfirmationResult(10L));
 
         mockMvc.perform(
                         post("/password-reset/reset-token")
@@ -266,12 +265,7 @@ class AuthFlowControllerTest {
         Mockito.when(accountAuthService.getVerificationPreview("account-token"))
                 .thenReturn(
                         new VerificationPreview(
-                                "Verify your account",
-                                "Confirm your email address.",
-                                "player@test.com",
-                                Instant.parse("2026-04-11T18:00:00Z"),
-                                "Verify account",
-                                List.of()));
+                                "player@test.com", Instant.parse("2026-04-11T18:00:00Z")));
 
         mockMvc.perform(get("/verifications/account-token"))
                 .andExpect(status().isOk())
@@ -296,8 +290,7 @@ class AuthFlowControllerTest {
                                         "{bcrypt}hash",
                                         UserRole.USER,
                                         Instant.parse("2026-04-05T00:00:00Z"),
-                                        UserLanguages.DEFAULT_LANGUAGE),
-                                "done"));
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
         final MvcResult result =
                 mockMvc.perform(post("/verifications/abc123/confirm"))

@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -365,49 +364,40 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
-    public String resolveTargetName(final ReportTargetType targetType, final Long targetId) {
-        final Locale locale = currentLocale();
-        final String name =
-                switch (targetType) {
-                    case USER ->
-                            userDataService
-                                    .findById(targetId)
-                                    .map(User::getUsername)
-                                    .orElseGet(
-                                            () ->
-                                                    messageSource.getMessage(
-                                                            "moderation.target.user.fallback",
-                                                            new Object[] {targetId},
-                                                            locale));
-                    case MATCH ->
-                            matchDataService
-                                    .findById(targetId)
-                                    .map(Match::getTitle)
-                                    .orElseGet(
-                                            () ->
-                                                    messageSource.getMessage(
-                                                            "moderation.target.match.fallback",
-                                                            new Object[] {targetId},
-                                                            locale));
-                    case REVIEW ->
-                            playerReviewDataService
-                                    .findByIdIncludingDeleted(targetId)
-                                    .map(review -> review.getReviewer().getUsername())
-                                    .map(
-                                            username ->
-                                                    messageSource.getMessage(
-                                                            "moderation.target.review.label",
-                                                            new Object[] {username},
-                                                            locale))
-                                    .orElseGet(
-                                            () ->
-                                                    messageSource.getMessage(
-                                                            "moderation.target.review.fallback",
-                                                            new Object[] {targetId},
-                                                            locale));
-                };
+    public ModerationTargetSummary resolveTarget(
+            final ReportTargetType targetType, final Long targetId) {
+        return switch (targetType) {
+            case USER ->
+                    userDataService
+                            .findById(targetId)
+                            .map(user -> targetSummary(targetType, targetId, user.getUsername()))
+                            .orElseGet(() -> missingTargetSummary(targetType, targetId));
+            case MATCH ->
+                    matchDataService
+                            .findById(targetId)
+                            .map(match -> targetSummary(targetType, targetId, match.getTitle()))
+                            .orElseGet(() -> missingTargetSummary(targetType, targetId));
+            case REVIEW ->
+                    playerReviewDataService
+                            .findByIdIncludingDeleted(targetId)
+                            .map(
+                                    review ->
+                                            targetSummary(
+                                                    targetType,
+                                                    targetId,
+                                                    review.getReviewer().getUsername()))
+                            .orElseGet(() -> missingTargetSummary(targetType, targetId));
+        };
+    }
 
-        return name;
+    private static ModerationTargetSummary targetSummary(
+            final ReportTargetType targetType, final Long targetId, final String displayName) {
+        return new ModerationTargetSummary(targetType, targetId, displayName, true);
+    }
+
+    private static ModerationTargetSummary missingTargetSummary(
+            final ReportTargetType targetType, final Long targetId) {
+        return new ModerationTargetSummary(targetType, targetId, null, false);
     }
 
     private static String normalizeText(final String value, final int maxLength) {
@@ -425,11 +415,6 @@ public class ModerationServiceImpl implements ModerationService {
         }
 
         return normalized;
-    }
-
-    private static Locale currentLocale() {
-        final Locale locale = LocaleContextHolder.getLocale();
-        return locale == null ? Locale.ENGLISH : locale;
     }
 
     private void applyResolutionEffect(

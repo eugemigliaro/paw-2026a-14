@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.adminReports" />
 <!DOCTYPE html>
@@ -124,21 +125,22 @@
 					<c:otherwise>
 						<div class="report-card-list" id="report-card-list">
 							<c:forEach var="report" items="${reports}">
-								<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetTypeCode}" />
-								<spring:message var="reasonLabel"     code="admin.reports.reason.${report.reasonCode}" />
-								<spring:message var="statusLabel"     code="admin.reports.status.${report.statusCode}" />
+								<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetType.dbValue}" />
+								<spring:message var="reasonLabel"     code="admin.reports.reason.${report.reason.dbValue}" />
+								<spring:message var="statusLabel"     code="admin.reports.status.${report.status.dbValue}" />
+								<c:set var="targetSummary" value="${targetSummaries[report.id]}" />
 
 								<div class="report-card">
 									<ui:card className="report-section report-card__inner">
 										<div class="report-card__header">
 											<div class="report-card__meta">
 												<span class="report-card__id">#<c:out value="${report.id}" /></span>
-												<span class="report-status-badge report-status-badge--${report.statusCode}">
+												<span class="report-status-badge report-status-badge--${report.status.dbValue}">
 													<c:out value="${statusLabel}" />
 												</span>
 											</div>
 											<div class="report-card__chips">
-												<span class="report-type-badge report-type-badge--${report.targetTypeCode}">
+												<span class="report-type-badge report-type-badge--${report.targetType.dbValue}">
 													<c:out value="${targetTypeLabel}" />
 												</span>
 												<span class="report-card__reason-chip">
@@ -150,7 +152,19 @@
 										<dl class="report-card__body stack">
 											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="admin.reports.target" /></dt>
-												<dd><c:out value="${report.targetKey}" /></dd>
+												<dd>
+													<c:choose>
+														<c:when test="${targetSummary.found and targetSummary.targetType.dbValue eq 'review'}">
+															<spring:message code="moderation.target.review.label" arguments="${targetSummary.displayName}" />
+														</c:when>
+														<c:when test="${targetSummary.found}">
+															<c:out value="${targetSummary.displayName}" />
+														</c:when>
+														<c:otherwise>
+															<spring:message code="moderation.target.${targetSummary.targetType.dbValue}.fallback" arguments="${targetSummary.targetId}" />
+														</c:otherwise>
+													</c:choose>
+												</dd>
 											</div>
 											<c:if test="${not empty report.details}">
 												<div class="report-section-field report-section-field__row">
@@ -160,7 +174,7 @@
 											</c:if>
 											<div class="report-section-field report-section-field__row">
 												<dt class="detail-label"><spring:message code="admin.reports.createdAt" /></dt>
-												<dd><c:out value="${report.createdAtLabel}" /></dd>
+												<dd><c:out value="${tf:dateTime(report.createdAtDateTime)}" /></dd>
 											</div>
 											<c:if test="${not empty report.appealReason}">
 												<div class="report-section-field report-section-field__row">
@@ -171,7 +185,7 @@
 										</dl>
 
 										<div class="report-section-actions">
-											<c:if test="${report.statusCode eq 'pending'}">
+											<c:if test="${report.status.dbValue eq 'pending'}">
 												<c:url var="reviewHref" value="/admin/reports/${report.id}/under-review" />
 												<form method="post" action="${reviewHref}" class="participant-manage-list__action-form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />

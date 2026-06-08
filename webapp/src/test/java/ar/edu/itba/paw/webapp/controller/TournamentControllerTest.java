@@ -25,25 +25,22 @@ import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
-import ar.edu.itba.paw.services.TournamentRegistrationReadiness;
 import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
+import ar.edu.itba.paw.services.TournamentViewerCapabilities;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
-import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -78,10 +75,18 @@ class TournamentControllerTest {
                                         tournamentRegistrationService,
                                         tournamentBracketService,
                                         messageSource(),
-                                        Clock.fixed(NOW, ZoneId.of("UTC"))))
+                                        false,
+                                        "",
+                                        "",
+                                        0))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setControllerAdvice(new AccessExceptionHandler())
                         .build();
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.any()))
+                .thenReturn(
+                        capabilities(
+                                false, false, false, false, false, false, false, false, false, true,
+                                false));
     }
 
     @AfterEach
@@ -98,40 +103,37 @@ class TournamentControllerTest {
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.isNull()))
                 .thenReturn(Optional.empty());
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.isNull()))
+                .thenReturn(
+                        capabilities(
+                                false, false, true, false, false, false, false, false, false, false,
+                                false));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("tournaments/detail"))
-                .andExpect(model().attributeExists("tournamentPage"))
+                .andExpect(model().attributeExists("tournament"))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournament",
                                         Matchers.hasProperty(
                                                 "title", Matchers.is("City Padel Cup"))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
-                                        Matchers.hasProperty(
-                                                "registrationWindowStartLabel",
-                                                Matchers.not(
-                                                        Matchers.is(
-                                                                Matchers.emptyOrNullString())))))
+                                        "tournamentRegistrationWindowStartLabel",
+                                        Matchers.not(Matchers.is(Matchers.emptyOrNullString()))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
-                                        Matchers.hasProperty(
-                                                "registrationWindowEndLabel",
-                                                Matchers.not(
-                                                        Matchers.is(
-                                                                Matchers.emptyOrNullString())))))
+                                        "tournamentRegistrationWindowEndLabel",
+                                        Matchers.not(Matchers.is(Matchers.emptyOrNullString()))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty("canJoinSolo", Matchers.is(false))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty(
                                                 "requiresLoginToJoin", Matchers.is(true))));
     }
@@ -145,26 +147,27 @@ class TournamentControllerTest {
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.isNull()))
                 .thenReturn(Optional.empty());
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.isNull()))
+                .thenReturn(
+                        capabilities(
+                                false, false, false, true, false, false, false, false, false, true,
+                                false));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.of("es")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("tournaments/detail"))
-                .andExpect(model().attributeExists("tournamentPage"))
+                .andExpect(model().attributeExists("tournament"))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty("canJoinSolo", Matchers.is(false))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty(
                                                 "registrationNotStarted", Matchers.is(true))))
-                .andExpect(
-                        model().attribute(
-                                        "tournamentPage",
-                                        Matchers.hasProperty(
-                                                "statusLabel", Matchers.is("Inscripción"))));
+                .andExpect(model().attributeExists("tournament"));
     }
 
     @Test
@@ -188,10 +191,10 @@ class TournamentControllerTest {
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("tournaments/detail"))
-                .andExpect(model().attributeExists("tournamentPage"))
+                .andExpect(model().attributeExists("tournament"))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty("canJoinSolo", Matchers.is(false))));
     }
 
@@ -205,6 +208,11 @@ class TournamentControllerTest {
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
                 .thenReturn(Optional.empty());
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.eq(host)))
+                .thenReturn(
+                        capabilities(
+                                false, false, false, true, true, true, false, false, false, true,
+                                false));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
@@ -212,17 +220,17 @@ class TournamentControllerTest {
                 .andExpect(view().name("tournaments/detail"))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty(
                                                 "canCloseRegistration", Matchers.is(true))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty(
                                                 "canEditTournament", Matchers.is(true))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty(
                                                 "registrationNotStarted", Matchers.is(true))));
     }
@@ -237,24 +245,25 @@ class TournamentControllerTest {
                 .thenReturn(Optional.empty());
         Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
                 .thenReturn(Optional.empty());
-        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(77L, host))
-                .thenReturn(new TournamentRegistrationReadiness(1, 0, 0, true));
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.eq(host)))
+                .thenReturn(
+                        capabilities(
+                                false, false, false, false, true, true, true, false, false, true,
+                                true));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
+                                        "tournamentCapabilities",
                                         Matchers.hasProperty(
                                                 "closeRegistrationDisabled", Matchers.is(true))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentPage",
-                                        Matchers.hasProperty(
-                                                "closeRegistrationDisabledMessage",
-                                                Matchers.is(
-                                                        "Not enough players to close registration. Wait for more players or cancel the tournament."))));
+                                        "tournamentCloseRegistrationDisabledMessage",
+                                        Matchers.is(
+                                                "Not enough players to close registration. Wait for more players or cancel the tournament.")));
     }
 
     @Test
@@ -346,20 +355,17 @@ class TournamentControllerTest {
                 mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
                         .andExpect(status().isOk())
                         .andExpect(view().name("tournaments/bracket"))
-                        .andExpect(model().attributeExists("bracketPage"))
+                        .andExpect(model().attributeExists("bracketView"))
                         .andExpect(
                                 model().attribute(
-                                                "bracketPage",
+                                                "bracketTournament",
                                                 Matchers.hasProperty(
                                                         "title", Matchers.is("City Padel Cup"))));
         final var mvcResult = result.andReturn();
-        final TournamentBracketViewModel bracketPage =
-                (TournamentBracketViewModel)
-                        mvcResult.getModelAndView().getModel().get("bracketPage");
-        Assertions.assertNotNull(bracketPage);
-        Assertions.assertEquals(2, bracketPage.getTeamRosters().size());
-        Assertions.assertEquals(
-                "user11, user12", bracketPage.getTeamRosters().get(0).getMembersLabel());
+        final Map<?, ?> membersByTeamId =
+                (Map<?, ?>) mvcResult.getModelAndView().getModel().get("bracketMembersByTeamId");
+        org.junit.jupiter.api.Assertions.assertEquals(
+                List.of("user11", "user12"), membersByTeamId.get(firstTeam.getId()));
     }
 
     @Test
@@ -372,6 +378,11 @@ class TournamentControllerTest {
                 .thenReturn(
                         new TournamentBracketView(
                                 tournament, List.of(), List.of(match), null, match));
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.eq(host)))
+                .thenReturn(
+                        capabilities(
+                                false, false, false, false, false, false, false, true, false, true,
+                                false));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/77/bracket").locale(Locale.ENGLISH))
@@ -517,6 +528,33 @@ class TournamentControllerTest {
 
     private static TournamentTeamMember member(final TournamentTeam team, final User user) {
         return new TournamentTeamMember(null, team, user, false, NOW);
+    }
+
+    private static TournamentViewerCapabilities capabilities(
+            final boolean canJoinSolo,
+            final boolean canLeaveSolo,
+            final boolean requiresLoginToJoin,
+            final boolean registrationNotStarted,
+            final boolean canCloseRegistration,
+            final boolean canEditTournament,
+            final boolean canCancelTournament,
+            final boolean canManageBracket,
+            final boolean canViewBracket,
+            final boolean closeRegistrationDisabled,
+            final boolean closeRegistrationBlockedByCapacity) {
+        return new TournamentViewerCapabilities(
+                canJoinSolo,
+                canLeaveSolo,
+                requiresLoginToJoin,
+                registrationNotStarted,
+                canCloseRegistration,
+                canEditTournament,
+                canCancelTournament,
+                canManageBracket,
+                false,
+                canViewBracket,
+                closeRegistrationDisabled,
+                closeRegistrationBlockedByCapacity);
     }
 
     private static MessageSource messageSource() {

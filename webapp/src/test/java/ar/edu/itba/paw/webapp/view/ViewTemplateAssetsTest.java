@@ -449,6 +449,7 @@ class ViewTemplateAssetsTest {
     @Test
     void feedIncludesNearMeGeolocationPostWithoutUrlCoordinates() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String eventCardTag = read("src/main/webapp/WEB-INF/tags/eventCard.tag");
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final Path scriptPath = Path.of("src/main/webapp/js/explore-location.js");
         final String script = Files.readString(scriptPath);
@@ -467,7 +468,8 @@ class ViewTemplateAssetsTest {
         assertFalse(feedIndex.contains("location.current.unavailable"));
         assertTrue(feedIndex.contains("near-me-panel--hidden"));
         assertFalse(feedIndex.contains("data-explore-location-submit=\"true\""));
-        assertTrue(feedIndex.contains("event.distanceLabel"));
+        assertTrue(feedIndex.contains("eventDistanceLabels"));
+        assertTrue(eventCardTag.contains("distanceLabel"));
         assertTrue(feedIndex.contains("sortOptions"));
         assertTrue(Files.exists(scriptPath));
         assertTrue(script.contains("navigator.geolocation"));
@@ -548,11 +550,11 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("tournament.host.closeRegistration"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.startsAt"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.endsAt"));
-        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabled"));
-        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabledMessage"));
+        assertTrue(detailView.contains("tournamentCapabilities.closeRegistrationDisabled"));
+        assertTrue(detailView.contains("tournamentCloseRegistrationDisabledMessage"));
         assertTrue(
                 detailView.contains(
-                        "variant=\"primary\" disabled=\"${tournamentPage.closeRegistrationDisabled}\""));
+                        "variant=\"primary\" disabled=\"${tournamentCapabilities.closeRegistrationDisabled}\""));
         assertTrue(detailView.contains("booking-panel__notice--info"));
         assertTrue(detailView.contains("variant=\"danger\""));
         assertTrue(
@@ -591,7 +593,7 @@ class ViewTemplateAssetsTest {
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(detailView.contains("eventPage.mapAvailable"));
+        assertTrue(detailView.contains("mapAvailable"));
         assertTrue(detailView.contains("data-event-map=\"true\""));
         assertTrue(detailView.contains("data-tile-url-template"));
         assertTrue(detailView.contains("data-latitude"));
@@ -679,8 +681,10 @@ class ViewTemplateAssetsTest {
 
         assertTrue(detailView.contains("aria-labelledby=\"pending-requests-title\""));
         assertTrue(detailView.contains("aria-labelledby=\"pending-invitations-title\""));
-        assertTrue(detailView.contains("<c:when test=\"${not empty req.profileHref}\">"));
-        assertTrue(detailView.contains("<c:when test=\"${not empty invite.profileHref}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<c:url var=\"requestProfileHref\" value=\"/users/${req.username}\" />"));
+        assertTrue(detailView.contains("value=\"/users/${invite.username}\""));
     }
 
     @Test
@@ -694,7 +698,9 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("feed-pagination"));
         assertTrue(detailView.contains("recurrenceHasPreviousPage"));
         assertTrue(detailView.contains("recurrenceHasNextPage"));
-        assertTrue(detailView.contains("<c:when test=\"${not empty occurrence.href}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<c:when test=\"${not empty occurrenceVisibleHrefs[occurrence.id]}\">"));
         assertTrue(detailView.contains("recurrence-schedule__text"));
         assertTrue(eventDetailCss.contains(".recurrence-schedule__text"));
         assertTrue(detailView.contains("code=\"event.recurrence.pagination.aria\""));

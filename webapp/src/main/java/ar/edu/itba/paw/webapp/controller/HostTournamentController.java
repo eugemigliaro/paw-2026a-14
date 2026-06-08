@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
-
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
@@ -29,19 +27,15 @@ import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
-import ar.edu.itba.paw.webapp.viewmodel.TournamentBracketViewModel;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.validation.Valid;
@@ -69,9 +63,6 @@ public class HostTournamentController {
     private static final double DEFAULT_MAP_LATITUDE = -34.6037;
     private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
     private static final int DEFAULT_MAP_ZOOM = 14;
-
-    private static final DateTimeFormatter TIME_INPUT_FORMATTER =
-            DateTimeFormatter.ofPattern("HH:mm");
 
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
@@ -309,30 +300,45 @@ public class HostTournamentController {
             final Model model,
             final Locale locale) {
         final Tournament tournament =
-                tournamentService.findTournamentForHost(tournamentId, user).get();
-        TournamentBracketViewModel bracketPage;
+                tournamentService
+                        .findTournamentForHost(tournamentId, user)
+                        .orElseGet(
+                                () -> {
+                                    if (tournamentService
+                                            .findPublicTournament(tournamentId)
+                                            .isPresent()) {
+                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                                    }
+                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                                });
 
+        TournamentBracketView bracketView = null;
+        boolean bracketGenerated = true;
         try {
-            bracketPage =
-                    buildBracketPage(
-                            tournamentBracketService.getBracket(tournamentId, user), locale);
+            bracketView = tournamentBracketService.getBracket(tournamentId, user);
         } catch (final TournamentBracketNotGeneratedException exception) {
-            bracketPage = buildUngeneratedBracketPage(tournament, user, locale);
+            bracketGenerated = false;
         }
 
         final List<TournamentTeam> manualPairingTeams =
-                bracketPage.isGenerated()
+                bracketGenerated
                         ? List.of()
                         : tournamentBracketService.listTeamsForSetup(tournamentId, user);
         final BracketPublishForm publishForm =
-                bracketPage.isGenerated() ? createBracketPublishForm(bracketPage) : null;
+                bracketGenerated ? createBracketPublishForm(bracketView, locale) : null;
         final BracketManualPairingsForm manualPairingsForm =
-                bracketPage.isGenerated() ? null : createManualPairingsForm(manualPairingTeams);
+                bracketGenerated ? null : createManualPairingsForm(manualPairingTeams);
+        final List<TournamentTeamMember> teamMembers =
+                bracketGenerated
+                        ? bracketView.getTeamMembers()
+                        : tournamentRegistrationService.listTeamMembers(tournamentId);
 
         return bracketSetupView(
                 tournamentId,
                 tournament,
-                bracketPage,
+                bracketView,
+                bracketGenerated,
+                teamMembers,
                 manualPairingTeams,
                 publishForm,
                 manualPairingsForm,
@@ -357,14 +363,16 @@ public class HostTournamentController {
 
         try {
             if (bindingResult.hasErrors()) {
-                final TournamentBracketViewModel bracketPage =
-                        buildUngeneratedBracketPage(tournament, user, locale);
                 final List<TournamentTeam> manualPairingTeams =
                         tournamentBracketService.listTeamsForSetup(tournamentId, user);
+                final List<TournamentTeamMember> teamMembers =
+                        tournamentRegistrationService.listTeamMembers(tournamentId);
                 return bracketSetupView(
                         tournamentId,
                         tournament,
-                        bracketPage,
+                        null,
+                        false,
+                        teamMembers,
                         manualPairingTeams,
                         null,
                         manualPairingsForm,
@@ -402,12 +410,12 @@ public class HostTournamentController {
             final TournamentBracketView bracketView =
                     tournamentBracketService.getBracket(tournamentId, user);
             if (bindingResult.hasErrors()) {
-                final TournamentBracketViewModel bracketPage =
-                        buildBracketPage(bracketView, locale);
                 return bracketSetupView(
                         tournamentId,
                         tournament,
-                        bracketPage,
+                        bracketView,
+                        true,
+                        bracketView.getTeamMembers(),
                         List.of(),
                         bracketPublishForm,
                         null,
@@ -463,7 +471,9 @@ public class HostTournamentController {
     private ModelAndView bracketSetupView(
             final long tournamentId,
             final Tournament tournament,
-            final TournamentBracketViewModel bracketPage,
+            final TournamentBracketView bracketView,
+            final boolean bracketGenerated,
+            final List<TournamentTeamMember> teamMembers,
             final List<TournamentTeam> manualPairingTeams,
             final BracketPublishForm bracketPublishForm,
             final BracketManualPairingsForm manualPairingsForm,
@@ -477,7 +487,23 @@ public class HostTournamentController {
                         "page.title.hostTournamentBracketSetup",
                         new Object[] {tournament.getTitle()},
                         locale));
-        mav.addObject("bracketPage", bracketPage);
+        final List<TournamentTeam> bracketTeams =
+                bracketGenerated && bracketView != null
+                        ? bracketView.getTeams()
+                        : manualPairingTeams == null ? List.of() : manualPairingTeams;
+        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(bracketTeams);
+        final Map<Integer, List<TournamentMatch>> matchesByRound =
+                bracketView == null ? Map.of() : matchesByRound(bracketView.getMatches());
+        mav.addObject("bracketTournament", tournament);
+        mav.addObject("bracketView", bracketView);
+        mav.addObject("bracketGenerated", bracketGenerated);
+        mav.addObject(
+                "bracketPublishable", TournamentStatus.BRACKET_SETUP == tournament.getStatus());
+        mav.addObject("bracketTeams", bracketTeams);
+        mav.addObject("bracketMembersByTeamId", membersByTeamId(teamMembers));
+        mav.addObject("bracketTeamDisplayNumbers", teamDisplayNumbers);
+        mav.addObject("bracketMatchesByRound", matchesByRound);
+        mav.addObject("bracketRoundCount", matchesByRound.size());
         mav.addObject(
                 "selectedPairingStrategy",
                 tournament.getPairingStrategy() == null
@@ -508,23 +534,38 @@ public class HostTournamentController {
     }
 
     private BracketPublishForm createBracketPublishForm(
-            final TournamentBracketViewModel bracketPage) {
+            final TournamentBracketView bracketView, final Locale locale) {
         final BracketPublishForm form = new BracketPublishForm();
         final List<BracketPublishScheduleForm> schedules = new ArrayList<>();
-        for (final TournamentBracketViewModel.RoundViewModel round : bracketPage.getRounds()) {
-            for (final TournamentBracketViewModel.MatchViewModel match : round.getMatches()) {
+        final Map<Integer, List<TournamentMatch>> matchesByRound =
+                matchesByRound(bracketView.getMatches());
+        final int roundCount = matchesByRound.size();
+        for (final Map.Entry<Integer, List<TournamentMatch>> round : matchesByRound.entrySet()) {
+            for (final TournamentMatch match : round.getValue()) {
                 final BracketPublishScheduleForm schedule = new BracketPublishScheduleForm();
                 schedule.setMatchId(match.getId());
-                schedule.setRoundNumber(round.getRoundNumber());
-                schedule.setRoundLabel(round.getLabel());
-                schedule.setMatchLabel(match.getLabel());
-                schedule.setStartDate(parseDate(match.getStartDate()));
-                schedule.setStartTime(parseTime(match.getStartTime()));
-                schedule.setEndDate(parseDate(match.getEndDate()));
-                schedule.setEndTime(parseTime(match.getEndTime()));
-                schedule.setAddress(match.getAddress());
-                schedule.setLatitude(parseDouble(match.getLatitude()));
-                schedule.setLongitude(parseDouble(match.getLongitude()));
+                schedule.setRoundNumber(round.getKey());
+                schedule.setRoundLabel(roundLabel(round.getKey(), roundCount, locale));
+                schedule.setMatchLabel(matchLabel(match, locale));
+                schedule.setStartDate(
+                        match.getScheduledStartsAt() == null
+                                ? defaultScheduleDate()
+                                : scheduleDate(match.getScheduledStartsAtDateTime()));
+                schedule.setStartTime(
+                        match.getScheduledStartsAt() == null
+                                ? defaultScheduleStartTime(round.getKey())
+                                : scheduleTime(match.getScheduledStartsAtDateTime()));
+                schedule.setEndDate(
+                        match.getScheduledEndsAt() == null
+                                ? defaultScheduleDate()
+                                : scheduleDate(match.getScheduledEndsAtDateTime()));
+                schedule.setEndTime(
+                        match.getScheduledEndsAt() == null
+                                ? null
+                                : scheduleTime(match.getScheduledEndsAtDateTime()));
+                schedule.setAddress(scheduleAddress(bracketView.getTournament(), match));
+                schedule.setLatitude(scheduleLatitude(bracketView.getTournament(), match));
+                schedule.setLongitude(scheduleLongitude(bracketView.getTournament(), match));
                 schedules.add(schedule);
             }
         }
@@ -665,162 +706,11 @@ public class HostTournamentController {
         return TournamentStatus.REGISTRATION == tournament.getStatus();
     }
 
-    private TournamentBracketViewModel buildUngeneratedBracketPage(
-            final Tournament tournament, final User actingUser, final Locale locale) {
-        final List<TournamentTeam> teams =
-                tournamentBracketService.listTeamsForSetup(tournament.getId(), actingUser);
-        final List<TournamentTeamMember> teamMembers =
-                tournamentRegistrationService.listTeamMembers(tournament.getId());
-        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(teams);
-        return new TournamentBracketViewModel(
-                tournament.getId(),
-                tournament.getTitle(),
-                statusLabel(tournament, locale),
-                statusTone(tournament),
-                false,
-                false,
-                false,
-                List.of(),
-                teamRosters(
-                        new TournamentBracketView(
-                                tournament, teams, List.of(), null, null, teamMembers),
-                        locale,
-                        teamDisplayNumbers));
-    }
-
-    private TournamentBracketViewModel buildBracketPage(
-            final TournamentBracketView bracketView, final Locale locale) {
-        final Tournament tournament = bracketView.getTournament();
-        final String defaultScheduleDate = LocalDate.now(PlatformTime.ZONE).plusDays(1).toString();
-        final Map<Integer, List<TournamentMatch>> matchesByRound =
-                bracketView.getMatches().stream()
-                        .sorted(
-                                Comparator.comparingInt(TournamentMatch::getRoundNumber)
-                                        .thenComparingInt(TournamentMatch::getMatchIndex))
-                        .collect(
-                                Collectors.groupingBy(
-                                        TournamentMatch::getRoundNumber,
-                                        LinkedHashMap::new,
-                                        Collectors.toList()));
-        final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbers(bracketView.getTeams());
-        final int totalRounds = matchesByRound.size();
-        final List<TournamentBracketViewModel.RoundViewModel> rounds =
-                matchesByRound.entrySet().stream()
-                        .map(
-                                entry ->
-                                        new TournamentBracketViewModel.RoundViewModel(
-                                                entry.getKey(),
-                                                roundLabel(entry.getKey(), totalRounds, locale),
-                                                entry.getValue().stream()
-                                                        .map(
-                                                                match ->
-                                                                        new TournamentBracketViewModel
-                                                                                .MatchViewModel(
-                                                                                match.getId(),
-                                                                                teamId(
-                                                                                        match
-                                                                                                .getTeamA()),
-                                                                                teamId(
-                                                                                        match
-                                                                                                .getTeamB()),
-                                                                                matchLabel(
-                                                                                        match,
-                                                                                        locale),
-                                                                                teamName(
-                                                                                        match
-                                                                                                .getTeamA(),
-                                                                                        locale,
-                                                                                        teamDisplayNumbers),
-                                                                                teamName(
-                                                                                        match
-                                                                                                .getTeamB(),
-                                                                                        locale,
-                                                                                        teamDisplayNumbers),
-                                                                                matchStatusLabel(
-                                                                                        match,
-                                                                                        locale),
-                                                                                match.getStatus()
-                                                                                        .getDbValue()
-                                                                                        .replace(
-                                                                                                '_',
-                                                                                                '-'),
-                                                                                false,
-                                                                                false,
-                                                                                isWinner(
-                                                                                        match
-                                                                                                .getTeamA(),
-                                                                                        match
-                                                                                                .getWinnerTeam()),
-                                                                                isWinner(
-                                                                                        match
-                                                                                                .getTeamB(),
-                                                                                        match
-                                                                                                .getWinnerTeam()),
-                                                                                entry.getKey()
-                                                                                        == totalRounds,
-                                                                                false,
-                                                                                matchScheduleLabel(
-                                                                                        match,
-                                                                                        locale),
-                                                                                match
-                                                                                                        .getScheduledStartsAt()
-                                                                                                == null
-                                                                                        ? defaultScheduleDate
-                                                                                        : scheduleDate(
-                                                                                                match
-                                                                                                        .getScheduledStartsAt()),
-                                                                                match
-                                                                                                        .getScheduledStartsAt()
-                                                                                                == null
-                                                                                        ? defaultScheduleStartTime(
-                                                                                                entry
-                                                                                                        .getKey())
-                                                                                        : scheduleTime(
-                                                                                                match
-                                                                                                        .getScheduledStartsAt()),
-                                                                                match
-                                                                                                        .getScheduledEndsAt()
-                                                                                                == null
-                                                                                        ? defaultScheduleDate
-                                                                                        : scheduleDate(
-                                                                                                match
-                                                                                                        .getScheduledEndsAt()),
-                                                                                match
-                                                                                                        .getScheduledEndsAt()
-                                                                                                == null
-                                                                                        ? ""
-                                                                                        : scheduleTime(
-                                                                                                match
-                                                                                                        .getScheduledEndsAt()),
-                                                                                scheduleAddress(
-                                                                                        tournament,
-                                                                                        match),
-                                                                                scheduleLatitude(
-                                                                                        tournament,
-                                                                                        match),
-                                                                                scheduleLongitude(
-                                                                                        tournament,
-                                                                                        match)))
-                                                        .toList()))
-                        .toList();
-        return new TournamentBracketViewModel(
-                tournament.getId(),
-                tournament.getTitle(),
-                statusLabel(tournament, locale),
-                statusTone(tournament),
-                true,
-                TournamentStatus.BRACKET_SETUP == tournament.getStatus(),
-                false,
-                rounds,
-                teamRosters(bracketView, locale, teamDisplayNumbers));
-    }
-
-    private List<TournamentBracketViewModel.TeamRosterViewModel> teamRosters(
-            final TournamentBracketView bracketView,
-            final Locale locale,
-            final Map<Long, Integer> teamDisplayNumbers) {
+    private static Map<Long, List<String>> membersByTeamId(
+            final List<TournamentTeamMember> teamMembers) {
         final Map<Long, List<String>> usernamesByTeamId = new LinkedHashMap<>();
-        for (final TournamentTeamMember member : bracketView.getTeamMembers()) {
+        for (final TournamentTeamMember member :
+                teamMembers == null ? List.<TournamentTeamMember>of() : teamMembers) {
             if (member.getTeam() == null || member.getUser() == null) {
                 continue;
             }
@@ -828,23 +718,7 @@ public class HostTournamentController {
                     .computeIfAbsent(member.getTeam().getId(), ignored -> new ArrayList<>())
                     .add(member.getUser().getUsername());
         }
-
-        return bracketView.getTeams().stream()
-                .map(
-                        team ->
-                                new TournamentBracketViewModel.TeamRosterViewModel(
-                                        teamName(team, locale, teamDisplayNumbers),
-                                        usernamesByTeamId.getOrDefault(team.getId(), List.of())))
-                .toList();
-    }
-
-    private String statusLabel(final Tournament tournament, final Locale locale) {
-        return messageSource.getMessage(
-                "tournament.status." + tournament.getStatus().getDbValue(), null, locale);
-    }
-
-    private static String statusTone(final Tournament tournament) {
-        return tournament.getStatus().getDbValue().replace('_', '-');
+        return usernamesByTeamId;
     }
 
     private String roundLabel(final int roundNumber, final int roundCount, final Locale locale) {
@@ -858,26 +732,6 @@ public class HostTournamentController {
     private String matchLabel(final TournamentMatch match, final Locale locale) {
         return messageSource.getMessage(
                 "tournament.bracket.match.label", new Object[] {match.getMatchIndex() + 1}, locale);
-    }
-
-    private String teamName(
-            final TournamentTeam team,
-            final Locale locale,
-            final Map<Long, Integer> teamDisplayNumbers) {
-        if (team == null) {
-            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
-        }
-        if (team.getName() != null && !team.getName().isBlank()) {
-            return team.getName();
-        }
-        if (team.getId() == null) {
-            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
-        }
-        final Integer displayNumber = teamDisplayNumbers.get(team.getId());
-        return messageSource.getMessage(
-                "tournament.team.solo.name",
-                new Object[] {displayNumber == null ? team.getId() : displayNumber},
-                locale);
     }
 
     private static Map<Long, Integer> teamDisplayNumbers(final List<TournamentTeam> teams) {
@@ -894,50 +748,34 @@ public class HostTournamentController {
         return displayNumbers;
     }
 
-    private static Long teamId(final TournamentTeam team) {
-        return team == null ? null : team.getId();
+    private static Map<Integer, List<TournamentMatch>> matchesByRound(
+            final List<TournamentMatch> matches) {
+        return (matches == null ? List.<TournamentMatch>of() : matches)
+                .stream()
+                        .sorted(
+                                Comparator.comparingInt(TournamentMatch::getRoundNumber)
+                                        .thenComparingInt(TournamentMatch::getMatchIndex))
+                        .collect(
+                                Collectors.groupingBy(
+                                        TournamentMatch::getRoundNumber,
+                                        LinkedHashMap::new,
+                                        Collectors.toList()));
     }
 
-    private String matchStatusLabel(final TournamentMatch match, final Locale locale) {
-        return messageSource.getMessage(
-                "tournament.match.status." + match.getStatus().getDbValue(), null, locale);
+    private static LocalTime defaultScheduleStartTime(final int roundNumber) {
+        return LocalTime.of(18, 0).plusHours(Math.max(0, roundNumber - 1));
     }
 
-    private String matchScheduleLabel(final TournamentMatch match, final Locale locale) {
-        if (match == null || match.getScheduledStartsAt() == null) {
-            return messageSource.getMessage("tournament.bracket.schedule.tbd", null, locale);
-        }
-        if (match.getScheduledEndsAt() == null) {
-            return formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE);
-        }
-        return messageSource.getMessage(
-                "tournament.bracket.schedule.range",
-                new Object[] {
-                    formatInstant(match.getScheduledStartsAt(), locale, PlatformTime.ZONE),
-                    formatInstant(match.getScheduledEndsAt(), locale, PlatformTime.ZONE)
-                },
-                locale);
+    private static LocalDate defaultScheduleDate() {
+        return LocalDate.now(PlatformTime.ZONE).plusDays(1);
     }
 
-    private static boolean isWinner(final TournamentTeam team, final TournamentTeam winner) {
-        return team != null && winner != null && Objects.equals(team.getId(), winner.getId());
+    private static LocalDate scheduleDate(final OffsetDateTime dateTime) {
+        return dateTime == null ? null : dateTime.toLocalDate();
     }
 
-    private static String defaultScheduleStartTime(final int roundNumber) {
-        return TIME_INPUT_FORMATTER.format(
-                LocalTime.of(18, 0).plusHours(Math.max(0, roundNumber - 1)));
-    }
-
-    private static String scheduleDate(final Instant instant) {
-        return instant == null
-                ? ""
-                : PlatformTime.toOffsetDateTime(instant).toLocalDate().toString();
-    }
-
-    private static String scheduleTime(final Instant instant) {
-        return instant == null
-                ? ""
-                : TIME_INPUT_FORMATTER.format(PlatformTime.toOffsetDateTime(instant).toLocalTime());
+    private static LocalTime scheduleTime(final OffsetDateTime dateTime) {
+        return dateTime == null ? null : dateTime.toLocalTime();
     }
 
     private static String scheduleAddress(
@@ -947,37 +785,14 @@ public class HostTournamentController {
                 : match.getAddress();
     }
 
-    private static String scheduleLatitude(
+    private static Double scheduleLatitude(
             final Tournament tournament, final TournamentMatch match) {
-        final Double latitude =
-                match.getLatitude() == null ? tournament.getLatitude() : match.getLatitude();
-        return latitude == null ? "" : latitude.toString();
+        return match.getLatitude() == null ? tournament.getLatitude() : match.getLatitude();
     }
 
-    private static String scheduleLongitude(
+    private static Double scheduleLongitude(
             final Tournament tournament, final TournamentMatch match) {
-        final Double longitude =
-                match.getLongitude() == null ? tournament.getLongitude() : match.getLongitude();
-        return longitude == null ? "" : longitude.toString();
-    }
-
-    private static LocalDate parseDate(
-            final String value) { // TODO: remove when replacing viewModels
-        return value == null || value.isBlank() ? null : LocalDate.parse(value);
-    }
-
-    private static LocalTime parseTime(
-            final String value) { // TODO: remove when replacing viewModels
-        return value == null || value.isBlank() ? null : LocalTime.parse(value);
-    }
-
-    private static Double parseDouble(
-            final String value) { // TODO: remove when replacing viewModels
-        final String normalized = normalizeBlank(value);
-        if (normalized.isEmpty()) {
-            return null;
-        }
-        return Double.valueOf(normalized);
+        return match.getLongitude() == null ? tournament.getLongitude() : match.getLongitude();
     }
 
     private static Optional<String> flashString(final Model model, final String name) {

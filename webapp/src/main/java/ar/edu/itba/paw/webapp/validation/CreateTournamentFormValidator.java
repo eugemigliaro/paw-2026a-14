@@ -42,6 +42,12 @@ public class CreateTournamentFormValidator
             reject(context, "sport", "{CreateTournamentForm.sport.NotNull}");
             return false;
         }
+
+        if (form.getSport() == Sport.OTHER) {
+            reject(context, "sport", "{CreateTournamentForm.sport.OtherNotAllowed}");
+            return false;
+        }
+
         return true;
     }
 

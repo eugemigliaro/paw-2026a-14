@@ -194,6 +194,10 @@ public class TournamentMatch {
         return latitude != null && longitude != null;
     }
 
+    public boolean isRecordable() {
+        return teamA != null && teamB != null && winnerTeam == null;
+    }
+
     public TournamentMatchStatus getStatus() {
         return status;
     }
@@ -210,8 +214,16 @@ public class TournamentMatch {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public Long getVersion() {

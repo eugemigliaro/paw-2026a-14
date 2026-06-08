@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.converters.ParticipantStatusConverter;
 import ar.edu.itba.paw.models.types.ParticipantScope;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -94,6 +95,10 @@ public class MatchParticipant {
 
     public Instant getJoinedAt() {
         return joinedAt;
+    }
+
+    public OffsetDateTime getJoinedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(joinedAt);
     }
 
     public void setJoinedAt(Instant joinedAt) {

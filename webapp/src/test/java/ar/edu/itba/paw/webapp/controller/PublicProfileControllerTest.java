@@ -27,7 +27,6 @@ import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PlayerReviewViewModel;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -139,9 +138,9 @@ class PublicProfileControllerTest {
                         .andReturn();
 
         final List<?> reviews = (List<?>) result.getModelAndView().getModel().get("profileReviews");
-        final PlayerReviewViewModel firstReview = (PlayerReviewViewModel) reviews.getFirst();
-        Assertions.assertEquals("Unknown player", firstReview.getReviewerUsername());
-        Assertions.assertNull(firstReview.getReviewerProfileHref());
+        final PlayerReview firstReview = (PlayerReview) reviews.getFirst();
+        Assertions.assertSame(review, firstReview);
+        Assertions.assertNull(firstReview.getReviewer().getUsername());
     }
 
     @Test
@@ -186,7 +185,7 @@ class PublicProfileControllerTest {
         mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
-                .andExpect(model().attributeExists("profilePage"))
+                .andExpect(model().attributeExists("targetUser"))
                 .andExpect(model().attributeExists("reviewSummary"))
                 .andExpect(model().attributeExists("profileReviews"))
                 .andExpect(model().attribute("reviewLikeLabel", "Likes"))
@@ -194,34 +193,31 @@ class PublicProfileControllerTest {
                 .andExpect(model().attribute("reviewFormVisible", false))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
                                                 "username", Matchers.is("host_player"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty("name", Matchers.is("Jamie"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty("lastName", Matchers.is("Rivera"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
                                                 "phone", Matchers.is("+1 555 123 4567"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
                                                 "email", Matchers.is("host@test.com"))))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
-                                        Matchers.hasProperty(
-                                                "profileImageUrl",
-                                                Matchers.is(
-                                                        "/assets/default-profile-avatar.svg"))));
+                                        "profileImageUrl",
+                                        Matchers.is("/assets/default-profile-avatar.svg")));
     }
 
     @Test
@@ -264,7 +260,8 @@ class PublicProfileControllerTest {
                                         "profileReviews",
                                         Matchers.hasItem(
                                                 Matchers.hasProperty(
-                                                        "reaction", Matchers.is("like")))))
+                                                        "reaction",
+                                                        Matchers.is(PlayerReviewReaction.LIKE)))))
                 .andExpect(
                         model().attribute(
                                         "reviewFilterOptions",
@@ -348,11 +345,7 @@ class PublicProfileControllerTest {
 
         mockMvc.perform(get("/users/host_player"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        model().attribute(
-                                        "profilePage",
-                                        Matchers.hasProperty(
-                                                "profileImageUrl", Matchers.is("/images/500"))));
+                .andExpect(model().attribute("profileImageUrl", Matchers.is("/images/500")));
     }
 
     @Test
@@ -389,12 +382,9 @@ class PublicProfileControllerTest {
                 .andExpect(view().name("users/profile"))
                 .andExpect(
                         model().attribute(
-                                        "profilePage",
+                                        "targetUser",
                                         Matchers.hasProperty(
-                                                "email", Matchers.is("host@test.com"))))
-                .andExpect(model().attribute("profileUsernameLabel", "Usuario"))
-                .andExpect(model().attribute("profileEmailLabel", "Email"))
-                .andExpect(model().attribute("profilePhoneLabel", "Teléfono"));
+                                                "email", Matchers.is("host@test.com"))));
     }
 
     private void stubHostPlayer(final ImageMetadata profileImageMetadata) {

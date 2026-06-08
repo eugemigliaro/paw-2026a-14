@@ -10,7 +10,6 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -78,7 +77,7 @@ public class HostParticipationController {
 
         final ModelAndView mav = new ModelAndView("host/participation/aggregate-requests");
         mav.addObject("aggregateRequests", true);
-        mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
+        mav.addObject("pendingRequests", pending);
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
         mav.addObject("matchesUrl", "/events");
@@ -197,34 +196,6 @@ public class HostParticipationController {
         return redirectToMatch(matchId);
     }
 
-    private List<PendingRequestViewModel> toHostPendingRequestViewModels(
-            final List<PendingJoinRequest> requests) {
-        return requests.stream()
-                .map(
-                        request -> {
-                            final User user = request.getUser();
-                            final Match match = request.getMatch();
-                            final Long matchId = match.getId();
-                            return new PendingRequestViewModel(
-                                    user.getUsername(),
-                                    avatarLabel(user.getUsername()),
-                                    "/host/matches/"
-                                            + matchId
-                                            + "/requests/"
-                                            + user.getId()
-                                            + "/approve",
-                                    "/host/matches/"
-                                            + matchId
-                                            + "/requests/"
-                                            + user.getId()
-                                            + "/reject",
-                                    match.getTitle(),
-                                    "/matches/" + matchId,
-                                    request.isSeriesRequest());
-                        })
-                .toList();
-    }
-
     private Match findMatchOrThrow(final Long matchId) {
         return matchService
                 .findMatchById(matchId)
@@ -248,20 +219,5 @@ public class HostParticipationController {
                 .map(error -> messageSource.getMessage(error, locale))
                 .orElseGet(
                         () -> messageSource.getMessage("host.invites.error.generic", null, locale));
-    }
-
-    private static String avatarLabel(final String username) {
-        if (username == null || username.isBlank()) {
-            return "?";
-        }
-        final String[] parts = username.trim().split("[^A-Za-z0-9]+");
-        if (parts.length >= 2) {
-            return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
-        }
-        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
-        if (compact.length() >= 2) {
-            return compact.substring(0, 2).toUpperCase();
-        }
-        return compact.isEmpty() ? "?" : compact.substring(0, 1).toUpperCase();
     }
 }

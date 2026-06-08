@@ -27,7 +27,9 @@ public class SearchForm {
     private static final EventCategory DEFAULT_CATEGORY = EventCategory.HOSTED;
 
     @Size(max = 150, message = "{SearchForm.q.Size}")
-    @Pattern(regexp = "^[\\p{L}\\p{N} ]*$", message = "{SearchForm.q.Pattern}")
+    @Pattern(
+            regexp = "^[\\p{L}\\p{N} ,.;:()\"'\\-\\/ .!?\\n@&_*+=\\[\\]{}\\$#%^~|<>\\\\]*$",
+            message = "{SearchForm.q.Pattern}")
     private String q = "";
 
     private EventSort sort = EventSort.SOONEST;

@@ -3,12 +3,14 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -38,6 +40,7 @@ public class TournamentServiceImplTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @Mock private TournamentDataService tournamentDataService;
+    @Mock private TournamentRegistrationService tournamentRegistrationService;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
 
@@ -48,6 +51,7 @@ public class TournamentServiceImplTest {
         tournamentService =
                 new TournamentServiceImpl(
                         tournamentDataService,
+                        tournamentRegistrationService,
                         tournamentMailService,
                         imageService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
@@ -396,6 +400,126 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void viewerCapabilitiesAllowHostRegistrationActions() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        host,
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+                .thenReturn(new TournamentRegistrationReadiness(0, 2, 2, false));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, host);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanCloseRegistration());
+        Assertions.assertTrue(result.isCanEditTournament());
+        Assertions.assertTrue(result.isCanCancelTournament());
+        Assertions.assertFalse(result.isCloseRegistrationDisabled());
+    }
+
+    @Test
+    public void viewerCapabilitiesPromptAnonymousUserToLoginWhenRegistrationIsOpen() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        UserUtils.getUser(1L),
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, null);
+
+        // 3. Assert
+        Assertions.assertFalse(result.isCanJoinSolo());
+        Assertions.assertTrue(result.isRequiresLoginToJoin());
+        Assertions.assertFalse(result.isCanEditTournament());
+    }
+
+    @Test
+    public void viewerCapabilitiesAllowSoloPoolUserToLeave() {
+        // 1. Arrange
+        final User player = UserUtils.getUser(2L);
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        UserUtils.getUser(1L),
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(10L, player))
+                .thenReturn(
+                        Optional.of(
+                                new TournamentSoloEntry(
+                                        20L,
+                                        tournament,
+                                        player,
+                                        TournamentSoloEntryStatus.IN_POOL,
+                                        null,
+                                        FIXED_NOW,
+                                        null)));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, player);
+
+        // 3. Assert
+        Assertions.assertFalse(result.isCanJoinSolo());
+        Assertions.assertTrue(result.isCanLeaveSolo());
+    }
+
+    @Test
+    public void viewerCapabilitiesBlockCloseRegistrationWhenCapacityIsUnsafe() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        host,
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+                .thenReturn(new TournamentRegistrationReadiness(1, 0, 1, true));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, host);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanCloseRegistration());
+        Assertions.assertTrue(result.isCloseRegistrationDisabled());
+        Assertions.assertTrue(result.isCloseRegistrationBlockedByCapacity());
+    }
+
+    @Test
+    public void viewerCapabilitiesAllowAdminModToManageInProgressResults() {
+        // 1. Arrange
+        authenticateAdminMod();
+        final User admin = UserUtils.getUser(99L);
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.IN_PROGRESS);
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, admin);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanManageResults());
+        Assertions.assertTrue(result.isCanCancelTournament());
+        Assertions.assertTrue(result.isCanViewBracket());
+    }
+
+    @Test
     public void searchPublicTournamentsPaginatesAndNormalizesInvalidSortToSoonest() {
         // 1. Arrange
         final Tournament expectedTournament =
@@ -498,6 +622,53 @@ public class TournamentServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(1, result.getTotalCount());
         Assertions.assertEquals(List.of(expectedTournament), result.getItems());
+    }
+
+    @Test
+    public void testSearchPublicTournamentsWithDistanceFilterHydratesDistanceProperty() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
+        tournament.setLatitude(40.7578);
+        tournament.setLongitude(-74.0060);
+        Mockito.when(
+                        tournamentDataService.countPublicTournaments(
+                                "", List.of(Sport.FOOTBALL), null, null, null, null))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentDataService.findPublicTournaments(
+                                "",
+                                List.of(Sport.FOOTBALL),
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.DISTANCE,
+                                40.7128,
+                                -74.0060,
+                                0,
+                                12))
+                .thenReturn(List.of(tournament));
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.searchPublicTournaments(
+                        "",
+                        List.of(Sport.FOOTBALL),
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        12,
+                        null,
+                        null,
+                        40.7128,
+                        -74.0060);
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(List.of(tournament), result.getItems());
+        Assertions.assertEquals(5.0, result.getItems().get(0).getDistanceKmFromViewer(), 0.1);
     }
 
     @Test

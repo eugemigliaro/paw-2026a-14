@@ -28,15 +28,15 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.EventCardViewModel;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FeedPageViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,12 +83,17 @@ class FeedControllerTest {
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
                 .thenAnswer(
-                        invocation ->
-                                new PaginatedResult<>(
-                                        List.of(match(42L, "Sunrise Padel")),
-                                        1,
-                                        invocation.getArgument(5),
-                                        invocation.getArgument(6)));
+                        invocation -> {
+                            final Match nearMatch = match(42L, "Sunrise Padel");
+                            if (invocation.getArgument(9) != null) {
+                                nearMatch.setDistanceKmFromViewer(5.0);
+                            }
+                            return new PaginatedResult<>(
+                                    List.of(nearMatch),
+                                    1,
+                                    invocation.getArgument(5),
+                                    invocation.getArgument(6));
+                        });
         Mockito.when(
                         tournamentService.searchPublicTournaments(
                                 ArgumentMatchers.anyString(),
@@ -159,10 +164,7 @@ class FeedControllerTest {
                         .andExpect(model().attribute("selectedType", "match"))
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-
-        Assertions.assertEquals("/matches/42", feedPage.getFeaturedEvents().get(0).getHref());
+        Assertions.assertEquals(42L, ((Match) featuredEvents(result).get(0)).getId());
     }
 
     @Test
@@ -198,15 +200,12 @@ class FeedControllerTest {
                         .andExpect(model().attribute("selectedType", "tournament"))
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        final EventCardViewModel card = feedPage.getFeaturedEvents().get(0);
+        final Tournament card = (Tournament) featuredEvents(result).get(0);
 
-        Assertions.assertEquals("/tournaments/77", card.getHref());
-        Assertions.assertEquals("Tournament", card.getBadge());
-        Assertions.assertEquals("Registration", card.getLevel());
+        Assertions.assertEquals(77L, card.getId());
+        Assertions.assertEquals("Tournament", eventBadgeLabels(result).get(77L));
         Assertions.assertTrue(
-                feedPage.getPaginationItems().stream()
+                paginationItems(result).stream()
                         .filter(item -> item.getHref() != null)
                         .allMatch(item -> item.getHref().contains("type=tournament")));
     }
@@ -220,11 +219,9 @@ class FeedControllerTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final List<SelectOptionViewModel> sortOptions = sortOptions(result);
         final FilterGroupViewModel eventTypeGroup =
-                feedPage.getFilterGroups().stream()
+                filterGroups(result).stream()
                         .filter(group -> "Tipo de evento".equals(group.getTitle()))
                         .findFirst()
                         .orElseThrow();
@@ -245,10 +242,8 @@ class FeedControllerTest {
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
         final FilterGroupViewModel sportGroup =
-                feedPage.getFilterGroups().stream()
+                filterGroups(result).stream()
                         .filter(group -> "Sports".equals(group.getTitle()))
                         .findFirst()
                         .orElseThrow();
@@ -308,11 +303,8 @@ class FeedControllerTest {
                         .andExpect(model().attribute("selectedType", "tournament"))
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-
-        Assertions.assertEquals(1, feedPage.getFeaturedEvents().size());
-        Assertions.assertEquals("/tournaments/78", feedPage.getFeaturedEvents().get(0).getHref());
+        Assertions.assertEquals(1, featuredEvents(result).size());
+        Assertions.assertEquals(78L, ((Tournament) featuredEvents(result).get(0)).getId());
     }
 
     @Test
@@ -320,21 +312,18 @@ class FeedControllerTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(model().attributeExists("feedPage"))
+                .andExpect(model().attributeExists("featuredEvents"))
                 .andExpect(model().attribute("nearMeUnavailable", false));
     }
 
     @Test
     void getFeedRouteWithSpanishLocaleLocalizesShellAndCards() throws Exception {
-        mockMvc.perform(get("/").locale(Locale.forLanguageTag("es")))
+        mockMvc.perform(get("/").locale(java.util.Locale.forLanguageTag("es")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
                 .andExpect(
                         model().attribute(
-                                        "feedPage",
-                                        Matchers.hasProperty(
-                                                "title",
-                                                Matchers.is("Encontrá tu próximo partido."))));
+                                        "feedTitle", Matchers.is("Encontrá tu próximo partido.")));
     }
 
     @Test
@@ -424,9 +413,9 @@ class FeedControllerTest {
     void getFeedRouteOmitsDistanceLabelWithoutStoredLocation() throws Exception {
         final MvcResult result = mockMvc.perform(get("/")).andExpect(status().isOk()).andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        Assertions.assertNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+        Assertions.assertFalse(
+                eventDistanceLabels(result)
+                        .containsKey(((Match) featuredEvents(result).get(0)).getId()));
     }
 
     @Test
@@ -434,13 +423,14 @@ class FeedControllerTest {
         final MvcResult result =
                 mockMvc.perform(
                                 get("/").sessionAttr("exploreLocationLatitude", -34.60)
-                                        .sessionAttr("exploreLocationLongitude", -58.38))
+                                        .sessionAttr("exploreLocationLongitude", -58.38)
+                                        .param("sort", "distance"))
                         .andExpect(status().isOk())
                         .andReturn();
 
-        final FeedPageViewModel feedPage =
-                (FeedPageViewModel) result.getModelAndView().getModel().get("feedPage");
-        Assertions.assertNotNull(feedPage.getFeaturedEvents().get(0).getDistanceLabel());
+        Assertions.assertTrue(
+                eventDistanceLabels(result)
+                        .containsKey(((Match) featuredEvents(result).get(0)).getId()));
     }
 
     @Test
@@ -465,6 +455,33 @@ class FeedControllerTest {
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {
         return group.getOptions().stream()
                 .anyMatch(option -> label.equals(option.getLabel()) && option.isActive());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Object> featuredEvents(final MvcResult result) {
+        return (List<Object>) result.getModelAndView().getModel().get("featuredEvents");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Long, String> eventBadgeLabels(final MvcResult result) {
+        return (Map<Long, String>) result.getModelAndView().getModel().get("eventBadgeLabels");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Long, String> eventDistanceLabels(final MvcResult result) {
+        return (Map<Long, String>) result.getModelAndView().getModel().get("eventDistanceLabels");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<FilterGroupViewModel> filterGroups(final MvcResult result) {
+        return (List<FilterGroupViewModel>)
+                result.getModelAndView().getModel().get("feedFilterGroups");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<PaginationItemViewModel> paginationItems(final MvcResult result) {
+        return (List<PaginationItemViewModel>)
+                result.getModelAndView().getModel().get("feedPaginationItems");
     }
 
     @SuppressWarnings("unchecked")

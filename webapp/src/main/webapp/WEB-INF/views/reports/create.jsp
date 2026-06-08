@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -39,40 +40,41 @@
 					</div>
 
 					<c:choose>
-						<c:when test="${reportPage.targetTypeCode eq 'user'}">
+						<c:when test="${targetType.dbValue eq 'user'}">
 							<article class="report-summary report-summary--user">
 								<dl class="stack">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="moderation.report.user.title" /></dt>
 										<dd class="report-section-field__row">
-											<c:url var="reportUserImageSrc" value="${reportPage.user.profileImageUrl}" />
+											<c:url var="reportUserImageSrc" value="${targetUserProfileImageUrl}" />
+											<spring:message var="reportUserImageAlt" code="report.page.user.avatarAlt" arguments="${targetUser.username}" />
 											<img
 												class="public-profile-avatar-panel__image report-profile__image"
 												src="${reportUserImageSrc}"
-												alt="${reportPage.user.profileImageAlt}"
+												alt="${reportUserImageAlt}"
 												loading="eager"
 												decoding="async" />
 											<div class	="report-summary__body">
-												<strong><c:out value="${reportPage.user.username}" /></strong>
+												<strong><c:out value="${targetUser.username}" /></strong>
 											</div>
 										</dd>
 									</div>
 								</dl>
 							</article>
 						</c:when>
-						<c:when test="${reportPage.targetTypeCode eq 'review'}">
+						<c:when test="${targetType.dbValue eq 'review'}">
 							<article class="report-summary report-summary--review">
 								<dl class="stack">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.review.author" /></dt>
 										<dd>
 											<c:choose>
-												<c:when test="${not empty reportPage.review.authorProfileHref}">
-													<c:url var="reportReviewAuthorHref" value="${reportPage.review.authorProfileHref}" />
-													<a href="${reportReviewAuthorHref}"><c:out value="${reportPage.review.authorUsername}" /></a>
+												<c:when test="${not empty targetReview.reviewer.username}">
+													<c:url var="reportReviewAuthorHref" value="/users/${targetReview.reviewer.username}" />
+													<a href="${reportReviewAuthorHref}"><c:out value="${targetReview.reviewer.username}" /></a>
 												</c:when>
 												<c:otherwise>
-													<c:out value="${reportPage.review.authorUsername}" />
+													<spring:message code="profile.reviews.unknownReviewer" />
 												</c:otherwise>
 											</c:choose>
 										</dd>
@@ -81,8 +83,8 @@
 										<dt class="detail-label"><spring:message code="report.page.review.content" /></dt>
 										<dd class="body-copy">
 											<c:choose>
-												<c:when test="${not empty reportPage.review.content}">
-													<c:out value="${reportPage.review.content}" />
+												<c:when test="${not empty targetReview.comment}">
+													<c:out value="${targetReview.comment}" />
 												</c:when>
 												<c:otherwise>
 													<spring:message code="report.page.review.emptyContent" />
@@ -92,19 +94,21 @@
 									</div>
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.review.date" /></dt>
-										<dd><c:out value="${reportPage.review.dateLabel}" /></dd>
+										<dd>
+											<c:out value="${tf:date(targetReview.updatedAtDateTime)}" />
+										</dd>
 									</div>
-									<c:if test="${not empty reportPage.review.reviewedUsername}">
+									<c:if test="${not empty targetReview.reviewed.username}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="report.page.review.target" /></dt>
 											<dd>
 												<c:choose>
-													<c:when test="${not empty reportPage.review.reviewedProfileHref}">
-														<c:url var="reportReviewedUserHref" value="${reportPage.review.reviewedProfileHref}" />
-															<a href="${reportReviewedUserHref}"><c:out value="${reportPage.review.reviewedUsername}" /></a>
+													<c:when test="${not empty targetReview.reviewed.username}">
+														<c:url var="reportReviewedUserHref" value="/users/${targetReview.reviewed.username}" />
+															<a href="${reportReviewedUserHref}"><c:out value="${targetReview.reviewed.username}" /></a>
 														</c:when>
 														<c:otherwise>
-															<c:out value="${reportPage.review.reviewedUsername}" />
+															<spring:message code="profile.reviews.unknownReviewer" />
 														</c:otherwise>
 													</c:choose>
 											</dd>
@@ -113,44 +117,58 @@
 								</dl>
 							</article>
 						</c:when>
-						<c:when test="${reportPage.targetTypeCode eq 'match'}">
+						<c:when test="${targetType.dbValue eq 'match'}">
 							<article class="report-summary report-summary--match">
 								<dl class="stack">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.name" /></dt>
-										<dd><c:out value="${reportPage.match.title}" /></dd>
+										<dd><c:out value="${targetMatch.title}" /></dd>
 									</div>
-									<c:if test="${not empty reportPage.match.description}">
+									<c:if test="${not empty targetMatch.description}">
 										<div class="report-section-field report-section-field__row">
 											<dt class="detail-label"><spring:message code="report.page.match.description" /></dt>
-											<dd class="body-copy"><c:out value="${reportPage.match.description}" /></dd>
+											<dd class="body-copy"><c:out value="${targetMatch.description}" /></dd>
 										</div>
 									</c:if>
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.host" /></dt>
 										<dd>
 											<c:choose>
-												<c:when test="${not empty reportPage.match.hostProfileHref}">
-													<c:url var="reportMatchHostHref" value="${reportPage.match.hostProfileHref}" />
-													<a href="${reportMatchHostHref}"><c:out value="${reportPage.match.hostUsername}" /></a>
+												<c:when test="${not empty targetMatch.host.username}">
+													<c:url var="reportMatchHostHref" value="/users/${targetMatch.host.username}" />
+													<a href="${reportMatchHostHref}"><c:out value="${targetMatch.host.username}" /></a>
 												</c:when>
 												<c:otherwise>
-													<c:out value="${reportPage.match.hostUsername}" />
+													<spring:message code="profile.reviews.unknownReviewer" />
 												</c:otherwise>
 											</c:choose>
 										</dd>
 									</div>
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.date" /></dt>
-										<dd><c:out value="${reportPage.match.dateLabel}" /></dd>
+										<dd>
+											<c:out value="${tf:dateTime(targetMatch.startsAtDateTime)}" />
+										</dd>
 									</div>
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.address" /></dt>
-										<dd><c:out value="${reportPage.match.address}" /></dd>
+										<dd><c:out value="${targetMatch.address}" /></dd>
 									</div>
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.price" /></dt>
-										<dd><c:out value="${reportPage.match.priceLabel}" /></dd>
+										<dd>
+											<c:choose>
+												<c:when test="${empty targetMatch.pricePerPlayer}">
+													<spring:message code="price.tbd" />
+												</c:when>
+												<c:when test="${targetMatch.pricePerPlayer == 0}">
+													<spring:message code="price.free" />
+												</c:when>
+												<c:otherwise>
+													<spring:message code="price.amount" arguments="${targetMatch.pricePerPlayer}" />
+												</c:otherwise>
+											</c:choose>
+										</dd>
 									</div>
 								</dl>
 							</article>

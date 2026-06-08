@@ -31,13 +31,11 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -56,7 +54,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private final EmailActionRequestDao emailActionRequestDao;
     private final MailProperties mailProperties;
     private final MailDispatchService mailDispatchService;
-    private final MessageSource messageSource;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -66,14 +63,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final EmailActionRequestDao emailActionRequestDao,
             final MailProperties mailProperties,
             final MailDispatchService mailDispatchService,
-            final MessageSource messageSource,
             final PasswordEncoder passwordEncoder,
             final Clock clock) {
         this.userDataService = Objects.requireNonNull(userDataService);
         this.emailActionRequestDao = Objects.requireNonNull(emailActionRequestDao);
         this.mailProperties = Objects.requireNonNull(mailProperties);
         this.mailDispatchService = Objects.requireNonNull(mailDispatchService);
-        this.messageSource = Objects.requireNonNull(messageSource);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.clock = Objects.requireNonNull(clock);
     }
@@ -137,13 +132,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final EmailActionRequest request =
                 getRequiredPendingRequest(
                         rawToken, EmailActionType.ACCOUNT_VERIFICATION, false, locale);
-        return new VerificationPreview(
-                message("verification.preview.account.title", locale),
-                message("verification.preview.account.summary", locale),
-                request.getEmail(),
-                request.getExpiresAt(),
-                message("verification.preview.account.confirm", locale),
-                List.of());
+        return new VerificationPreview(request.getEmail(), request.getExpiresAt());
     }
 
     @Override
@@ -167,8 +156,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 account.isEmailVerified()
                         ? account
                         : userDataService.findAccountById(account.getId()).orElse(account);
-        return new VerificationConfirmationResult(
-                verifiedAccount, message("verification.message.accountVerified", locale));
+        return new VerificationConfirmationResult(verifiedAccount);
     }
 
     @Override
@@ -210,8 +198,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
-        return new VerificationConfirmationResult(
-                account.getId(), message("passwordReset.message.completed", locale));
+        return new VerificationConfirmationResult(account.getId());
     }
 
     @Override
@@ -420,11 +407,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 || password.isBlank()
                 || password.length() < MIN_PASSWORD_LENGTH
                 || password.length() > MAX_PASSWORD_LENGTH;
-    }
-
-    private String message(final String code, final Locale locale) {
-        return messageSource.getMessage(
-                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 
     private static Locale currentLocale() {

@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.converters.RecurrenceFrequencyConverter;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 import javax.persistence.Column;
@@ -105,8 +106,16 @@ public class MatchSeries {
         return startsAt;
     }
 
+    public OffsetDateTime getStartsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(startsAt);
+    }
+
     public Instant getEndsAt() {
         return endsAt;
+    }
+
+    public OffsetDateTime getEndsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(endsAt);
     }
 
     public String getTimezone() {
@@ -125,8 +134,16 @@ public class MatchSeries {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public List<Match> getOccurrences() {

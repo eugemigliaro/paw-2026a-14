@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import ar.edu.itba.paw.models.converters.TournamentTeamOriginConverter;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -97,6 +98,10 @@ public class TournamentTeam {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
     }
 
     public Long getVersion() {
