@@ -16,10 +16,10 @@ import org.junit.jupiter.api.Test;
 class ViewTemplateAssetsTest {
 
     @Test
-    void sharedHeadLoadsTimezoneFieldScript() throws IOException {
+    void sharedHeadDoesNotLoadBrowserTimezoneScript() throws IOException {
         final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
 
-        assertTrue(head.contains("/js/timezone-field.js"));
+        assertFalse(head.contains("/js/timezone-field.js"));
         assertTrue(head.contains("/css/auth.css"));
         assertTrue(head.contains("/js/overflow-menu.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
@@ -28,11 +28,12 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void hostCreateMatchUsesSharedTimezoneScriptInsteadOfLegacyPageScript() throws IOException {
+    void hostCreateMatchUsesPlatformTimezoneInsteadOfBrowserTimezoneField() throws IOException {
         final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
         final String buttonTag = read("src/main/webapp/WEB-INF/tags/button.tag");
 
-        assertTrue(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
+        assertFalse(hostCreateMatch.contains("data-browser-timezone-field=\"true\""));
+        assertFalse(hostCreateMatch.contains("name=\"tz\""));
         assertFalse(hostCreateMatch.contains("/js/create-match.js"));
         assertTrue(
                 hostCreateMatch.contains(
@@ -53,8 +54,73 @@ class ViewTemplateAssetsTest {
         assertFalse(eventsList.contains("<script>"));
         assertFalse(hostCreateMatch.contains("<script>"));
         assertTrue(head.contains("/js/account-edit-form.js"));
+        assertTrue(head.contains("/js/file-upload-preview.js"));
         assertTrue(head.contains("/js/events-toggle-filter.js"));
         assertTrue(head.contains("/js/host-create-match.js"));
+    }
+
+    private static final String IMAGE_ACCEPT =
+            "accept=\"image/png,image/jpeg,image/webp,image/gif\"";
+
+    @Test
+    void imageUploadsExposeClientSidePreviewHooks() throws IOException {
+        final String accountIndex = read("src/main/webapp/WEB-INF/views/account/index.jsp");
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String hostTournamentCreate =
+                read("src/main/webapp/WEB-INF/views/host/tournaments/create.jsp");
+        final String script = read("src/main/webapp/js/file-upload-preview.js");
+        final String authCss = read("src/main/webapp/css/auth.css");
+        final String hostCreateCss = read("src/main/webapp/css/host-create.css");
+
+        assertTrue(accountIndex.contains("data-image-preview-container=\"true\""));
+        assertTrue(accountIndex.contains("data-image-preview-input=\"true\""));
+        assertTrue(accountIndex.contains(IMAGE_ACCEPT));
+        assertTrue(accountIndex.contains("image-upload-preview--profile"));
+
+        assertTrue(hostCreateMatch.contains("id=\"match-banner-image\""));
+        assertTrue(hostCreateMatch.contains("data-image-preview-container=\"true\""));
+        assertTrue(hostCreateMatch.contains("data-image-preview-input=\"true\""));
+        assertTrue(hostCreateMatch.contains(IMAGE_ACCEPT));
+        assertTrue(hostCreateMatch.contains("image-upload-preview--banner"));
+
+        assertTrue(hostTournamentCreate.contains("id=\"tournament-banner-image\""));
+        assertTrue(hostTournamentCreate.contains("data-image-preview-container=\"true\""));
+        assertTrue(hostTournamentCreate.contains("data-image-preview-input=\"true\""));
+        assertTrue(hostTournamentCreate.contains(IMAGE_ACCEPT));
+        assertTrue(hostTournamentCreate.contains("image-upload-preview--banner"));
+
+        assertTrue(script.contains("URL.createObjectURL"));
+        assertTrue(script.contains("URL.revokeObjectURL"));
+        assertTrue(script.contains("data-image-preview-input"));
+        assertTrue(authCss.contains(".image-upload-preview--profile"));
+        assertTrue(authCss.contains("border-radius: 999px"));
+        assertTrue(hostCreateCss.contains(".image-upload-preview--banner"));
+        assertTrue(hostCreateCss.contains("border-radius: 12px"));
+    }
+
+    @Test
+    void hostBannerImageValidationMessagesAreLocalized() throws IOException {
+        final Properties english = properties("src/main/resources/i18n/messages.properties");
+        final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
+
+        assertEquals(
+                "Please upload a JPG, PNG, WEBP, or GIF image.",
+                english.getProperty("host.form.bannerImage.error.invalidFormat"));
+        assertEquals(
+                "Sub\u00ed una imagen en formato JPG, PNG, WEBP o GIF.",
+                spanish.getProperty("host.form.bannerImage.error.invalidFormat"));
+        assertEquals(
+                "The uploaded image is empty.",
+                english.getProperty("host.form.bannerImage.error.empty"));
+        assertEquals(
+                "La imagen subida est\u00e1 vac\u00eda.",
+                spanish.getProperty("host.form.bannerImage.error.empty"));
+        assertEquals(
+                "The uploaded image must be 5 MB or smaller.",
+                english.getProperty("host.form.bannerImage.error.tooLarge"));
+        assertEquals(
+                "La imagen subida debe pesar 5 MB o menos.",
+                spanish.getProperty("host.form.bannerImage.error.tooLarge"));
     }
 
     @Test
@@ -106,10 +172,11 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void feedTimezoneInputsUseBrowserTimezoneFieldHook() throws IOException {
+    void feedDoesNotSubmitBrowserTimezone() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
 
-        assertEquals(3, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+        assertEquals(0, countOccurrences(feedIndex, "data-browser-timezone-field=\"true\""));
+        assertFalse(feedIndex.contains("name=\"tz\""));
     }
 
     @Test
@@ -132,7 +199,7 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void feedClearAllResetsToPublicExploreWithoutPreservingFilters() throws IOException {
+    void feedClearAllKeepsEventTypeAndFilter() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
         final int clearAllIndex = feedIndex.indexOf("var=\"clearFiltersHref\"");
         final int clearAllLabelIndex = feedIndex.indexOf("var=\"clearAllLabel\"");
@@ -140,14 +207,39 @@ class ViewTemplateAssetsTest {
         assertTrue(clearAllIndex >= 0);
         assertTrue(clearAllLabelIndex > clearAllIndex);
         assertTrue(feedIndex.contains("<c:set var=\"feedPath\" value=\"/\" />"));
-        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\" />"));
-        assertFalse(
+        assertTrue(feedIndex.contains("<c:url var=\"clearFiltersHref\" value=\"${feedPath}\">"));
+        assertTrue(feedIndex.contains("<c:param name=\"type\" value=\"${selectedType}\" />"));
+        assertTrue(
                 feedIndex.contains(
-                        "<c:url var=\"clearFiltersHref\" value=\"${feedFormAction}\" />"));
+                        "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
         final String clearAllBlock = feedIndex.substring(clearAllIndex, clearAllLabelIndex);
         assertFalse(clearAllBlock.contains("name=\"sort\""));
         assertFalse(clearAllBlock.contains("name=\"startDate\""));
         assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"minPrice\""));
+        assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
+    }
+
+    @Test
+    void eventsClearAllKeepsEventTypeSortAndFilterState() throws IOException {
+        final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
+        final int clearAllIndex = eventsList.indexOf("var=\"clearSearchHref\"");
+        final int clearAllLabelIndex = eventsList.indexOf("var=\"clearAllLabel\"");
+
+        assertTrue(clearAllIndex >= 0);
+        assertTrue(clearAllLabelIndex > clearAllIndex);
+        assertTrue(
+                eventsList.contains(
+                        "<c:url var=\"clearSearchHref\" value=\"${listControls.cleanSearchAction}\">"));
+        assertTrue(eventsList.contains("<c:param name=\"type\" value=\"${searchForm.type}\" />"));
+        assertTrue(
+                eventsList.contains(
+                        "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
+        final String clearAllBlock = eventsList.substring(clearAllIndex, clearAllLabelIndex);
+        assertFalse(clearAllBlock.contains("name=\"sort\""));
+        assertFalse(clearAllBlock.contains("name=\"startDate\""));
+        assertFalse(clearAllBlock.contains("name=\"endDate\""));
+        assertFalse(clearAllBlock.contains("name=\"tz\""));
         assertFalse(clearAllBlock.contains("name=\"minPrice\""));
         assertFalse(clearAllBlock.contains("name=\"maxPrice\""));
     }
@@ -168,18 +260,39 @@ class ViewTemplateAssetsTest {
         assertFalse(feedIndex.contains("data-filter-name=\"${eventTypeFilterTitle}\""));
         assertTrue(feedCss.contains(".feed-event-type-toggle"));
         assertTrue(feedCss.contains(".feed-event-type-toggle .events-toggle-icon"));
+        assertTrue(eventsToggleScript.contains("toUpperCase()"));
         assertTrue(eventsToggleScript.contains("optionCount === 2 && selectedIndex === 1"));
         assertTrue(toggleTag.contains("iconOnly"));
         assertTrue(toggleTag.contains("leftIcon"));
     }
 
     @Test
-    void sortSelectUpdatesOptionUrlsWithBrowserTimezone() throws IOException {
+    void hostVisibilityToggleRestoresPublicJoinPolicyValue() throws IOException {
+        final String hostCreateScript = read("src/main/webapp/js/host-create-match.js");
+        final String hostCreateMatch = read("src/main/webapp/WEB-INF/views/host/create-match.jsp");
+        final String head = read("src/main/webapp/WEB-INF/views/includes/head.jspf");
+
+        assertTrue(hostCreateMatch.contains("selectedVisibility"));
+        assertTrue(hostCreateMatch.contains("currentValue=\"${selectedVisibility}\""));
+        assertTrue(hostCreateMatch.contains("currentValue=\"${selectedJoinPolicy}\""));
+        assertTrue(hostCreateMatch.contains("selectedVisibility eq 'private'"));
+        assertTrue(hostCreateScript.contains("var lastPublicJoinPolicy"));
+        assertTrue(hostCreateScript.contains("function isPublicJoinPolicy"));
+        assertTrue(
+                hostCreateScript.contains(
+                        "syncSegmentedToggle(joinPolicyToggle, joinPolicyInput, \"\")"));
+        assertTrue(
+                hostCreateScript.contains(
+                        "syncSegmentedToggle(joinPolicyToggle, joinPolicyInput, lastPublicJoinPolicy || defaultPublicJoinPolicy)"));
+        assertTrue(head.contains("/js/host-create-match.js?v=20260606"));
+    }
+
+    @Test
+    void sortSelectDoesNotMutateOptionUrlsWithBrowserTimezone() throws IOException {
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final String filterDropdowns = read("src/main/webapp/js/filter-dropdowns.js");
-        final String timezoneScript = read("src/main/webapp/js/timezone-field.js");
 
-        assertTrue(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
+        assertFalse(sortSelectTag.contains("data-browser-timezone-url-link=\"true\""));
         assertTrue(sortSelectTag.contains("data-close-on-select=\"true\""));
         assertTrue(sortSelectTag.contains("aria-expanded=\"false\""));
         assertTrue(sortSelectTag.contains("aria-current="));
@@ -188,17 +301,13 @@ class ViewTemplateAssetsTest {
         assertFalse(sortSelectTag.contains("aria-haspopup=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"listbox\""));
         assertFalse(sortSelectTag.contains("role=\"option\""));
-        assertTrue(timezoneScript.contains("data-browser-timezone-url-link"));
-        assertFalse(timezoneScript.contains("data-browser-timezone-url-options"));
-        assertTrue(timezoneScript.contains("searchParams.set('tz', timezone)"));
     }
 
     @Test
-    void timezoneFieldScriptExistsAndTargetsBrowserTimezoneHook() throws IOException {
+    void timezoneFieldScriptIsRemoved() {
         final Path scriptPath = Path.of("src/main/webapp/js/timezone-field.js");
 
-        assertTrue(Files.exists(scriptPath));
-        assertTrue(Files.readString(scriptPath).contains("data-browser-timezone-field"));
+        assertFalse(Files.exists(scriptPath));
     }
 
     @Test
@@ -253,11 +362,9 @@ class ViewTemplateAssetsTest {
     void eventCardRelationshipBadgesRenderOnlyViewModelState() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
         final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
-        final String matchDetail = read("src/main/webapp/WEB-INF/views/matches/detail.jsp");
 
         assertRelationshipBadgeRendering(feedIndex);
         assertRelationshipBadgeRendering(eventsList);
-        assertRelationshipBadgeRendering(matchDetail);
     }
 
     @Test
@@ -272,7 +379,7 @@ class ViewTemplateAssetsTest {
         assertTrue(hostCreateMatch.contains("data-location-picker=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-zoom-in=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-zoom-out=\"true\""));
-        assertTrue(hostCreateMatch.contains("data-location-current=\"true\""));
+        assertFalse(hostCreateMatch.contains("data-location-current=\"true\""));
         assertTrue(hostCreateMatch.contains("data-location-clear=\"true\""));
         assertFalse(hostCreateMatch.contains("data-location-unavailable-message"));
         assertFalse(hostCreateMatch.contains("data-location-current-status"));
@@ -286,6 +393,8 @@ class ViewTemplateAssetsTest {
         assertNotNull(english.getProperty("host.form.location.zoomOut"));
         assertNotNull(spanish.getProperty("host.form.location.zoomIn"));
         assertNotNull(spanish.getProperty("host.form.location.zoomOut"));
+        assertFalse(english.containsKey("host.form.location.current"));
+        assertFalse(spanish.containsKey("host.form.location.current"));
     }
 
     @Test
@@ -303,7 +412,7 @@ class ViewTemplateAssetsTest {
         assertTrue(hostTournamentCreate.contains("data-location-map=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-zoom-in=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-zoom-out=\"true\""));
-        assertTrue(hostTournamentCreate.contains("data-location-current=\"true\""));
+        assertFalse(hostTournamentCreate.contains("data-location-current=\"true\""));
         assertTrue(hostTournamentCreate.contains("data-location-clear=\"true\""));
         assertTrue(hostTournamentCreate.contains("host.form.location.map"));
         assertTrue(hostTournamentCreate.contains("host.form.location.map.aria"));
@@ -334,13 +443,16 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("L.tileLayer"));
         assertTrue(script.contains("L.marker"));
         assertTrue(script.contains("L.divIcon"));
-        assertTrue(script.contains("isSecureContext"));
         assertTrue(script.contains("window.MatchPointLocationPicker"));
         assertTrue(script.contains("data-latitude-input"));
         assertTrue(script.contains("location-picker:change"));
         assertTrue(script.contains("data-location-zoom-in"));
         assertTrue(script.contains("data-location-zoom-out"));
         assertTrue(script.contains("data-location-picker"));
+        assertFalse(script.contains("data-location-current"));
+        assertFalse(script.contains("map.locate"));
+        assertFalse(script.contains("locationfound"));
+        assertFalse(script.contains("isSecureContext"));
         assertTrue(head.contains("/js/vendor/leaflet.js"));
         assertTrue(head.contains("/css/vendor/leaflet.css"));
     }
@@ -363,6 +475,7 @@ class ViewTemplateAssetsTest {
     @Test
     void feedIncludesNearMeGeolocationPostWithoutUrlCoordinates() throws IOException {
         final String feedIndex = read("src/main/webapp/WEB-INF/views/feed/index.jsp");
+        final String eventCardTag = read("src/main/webapp/WEB-INF/tags/eventCard.tag");
         final String sortSelectTag = read("src/main/webapp/WEB-INF/tags/sortSelect.tag");
         final Path scriptPath = Path.of("src/main/webapp/js/explore-location.js");
         final String script = Files.readString(scriptPath);
@@ -381,7 +494,8 @@ class ViewTemplateAssetsTest {
         assertFalse(feedIndex.contains("location.current.unavailable"));
         assertTrue(feedIndex.contains("near-me-panel--hidden"));
         assertFalse(feedIndex.contains("data-explore-location-submit=\"true\""));
-        assertTrue(feedIndex.contains("event.distanceLabel"));
+        assertTrue(feedIndex.contains("eventDistanceLabels"));
+        assertTrue(eventCardTag.contains("distanceLabel"));
         assertTrue(feedIndex.contains("sortOptions"));
         assertTrue(Files.exists(scriptPath));
         assertTrue(script.contains("navigator.geolocation"));
@@ -413,6 +527,18 @@ class ViewTemplateAssetsTest {
         assertTrue(script.contains("report-filter-form"));
         assertTrue(script.contains("input[type=\"checkbox\"]"));
         assertTrue(script.contains(".submit()"));
+    }
+
+    @Test
+    void submitGuardRestoresButtonStateWhenPageIsRestoredFromHistory() throws IOException {
+        final String script = read("src/main/webapp/js/form-submit-guard.js");
+
+        assertTrue(script.contains("window.addEventListener(\"pageshow\""));
+        assertTrue(script.contains("delete form.dataset.submitting"));
+        assertTrue(script.contains("restoreSubmitButtons(form)"));
+        assertTrue(
+                script.indexOf("disableSubmitButtons(form)")
+                        < script.indexOf("updateLoadingLabel(form)"));
     }
 
     @Test
@@ -450,11 +576,11 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("tournament.host.closeRegistration"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.startsAt"));
         assertTrue(detailView.contains("tournament.detail.registrationWindow.endsAt"));
-        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabled"));
-        assertTrue(detailView.contains("tournamentPage.closeRegistrationDisabledMessage"));
+        assertTrue(detailView.contains("tournamentCapabilities.closeRegistrationDisabled"));
+        assertTrue(detailView.contains("tournamentCloseRegistrationDisabledMessage"));
         assertTrue(
                 detailView.contains(
-                        "variant=\"primary\" disabled=\"${tournamentPage.closeRegistrationDisabled}\""));
+                        "variant=\"primary\" disabled=\"${tournamentCapabilities.closeRegistrationDisabled}\""));
         assertTrue(detailView.contains("booking-panel__notice--info"));
         assertTrue(detailView.contains("variant=\"danger\""));
         assertTrue(
@@ -493,7 +619,7 @@ class ViewTemplateAssetsTest {
         final Properties english = properties("src/main/resources/i18n/messages.properties");
         final Properties spanish = properties("src/main/resources/i18n/messages_es.properties");
 
-        assertTrue(detailView.contains("eventPage.mapAvailable"));
+        assertTrue(detailView.contains("mapAvailable"));
         assertTrue(detailView.contains("data-event-map=\"true\""));
         assertTrue(detailView.contains("data-tile-url-template"));
         assertTrue(detailView.contains("data-latitude"));
@@ -581,8 +707,10 @@ class ViewTemplateAssetsTest {
 
         assertTrue(detailView.contains("aria-labelledby=\"pending-requests-title\""));
         assertTrue(detailView.contains("aria-labelledby=\"pending-invitations-title\""));
-        assertTrue(detailView.contains("<c:when test=\"${not empty req.profileHref}\">"));
-        assertTrue(detailView.contains("<c:when test=\"${not empty invite.profileHref}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<c:url var=\"requestProfileHref\" value=\"/users/${req.username}\" />"));
+        assertTrue(detailView.contains("value=\"/users/${invite.username}\""));
     }
 
     @Test
@@ -596,7 +724,9 @@ class ViewTemplateAssetsTest {
         assertTrue(detailView.contains("feed-pagination"));
         assertTrue(detailView.contains("recurrenceHasPreviousPage"));
         assertTrue(detailView.contains("recurrenceHasNextPage"));
-        assertTrue(detailView.contains("<c:when test=\"${not empty occurrence.href}\">"));
+        assertTrue(
+                detailView.contains(
+                        "<c:when test=\"${not empty occurrenceVisibleHrefs[occurrence.id]}\">"));
         assertTrue(detailView.contains("recurrence-schedule__text"));
         assertTrue(eventDetailCss.contains(".recurrence-schedule__text"));
         assertTrue(detailView.contains("code=\"event.recurrence.pagination.aria\""));
@@ -717,9 +847,9 @@ class ViewTemplateAssetsTest {
     }
 
     private static void assertRelationshipBadgeRendering(final String template) {
-        assertTrue(template.contains("items=\"${event.relationshipBadges}\""));
-        assertTrue(template.contains("relationshipBadge.type"));
-        assertTrue(template.contains("relationshipBadge.label"));
+        assertTrue(
+                template.contains(
+                        "relationshipBadgeCodes=\"${eventRelationshipBadgeCodes[event.id]}\""));
         assertFalse(template.contains("currentUser"));
         assertFalse(template.contains(".host.id"));
         assertFalse(template.contains("hasActiveReservation"));

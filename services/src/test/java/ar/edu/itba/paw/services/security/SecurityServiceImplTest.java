@@ -4,7 +4,7 @@ import static org.mockito.Mockito.when;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.MatchDao;
+import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.util.List;
 import java.util.Optional;
@@ -19,13 +19,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 class SecurityServiceImplTest {
 
-    private MatchDao matchDao;
+    private MatchDataService matchDataService;
     private SecurityServiceImpl securityService;
 
     @BeforeEach
     void setUp() {
-        matchDao = Mockito.mock(MatchDao.class);
-        securityService = new SecurityServiceImpl(matchDao);
+        matchDataService = Mockito.mock(MatchDataService.class);
+        securityService = new SecurityServiceImpl(matchDataService);
     }
 
     @AfterEach
@@ -73,7 +73,7 @@ class SecurityServiceImplTest {
         when(host.getId()).thenReturn(99L);
         when(match.getHost()).thenReturn(host);
 
-        when(matchDao.findById(10L)).thenReturn(Optional.of(match));
+        when(matchDataService.findById(10L)).thenReturn(Optional.of(match));
 
         Assertions.assertTrue(securityService.isHost(10L));
     }

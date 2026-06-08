@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import ar.edu.itba.paw.models.converters.TournamentMatchStatusConverter;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -165,8 +166,16 @@ public class TournamentMatch {
         return scheduledStartsAt;
     }
 
+    public OffsetDateTime getScheduledStartsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(scheduledStartsAt);
+    }
+
     public Instant getScheduledEndsAt() {
         return scheduledEndsAt;
+    }
+
+    public OffsetDateTime getScheduledEndsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(scheduledEndsAt);
     }
 
     public String getAddress() {
@@ -185,6 +194,10 @@ public class TournamentMatch {
         return latitude != null && longitude != null;
     }
 
+    public boolean isRecordable() {
+        return teamA != null && teamB != null && winnerTeam == null;
+    }
+
     public TournamentMatchStatus getStatus() {
         return status;
     }
@@ -201,8 +214,16 @@ public class TournamentMatch {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public Long getVersion() {

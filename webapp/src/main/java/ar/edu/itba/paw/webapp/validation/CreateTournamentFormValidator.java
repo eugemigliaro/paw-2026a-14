@@ -2,8 +2,9 @@ package ar.edu.itba.paw.webapp.validation;
 
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
@@ -30,6 +31,7 @@ public class CreateTournamentFormValidator
         valid = validateJoinMode(form, context) && valid;
         valid = validateCoordinates(form, context) && valid;
         valid = validateRegistrationWindow(form, context) && valid;
+        valid = validateSchedule(form, context) && valid;
 
         return valid;
     }
@@ -40,6 +42,12 @@ public class CreateTournamentFormValidator
             reject(context, "sport", "{CreateTournamentForm.sport.NotNull}");
             return false;
         }
+
+        if (form.getSport() == Sport.OTHER) {
+            reject(context, "sport", "{CreateTournamentForm.sport.OtherNotAllowed}");
+            return false;
+        }
+
         return true;
     }
 
@@ -130,16 +138,10 @@ public class CreateTournamentFormValidator
             return true;
         }
 
-        final Instant opensAt =
-                toInstant(
-                        form.getRegistrationOpensDate(),
-                        form.getRegistrationOpensTime(),
-                        form.getTz());
-        final Instant closesAt =
-                toInstant(
-                        form.getRegistrationClosesDate(),
-                        form.getRegistrationClosesTime(),
-                        form.getTz());
+        final LocalDateTime opensAt =
+                toLocalDateTime(form.getRegistrationOpensDate(), form.getRegistrationOpensTime());
+        final LocalDateTime closesAt =
+                toLocalDateTime(form.getRegistrationClosesDate(), form.getRegistrationClosesTime());
 
         if (!closesAt.isAfter(opensAt)) {
             reject(
@@ -151,20 +153,36 @@ public class CreateTournamentFormValidator
         return true;
     }
 
-    private static Instant toInstant(
-            final java.time.LocalDate date, final java.time.LocalTime time, final String timezone) {
-        return date.atTime(time).atZone(resolveZoneId(timezone)).toInstant();
+    private static boolean validateSchedule(
+            final CreateTournamentForm form, final ConstraintValidatorContext context) {
+        if (form.getStartDate() == null
+                || form.getStartTime() == null
+                || form.getEndDate() == null
+                || form.getEndTime() == null
+                || form.getRegistrationClosesDate() == null
+                || form.getRegistrationClosesTime() == null) {
+            return true;
+        }
+
+        final LocalDateTime startsAt = toLocalDateTime(form.getStartDate(), form.getStartTime());
+        final LocalDateTime endsAt = toLocalDateTime(form.getEndDate(), form.getEndTime());
+        final LocalDateTime registrationClosesAt =
+                toLocalDateTime(form.getRegistrationClosesDate(), form.getRegistrationClosesTime());
+
+        boolean valid = true;
+        if (!endsAt.isAfter(startsAt)) {
+            reject(context, "endTime", "{CreateTournamentForm.endTime.AfterStart}");
+            valid = false;
+        }
+        if (!startsAt.isAfter(registrationClosesAt)) {
+            reject(context, "startTime", "{CreateTournamentForm.startTime.AfterRegistrationClose}");
+            valid = false;
+        }
+        return valid;
     }
 
-    private static ZoneId resolveZoneId(final String timezone) {
-        if (timezone == null || timezone.isBlank()) {
-            return ZoneId.systemDefault();
-        }
-        try {
-            return ZoneId.of(timezone);
-        } catch (final Exception ignored) {
-            return ZoneId.systemDefault();
-        }
+    private static LocalDateTime toLocalDateTime(final LocalDate date, final LocalTime time) {
+        return date.atTime(time);
     }
 
     private static void reject(

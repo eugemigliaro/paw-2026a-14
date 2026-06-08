@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.hostRequests" />
@@ -42,16 +43,16 @@
 										<li class="participant-manage-list__item">
 											<div class="participant-manage-list__info">
 												<span class="participant-list__avatar" aria-hidden="true">
-													<c:out value="${req.avatarLabel}" />
+													<c:out value="${fn:toUpperCase(fn:substring(req.user.username, 0, 1))}" />
 												</span>
 												<div class="participant-manage-list__details">
 													<strong class="participant-manage-list__name">
-														<c:out value="${req.username}" />
+														<c:out value="${req.user.username}" />
 													</strong>
-													<c:if test="${not empty req.matchHref}">
-														<c:url var="requestMatchHref" value="${req.matchHref}" />
+													<c:if test="${not empty req.match}">
+														<c:url var="requestMatchHref" value="/matches/${req.match.id}" />
 														<a class="participant-manage-list__meta-link" href="${requestMatchHref}">
-															<c:out value="${req.matchTitle}" />
+															<c:out value="${req.match.title}" />
 														</a>
 													</c:if>
 													<c:if test="${req.seriesRequest}">
@@ -62,7 +63,7 @@
 												</div>
 											</div>
 											<div class="participant-manage-list__actions">
-												<c:url var="approveAction" value="${req.approveUrl}" />
+												<c:url var="approveAction" value="/host/matches/${req.match.id}/requests/${req.user.id}/approve" />
 												<spring:message var="approvingLabel" code="host.requests.approving" />
 												<form
 													method="post"
@@ -75,7 +76,7 @@
 													<spring:message var="approveLabel" code="host.requests.approve" />
 													<ui:button label="${approveLabel}" type="submit" />
 												</form>
-												<c:url var="rejectAction" value="${req.rejectUrl}" />
+												<c:url var="rejectAction" value="/host/matches/${req.match.id}/requests/${req.user.id}/reject" />
 												<spring:message var="rejectingLabel" code="host.requests.rejecting" />
 												<form
 													method="post"

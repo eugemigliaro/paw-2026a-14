@@ -17,8 +17,10 @@ import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.ModerationTargetSummary;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
@@ -62,6 +64,7 @@ class ModerationAdminControllerTest {
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .setConversionService(conversionService())
+                        .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
 
@@ -69,11 +72,15 @@ class ModerationAdminControllerTest {
     void getReportsRendersAdminQueue() throws Exception {
         Mockito.when(moderationService.findReports(List.of(), List.of(), 1, 4))
                 .thenReturn(new PaginatedResult<>(List.of(sampleAppealedReport()), 1, 1, 4));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
+                .thenReturn(
+                        new ModerationTargetSummary(ReportTargetType.USER, 44L, "user44", true));
 
         mockMvc.perform(get("/admin/reports").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reports/list"))
                 .andExpect(model().attributeExists("reports"))
+                .andExpect(model().attributeExists("targetSummaries"))
                 .andExpect(model().attributeExists("emptyMessage"));
     }
 
@@ -125,11 +132,15 @@ class ModerationAdminControllerTest {
                 .thenReturn(Optional.empty());
         Mockito.when(moderationService.findReportById(17L))
                 .thenReturn(Optional.of(sampleAppealedReport()));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
+                .thenReturn(
+                        new ModerationTargetSummary(ReportTargetType.USER, 44L, "user44", true));
 
         mockMvc.perform(get("/admin/reports/17").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reports/detail"))
-                .andExpect(model().attributeExists("report"));
+                .andExpect(model().attributeExists("report"))
+                .andExpect(model().attributeExists("targetSummary"));
     }
 
     @Test
@@ -139,6 +150,9 @@ class ModerationAdminControllerTest {
                 .thenReturn(Optional.empty());
         Mockito.when(moderationService.findReportById(3L))
                 .thenReturn(Optional.of(samplePendingReport()));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
+                .thenReturn(
+                        new ModerationTargetSummary(ReportTargetType.USER, 44L, "user44", true));
 
         mockMvc.perform(get("/admin/reports/3").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())

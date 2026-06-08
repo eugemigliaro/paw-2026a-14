@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.webapp.validation.ValidImage;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
@@ -8,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class AccountProfileForm {
 
     @NotBlank(message = "{AccountProfileForm.username.NotBlank}")
+    @Pattern(regexp = "^[a-z0-9_]{3,50}$", message = "{AccountProfileForm.username.Pattern}")
     private String username;
 
     @NotBlank(message = "{AccountProfileForm.name.NotBlank}")
@@ -22,7 +24,7 @@ public class AccountProfileForm {
     @Pattern(regexp = "^$|^[0-9+()\\-\\s]{6,50}$", message = "{AccountProfileForm.phone.Pattern}")
     private String phone;
 
-    private MultipartFile profileImage;
+    @ValidImage private MultipartFile profileImage;
 
     public String getUsername() {
         return username;

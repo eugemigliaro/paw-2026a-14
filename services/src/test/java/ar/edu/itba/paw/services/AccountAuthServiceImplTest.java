@@ -5,12 +5,12 @@ import ar.edu.itba.paw.models.ImageMetadata;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.exceptions.registration.*;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
-import ar.edu.itba.paw.persistence.UserDao;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailMode;
 import ar.edu.itba.paw.services.mail.MailProperties;
@@ -36,9 +36,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.context.support.StaticMessageSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -47,7 +45,7 @@ public class AccountAuthServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-10T18:00:00Z");
 
-    @Mock private UserDao userDao;
+    @Mock private UserDataService userDataService;
     @Mock private EmailActionRequestDao emailActionRequestDao;
 
     private RecordingMailDispatchService mailDispatchService;
@@ -61,7 +59,7 @@ public class AccountAuthServiceImplTest {
         passwordEncoder = new BCryptPasswordEncoder();
         accountAuthService =
                 new AccountAuthServiceImpl(
-                        userDao,
+                        userDataService,
                         emailActionRequestDao,
                         new MailProperties(
                                 MailMode.LOG,
@@ -75,7 +73,6 @@ public class AccountAuthServiceImplTest {
                                 true,
                                 24),
                         mailDispatchService,
-                        messageSource(),
                         passwordEncoder,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -128,7 +125,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRegisterRejectsExistingVerifiedEmail() {
-        Mockito.when(userDao.findAccountByEmail("player@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("player@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -144,25 +141,22 @@ public class AccountAuthServiceImplTest {
                                         FIXED_NOW.minusSeconds(300),
                                         UserLanguages.ENGLISH)));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "player@test.com",
-                                                "player",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("email_taken", exception.getCode());
+        Assertions.assertThrows(
+                EmailTakenException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "player@test.com",
+                                        "player",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
     public void testRegisterRejectsExistingUnverifiedEmail() {
-        Mockito.when(userDao.findAccountByEmail("pending@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("pending@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -178,42 +172,38 @@ public class AccountAuthServiceImplTest {
                                         null,
                                         UserLanguages.ENGLISH)));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "pending@test.com",
-                                                "pending",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("email_pending_verification", exception.getCode());
+        Assertions.assertThrows(
+                EmailPendingVerificationException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "pending@test.com",
+                                        "pending",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
     public void testRegisterRejectsTakenUsername() {
-        Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
+        Mockito.when(userDataService.findAccountByEmail("new@test.com"))
+                .thenReturn(Optional.empty());
         final User userWithTakenName = UserUtils.getUser(7L);
-        Mockito.when(userDao.findByUsername("user7")).thenReturn(Optional.of(userWithTakenName));
+        Mockito.when(userDataService.findByUsername("user7"))
+                .thenReturn(Optional.of(userWithTakenName));
 
-        final AccountRegistrationException exception =
-                Assertions.assertThrows(
-                        AccountRegistrationException.class,
-                        () ->
-                                accountAuthService.register(
-                                        new RegisterAccountRequest(
-                                                "new@test.com",
-                                                "user7",
-                                                "Jamie",
-                                                "Rivera",
-                                                "+1 555 123 4567",
-                                                "Password123!")));
-
-        Assertions.assertEquals("username_taken", exception.getCode());
+        Assertions.assertThrows(
+                UsernameTakenException.class,
+                () ->
+                        accountAuthService.register(
+                                new RegisterAccountRequest(
+                                        "new@test.com",
+                                        "user7",
+                                        "Jamie",
+                                        "Rivera",
+                                        "+1 555 123 4567",
+                                        "Password123!")));
     }
 
     @Test
@@ -232,10 +222,11 @@ public class AccountAuthServiceImplTest {
                         null,
                         UserLanguages.ENGLISH);
 
-        Mockito.when(userDao.findAccountByEmail("new@test.com")).thenReturn(Optional.empty());
-        Mockito.when(userDao.findByUsername("new_user")).thenReturn(Optional.empty());
+        Mockito.when(userDataService.findAccountByEmail("new@test.com"))
+                .thenReturn(Optional.empty());
+        Mockito.when(userDataService.findByUsername("new_user")).thenReturn(Optional.empty());
         Mockito.when(
-                        userDao.createAccount(
+                        userDataService.createAccount(
                                 ArgumentMatchers.eq("new@test.com"),
                                 ArgumentMatchers.eq("new_user"),
                                 ArgumentMatchers.eq("Jamie"),
@@ -277,7 +268,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testResendVerificationReturnsEmptyForVerifiedAccount() {
-        Mockito.when(userDao.findAccountByEmail("verified@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("verified@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -314,7 +305,7 @@ public class AccountAuthServiceImplTest {
                         UserRole.USER,
                         null,
                         UserLanguages.SPANISH);
-        Mockito.when(userDao.findAccountByEmail("pending@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("pending@test.com"))
                 .thenReturn(Optional.of(pendingAccount));
         Mockito.when(
                         emailActionRequestDao.create(
@@ -409,7 +400,7 @@ public class AccountAuthServiceImplTest {
                         FIXED_NOW,
                         UserLanguages.SPANISH);
 
-        Mockito.when(userDao.findAccountByEmail("legacy@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("legacy@test.com"))
                 .thenReturn(Optional.of(account));
         Mockito.when(
                         emailActionRequestDao.create(
@@ -444,7 +435,7 @@ public class AccountAuthServiceImplTest {
 
     @Test
     public void testRequestPasswordResetReturnsEmptyForUnverifiedAccount() {
-        Mockito.when(userDao.findAccountByEmail("pending@test.com"))
+        Mockito.when(userDataService.findAccountByEmail("pending@test.com"))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -484,7 +475,7 @@ public class AccountAuthServiceImplTest {
 
         Mockito.when(emailActionRequestDao.findByTokenHash(ArgumentMatchers.anyString()))
                 .thenReturn(Optional.of(request));
-        Mockito.when(userDao.findAccountById(8L))
+        Mockito.when(userDataService.findAccountById(8L))
                 .thenReturn(
                         Optional.of(
                                 new UserAccount(
@@ -551,9 +542,10 @@ public class AccountAuthServiceImplTest {
     }
 
     private AccountAuthServiceImpl accountAuthService(
-            final UserDao userDao, final EmailActionRequestDao emailActionRequestDao) {
+            final UserDataService userDataService,
+            final EmailActionRequestDao emailActionRequestDao) {
         return new AccountAuthServiceImpl(
-                userDao,
+                userDataService,
                 emailActionRequestDao,
                 new MailProperties(
                         MailMode.LOG,
@@ -567,93 +559,8 @@ public class AccountAuthServiceImplTest {
                         true,
                         24),
                 mailDispatchService,
-                messageSource(),
                 passwordEncoder,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-    }
-
-    private static MessageSource messageSource() {
-        final StaticMessageSource messageSource = new StaticMessageSource();
-        messageSource.addMessage(
-                "auth.registration.error.emailTaken",
-                Locale.ENGLISH,
-                "An account with that email already exists.");
-        messageSource.addMessage(
-                "auth.registration.error.emailPending",
-                Locale.ENGLISH,
-                "That email is already registered but still pending verification.");
-        messageSource.addMessage(
-                "auth.registration.error.usernameTaken",
-                Locale.ENGLISH,
-                "That username is already in use.");
-        messageSource.addMessage(
-                "auth.registration.error.usernameInvalid",
-                Locale.ENGLISH,
-                "Use 3 to 50 lowercase letters, numbers, or underscores for your username.");
-        messageSource.addMessage(
-                "auth.registration.error.nameInvalid", Locale.ENGLISH, "Enter a valid first name.");
-        messageSource.addMessage(
-                "auth.registration.error.lastNameInvalid",
-                Locale.ENGLISH,
-                "Enter a valid last name.");
-        messageSource.addMessage(
-                "auth.registration.error.phoneInvalid",
-                Locale.ENGLISH,
-                "Enter a valid phone number.");
-        messageSource.addMessage(
-                "auth.registration.error.passwordInvalid",
-                Locale.ENGLISH,
-                "Use a password between 8 and 72 characters.");
-        messageSource.addMessage(
-                "verification.preview.account.title",
-                Locale.ENGLISH,
-                "Verify your Match Point account");
-        messageSource.addMessage(
-                "verification.preview.account.summary",
-                Locale.ENGLISH,
-                "Use this one-time confirmation to activate your account and sign in.");
-        messageSource.addMessage(
-                "verification.preview.account.confirm", Locale.ENGLISH, "Verify account");
-        messageSource.addMessage(
-                "verification.message.notFound",
-                Locale.ENGLISH,
-                "That verification link is invalid or no longer exists.");
-        messageSource.addMessage(
-                "verification.message.alreadyUsed",
-                Locale.ENGLISH,
-                "That verification link was already used.");
-        messageSource.addMessage(
-                "verification.message.expired",
-                Locale.ENGLISH,
-                "That verification link has expired.");
-        messageSource.addMessage(
-                "verification.message.accountVerified",
-                Locale.ENGLISH,
-                "Your email is now verified. You can sign in.");
-        messageSource.addMessage(
-                "verification.message.accountUnavailable",
-                Locale.ENGLISH,
-                "This account verification can no longer be completed.");
-        messageSource.addMessage("passwordReset.mail.title", Locale.ENGLISH, "Reset your password");
-        messageSource.addMessage(
-                "passwordReset.mail.summary",
-                Locale.ENGLISH,
-                "Use this secure link to choose a new password for your Match Point account.");
-        messageSource.addMessage(
-                "passwordReset.preview.title", Locale.ENGLISH, "Choose a new password");
-        messageSource.addMessage(
-                "passwordReset.preview.summary",
-                Locale.ENGLISH,
-                "Use this secure link to set a new password for your account.");
-        messageSource.addMessage(
-                "passwordReset.message.unavailable",
-                Locale.ENGLISH,
-                "This password reset link can no longer be used.");
-        messageSource.addMessage(
-                "passwordReset.message.completed",
-                Locale.ENGLISH,
-                "Your password was updated successfully.");
-        return messageSource;
     }
 
     private static String hashToken(final String rawToken) {
@@ -698,7 +605,7 @@ public class AccountAuthServiceImplTest {
         }
     }
 
-    private static class FakeUserDao implements UserDao {
+    private static class FakeUserDao implements UserDataService {
 
         private final List<UserAccount> accounts = new ArrayList<>();
         private long nextAccountId = 9L;
@@ -782,11 +689,6 @@ public class AccountAuthServiceImplTest {
                 final String lastName,
                 final String phone,
                 final ImageMetadata profileImageMetadata) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void updateProfileImage(final Long id, final ImageMetadata profileImageMetadata) {
             throw new UnsupportedOperationException();
         }
 

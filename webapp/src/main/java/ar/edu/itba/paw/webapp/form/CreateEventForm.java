@@ -6,11 +6,11 @@ import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.webapp.validation.ValidCreateEventForm;
+import ar.edu.itba.paw.webapp.validation.ValidImage;
 import ar.edu.itba.paw.webapp.validation.ValidRecurrenceSelection;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.FutureOrPresent;
 import javax.validation.constraints.Max;
@@ -87,8 +87,7 @@ public class CreateEventForm {
             message = "{CreateEventForm.pricePerPlayer.DecimalMin}")
     private BigDecimal pricePerPlayer = BigDecimal.ZERO;
 
-    private ZoneId timezone;
-    private MultipartFile bannerImage;
+    @ValidImage private MultipartFile bannerImage;
 
     public String getTitle() {
         return title;
@@ -240,14 +239,6 @@ public class CreateEventForm {
 
     public void setPricePerPlayer(final BigDecimal pricePerPlayer) {
         this.pricePerPlayer = pricePerPlayer;
-    }
-
-    public ZoneId getTimezone() {
-        return timezone;
-    }
-
-    public void setTimezone(final ZoneId timezone) {
-        this.timezone = timezone;
     }
 
     public MultipartFile getBannerImage() {

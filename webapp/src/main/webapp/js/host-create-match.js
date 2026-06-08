@@ -1,4 +1,27 @@
 (function() {
+	function syncSegmentedToggle(toggleRoot, hiddenInput, nextValue) {
+		var slider = toggleRoot.querySelector("[data-events-toggle-slider='true']");
+		var buttons = toggleRoot.querySelectorAll(".events-toggle-btn");
+		var rightValue = toggleRoot.getAttribute("data-events-toggle-right-value");
+		var selectedIndex = 0;
+
+		if (hiddenInput) {
+			hiddenInput.value = nextValue;
+		}
+		buttons.forEach(function(button, index) {
+			var isActive = button.getAttribute("data-value") === nextValue;
+			button.classList.toggle("active", isActive);
+			button.setAttribute("aria-pressed", isActive ? "true" : "false");
+			if (isActive) {
+				selectedIndex = index;
+			}
+		});
+		toggleRoot.style.setProperty("--events-toggle-index", String(selectedIndex));
+		if (slider) {
+			slider.classList.toggle("right", nextValue === rightValue);
+		}
+	}
+
 	function initializeSegmentedToggle(toggleRoot) {
 		if (!toggleRoot) {
 			return null;
@@ -7,36 +30,20 @@
 		var slider = toggleRoot.querySelector("[data-events-toggle-slider='true']");
 		var hiddenInput = toggleRoot.querySelector("[data-events-toggle-input='true']");
 		var buttons = toggleRoot.querySelectorAll(".events-toggle-btn");
-		var rightValue = toggleRoot.getAttribute("data-events-toggle-right-value");
 
 		if (!slider || !hiddenInput || !buttons.length) {
 			return hiddenInput;
 		}
 
-		function syncUi(nextValue) {
-			var selectedIndex = 0;
-			buttons.forEach(function(button, index) {
-				var isActive = button.getAttribute("data-value") === nextValue;
-				button.classList.toggle("active", isActive);
-				button.setAttribute("aria-pressed", isActive ? "true" : "false");
-				if (isActive) {
-					selectedIndex = index;
-				}
-			});
-			toggleRoot.style.setProperty("--events-toggle-index", String(selectedIndex));
-			slider.classList.toggle("right", nextValue === rightValue);
-		}
-
 		buttons.forEach(function(button) {
 			button.addEventListener("click", function() {
 				var nextValue = button.getAttribute("data-value");
-				hiddenInput.value = nextValue;
-				syncUi(nextValue);
+				syncSegmentedToggle(toggleRoot, hiddenInput, nextValue);
 				hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
 			});
 		});
 
-		syncUi(hiddenInput.value);
+		syncSegmentedToggle(toggleRoot, hiddenInput, hiddenInput.value);
 		return hiddenInput;
 	}
 
@@ -45,21 +52,32 @@
 			return;
 		}
 
+		function isPublicJoinPolicy(value) {
+			return value === "direct" || value === "approval_required";
+		}
+
+		var firstJoinPolicyButton = joinPolicyToggle.querySelector(".events-toggle-btn");
+		var defaultPublicJoinPolicy = firstJoinPolicyButton
+			? firstJoinPolicyButton.getAttribute("data-value")
+			: "direct";
+		var lastPublicJoinPolicy = isPublicJoinPolicy(joinPolicyInput.value)
+			? joinPolicyInput.value
+			: defaultPublicJoinPolicy;
+
 		function updateJoinPolicyVisibility() {
 			var isPrivate = visibilityInput.value === "private";
 			joinPolicyField.style.display = isPrivate ? "none" : "";
 
 			if (isPrivate) {
-				joinPolicyInput.value = "";
-				joinPolicyToggle.querySelectorAll(".events-toggle-btn").forEach(function(button) {
-					button.classList.remove("active");
-					button.setAttribute("aria-pressed", "false");
-				});
-				var slider = joinPolicyToggle.querySelector("[data-events-toggle-slider='true']");
-				if (slider) {
-					slider.classList.remove("right");
+				if (isPublicJoinPolicy(joinPolicyInput.value)) {
+					lastPublicJoinPolicy = joinPolicyInput.value;
 				}
-				joinPolicyToggle.style.setProperty("--events-toggle-index", "0");
+				syncSegmentedToggle(joinPolicyToggle, joinPolicyInput, "");
+				return;
+			}
+
+			if (!isPublicJoinPolicy(joinPolicyInput.value)) {
+				syncSegmentedToggle(joinPolicyToggle, joinPolicyInput, lastPublicJoinPolicy || defaultPublicJoinPolicy);
 			}
 		}
 

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.models;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -68,5 +69,9 @@ public class Image {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
     }
 }

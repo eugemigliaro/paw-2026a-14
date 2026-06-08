@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -24,6 +25,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.persistence.Version;
 
 @Entity
@@ -155,6 +157,8 @@ public class Tournament {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "tournament")
     private List<TournamentMatch> matches;
 
+    @Transient private Double distanceKmFromViewer;
+
     Tournament() {}
 
     public Tournament(
@@ -244,8 +248,16 @@ public class Tournament {
         return startsAt;
     }
 
+    public OffsetDateTime getStartsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(startsAt);
+    }
+
     public Instant getEndsAt() {
         return endsAt;
+    }
+
+    public OffsetDateTime getEndsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(endsAt);
     }
 
     public BigDecimal getPricePerPlayer() {
@@ -284,8 +296,16 @@ public class Tournament {
         return registrationOpensAt;
     }
 
+    public OffsetDateTime getRegistrationOpensAtDateTime() {
+        return PlatformTime.toOffsetDateTime(registrationOpensAt);
+    }
+
     public Instant getRegistrationClosesAt() {
         return registrationClosesAt;
+    }
+
+    public OffsetDateTime getRegistrationClosesAtDateTime() {
+        return PlatformTime.toOffsetDateTime(registrationClosesAt);
     }
 
     public TournamentStatus getStatus() {
@@ -300,20 +320,40 @@ public class Tournament {
         return registrationClosedAt;
     }
 
+    public OffsetDateTime getRegistrationClosedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(registrationClosedAt);
+    }
+
     public Instant getBracketGeneratedAt() {
         return bracketGeneratedAt;
+    }
+
+    public OffsetDateTime getBracketGeneratedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(bracketGeneratedAt);
     }
 
     public Instant getStartedAt() {
         return startedAt;
     }
 
+    public OffsetDateTime getStartedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(startedAt);
+    }
+
     public Instant getCompletedAt() {
         return completedAt;
     }
 
+    public OffsetDateTime getCompletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(completedAt);
+    }
+
     public Instant getCancelledAt() {
         return cancelledAt;
+    }
+
+    public OffsetDateTime getCancelledAtDateTime() {
+        return PlatformTime.toOffsetDateTime(cancelledAt);
     }
 
     public String getCancelReason() {
@@ -328,6 +368,10 @@ public class Tournament {
         return deletedAt;
     }
 
+    public OffsetDateTime getDeletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(deletedAt);
+    }
+
     public User getDeletedByUser() {
         return deletedByUser;
     }
@@ -340,8 +384,16 @@ public class Tournament {
         return createdAt;
     }
 
+    public OffsetDateTime getCreatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getUpdatedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(updatedAt);
     }
 
     public Long getVersion() {
@@ -358,6 +410,10 @@ public class Tournament {
 
     public List<TournamentMatch> getMatches() {
         return matches;
+    }
+
+    public Double getDistanceKmFromViewer() {
+        return distanceKmFromViewer;
     }
 
     public void setHost(final User host) {
@@ -470,6 +526,10 @@ public class Tournament {
 
     public void setUpdatedAt(final Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public void setDistanceKmFromViewer(final Double distanceKmFromViewer) {
+        this.distanceKmFromViewer = distanceKmFromViewer;
     }
 
     @Override

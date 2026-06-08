@@ -30,11 +30,11 @@
 						<div class="hero-and-search">
 
 						<section class="hero-panel">
-							<c:if test="${not empty feedPage.eyebrow}">
-								<p class="eyebrow"><c:out value="${feedPage.eyebrow}" /></p>
+							<c:if test="${not empty feedEyebrow}">
+								<p class="eyebrow"><c:out value="${feedEyebrow}" /></p>
 							</c:if>
-							<h1 class="hero-panel__title"><c:out value="${feedPage.title}" /></h1>
-							<p class="hero-panel__description"><c:out value="${feedPage.description}" /></p>
+							<h1 class="hero-panel__title"><c:out value="${feedTitle}" /></h1>
+							<p class="hero-panel__description"><c:out value="${feedDescription}" /></p>
 						</section>
 
 						<section class="search-panel" aria-label="${searchAriaLabel}">
@@ -53,11 +53,6 @@
 								<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 								<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 								<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-								<input
-									type="hidden"
-									name="tz"
-									value="<c:out value='${selectedTimezone}' />"
-									data-browser-timezone-field="true" />
 								<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 								<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 								<div class="search-panel__row">
@@ -66,16 +61,16 @@
 										<form:input
 											path="q"
 											cssClass="search-panel__control"
-											placeholder="${feedPage.searchPlaceholder}" />
+											placeholder="${feedSearchPlaceholder}" />
 									</div>
-									<ui:button label="${feedPage.searchButtonLabel}" type="submit" />
+									<ui:button label="${feedSearchButtonLabel}" type="submit" />
 								</div>
 								<form:errors path="q" cssClass="search-panel__error" element="p" />
 							</form:form>
 						</section>
 					</div>
 						<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
-							<c:forEach var="group" items="${feedPage.filterGroups}">
+							<c:forEach var="group" items="${feedFilterGroups}">
 									<c:choose>
 										<c:when test="${group.title eq eventTypeFilterTitle}">
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
@@ -147,10 +142,32 @@
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 												<c:choose>
 													<c:when test="${optionStatus.first}">
-														<c:set var="clearFilterHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="clearFilterHref" value="${feedFormAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:set var="clearFilterHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 													</c:when>
 													<c:otherwise>
-														<c:url var="optionHref" value="${option.href}" />
+														<c:choose>
+															<c:when test="${not empty option.params}">
+																<c:url var="optionHref" value="${feedFormAction}">
+																	<c:forEach var="p" items="${option.params}">
+																		<c:param name="${p.key}" value="${p.value}" />
+																	</c:forEach>
+																</c:url>
+															</c:when>
+															<c:otherwise>
+																<c:url var="optionHref" value="${option.href}" />
+															</c:otherwise>
+														</c:choose>
 														<a href="${optionHref}" class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
 															<c:out value="${option.label}" />
 														</a>
@@ -205,7 +222,6 @@
 											<input type="hidden" name="type" value="tournament" />
 										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 										<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 
@@ -227,7 +243,6 @@
 												<c:param name="type" value="tournament" />
 											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
-											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="minPrice" value="${selectedMinPriceValue}" />
 											<c:param name="maxPrice" value="${selectedMaxPriceValue}" />
 										</c:url>
@@ -279,7 +294,6 @@
 											<input type="hidden" name="type" value="tournament" />
 										</c:if>
 										<input type="hidden" name="sort" value="<c:out value='${selectedSort}' />" />
-										<input type="hidden" name="tz" value="<c:out value='${selectedTimezone}' />" data-browser-timezone-field="true" />
 										<input type="hidden" name="startDate" value="<c:out value='${selectedStartDateValue}' />" />
 										<input type="hidden" name="endDate" value="<c:out value='${selectedEndDateValue}' />" />
 
@@ -307,7 +321,6 @@
 												<c:param name="type" value="tournament" />
 											</c:if>
 											<c:param name="sort" value="${selectedSort}" />
-											<c:param name="tz" value="${selectedTimezone}" />
 											<c:param name="startDate" value="${selectedStartDateValue}" />
 											<c:param name="endDate" value="${selectedEndDateValue}" />
 											<c:param name="minPrice" value="" />
@@ -340,7 +353,10 @@
 									</c:if>
 								</div>
 
-							<c:url var="clearFiltersHref" value="${feedPath}" />
+							<c:url var="clearFiltersHref" value="${feedPath}">
+								<c:param name="type" value="${selectedType}" />
+								<c:param name="filter" value="${searchForm.filterName}" />
+							</c:url>
 							<spring:message var="clearAllLabel" code="filter.clearAll" />
 							<ui:button
 								label="${clearAllLabel}"
@@ -443,7 +459,7 @@
 							</div>
 						</div>
 						<c:choose>
-							<c:when test="${empty feedPage.featuredEvents}">
+							<c:when test="${empty featuredEvents}">
 								<spring:message var="emptyFeedMessage" code="feed.empty.message" />
 								<div class="matches-empty-state feed-empty-state">
 									<div class="feed-empty-state__art" aria-hidden="true">
@@ -454,90 +470,29 @@
 							</c:when>
 							<c:otherwise>
 								<div class="event-grid">
-									<c:forEach var="event" items="${feedPage.featuredEvents}">
-										<c:url var="eventHref" value="${event.href}" />
-										<ui:card href="${eventHref}" className="event-card" ariaLabel="${event.title}">
-											<div class="event-card__media ${event.mediaClass}">
-												<c:if test="${not empty event.bannerImageUrl}">
-													<c:url var="eventBannerSrc" value="${event.bannerImageUrl}" />
-													<img class="event-card__image" src="${eventBannerSrc}" alt="" loading="lazy" decoding="async" />
-												</c:if>
-												<div class="event-card__media-badges">
-													<span class="event-card__badge"><c:out value="${event.badge}" /></span>
-													<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
-														<span class="event-badge event-badge--${relationshipBadge.type}">
-															<c:out value="${relationshipBadge.label}" />
-														</span>
-													</c:forEach>
-												</div>
-											</div>
-
-											<div class="event-card__body">
-												<div class="event-card__sport-row">
-													<span class="event-card__sport"><c:out value="${event.sport}" /></span>
-													<c:if test="${event.recurring}">
-														<span class="event-card__recurring"><c:out value="${event.recurringLabel}" /></span>
-													</c:if>
-												</div>
-												<h3 class="event-card__title"><c:out value="${event.title}" /></h3>
-												<div class="event-card__meta">
-													<span class="event-card__meta-item">
-														<span class="event-card__meta-icon" aria-hidden="true">
-															<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-														</span>
-														<span class="event-card__meta-text">
-															<c:out value="${event.venue}" />
-														</span>
-
-													</span>
-													<c:if test="${not empty event.distanceLabel}">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon" aria-hidden="true">
-																<icon:ruler fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-															</span>
-															<span class="event-card__meta-text">
-																<c:out value="${event.distanceLabel}" />
-															</span>
-														</span>
-													</c:if>
-													<span class="event-card__meta-item">
-														<span class="event-card__meta-icon" aria-hidden="true">
-															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-														</span>
-														<c:out value="${empty event.dateLabel ? event.schedule : event.dateLabel}" />
-													</span>
-													<c:if test="${not empty event.timeLabel}">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon" aria-hidden="true">
-																<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
-															<c:out value="${event.timeLabel}" />
-														</span>
-													</c:if>
-													<c:if test="${not empty event.hostLabel}">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon" aria-hidden="true">
-																<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
-															<span class="event-card__meta-text">
-																<spring:message code="event.card.hostedBy" />
-																<c:out value="${event.hostLabel}" />
-															</span>
-														</span>
-													</c:if>
-												</div>
-
-												<div class="event-card__footer">
-													<div class="event-card__cta">
-														<span><c:out value="${event.priceLabel}" /></span>
-													</div>
-												</div>
-											</div>
-										</ui:card>
+									<c:forEach var="event" items="${featuredEvents}">
+										<c:choose>
+											<c:when test="${featuredEventType.dbValue == 'tournament'}">
+												<ui:eventCard
+													tournament="${event}"
+													badgeLabel="${eventBadgeLabels[event.id]}"
+													distanceLabel="${eventDistanceLabels[event.id]}"
+													relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+													headingLevel="h3" />
+											</c:when>
+											<c:otherwise>
+												<ui:eventCard
+													match="${event}"
+													badgeLabel="${eventBadgeLabels[event.id]}"
+													distanceLabel="${eventDistanceLabels[event.id]}"
+													relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+													headingLevel="h3" />
+											</c:otherwise>
+										</c:choose>
 									</c:forEach>
 								</div>
 
-								<c:if test="${feedPage.totalPages > 1}">
+								<c:if test="${feedTotalPages > 1}">
 									<spring:message var="paginationAriaLabel" code="pagination.aria" />
 									<spring:message var="feedPaginationPagesLabel" code="feed.pagination.pages" />
 									<spring:message var="previousLabel" code="pagination.previous" />
@@ -545,8 +500,8 @@
 									<section class="feed-pagination" aria-label="${paginationAriaLabel}">
 										<nav class="feed-pagination__nav" aria-label="${feedPaginationPagesLabel}">
 											<c:choose>
-												<c:when test="${not empty feedPage.previousPageHref}">
-													<c:url var="feedPrevHref" value="${feedPage.previousPageHref}" />
+												<c:when test="${not empty feedPreviousPageHref}">
+													<c:url var="feedPrevHref" value="${feedPreviousPageHref}" />
 														<a class="feed-pagination__control" href="${feedPrevHref}"><c:out value="${previousLabel}" /></a>
 												</c:when>
 												<c:otherwise>
@@ -555,7 +510,7 @@
 											</c:choose>
 
 											<div class="feed-pagination__pages">
-												<c:forEach var="item" items="${feedPage.paginationItems}">
+												<c:forEach var="item" items="${feedPaginationItems}">
 													<c:choose>
 														<c:when test="${item.ellipsis}">
 																<span class="feed-pagination__ellipsis" aria-hidden="true"><c:out value="${item.label}" /></span>
@@ -572,8 +527,8 @@
 											</div>
 
 											<c:choose>
-												<c:when test="${not empty feedPage.nextPageHref}">
-													<c:url var="feedNextHref" value="${feedPage.nextPageHref}" />
+												<c:when test="${not empty feedNextPageHref}">
+													<c:url var="feedNextHref" value="${feedNextPageHref}" />
 														<a class="feed-pagination__control" href="${feedNextHref}"><c:out value="${nextLabel}" /></a>
 												</c:when>
 												<c:otherwise>

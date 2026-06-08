@@ -3,14 +3,25 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.EmailActionRequest;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.exceptions.registration.EmailInvalidException;
+import ar.edu.itba.paw.models.exceptions.registration.EmailPendingVerificationException;
+import ar.edu.itba.paw.models.exceptions.registration.EmailTakenException;
+import ar.edu.itba.paw.models.exceptions.registration.LastNameInvalidException;
+import ar.edu.itba.paw.models.exceptions.registration.NameInvalidException;
+import ar.edu.itba.paw.models.exceptions.registration.PasswordInvalidException;
+import ar.edu.itba.paw.models.exceptions.registration.PhoneInvalidException;
+import ar.edu.itba.paw.models.exceptions.registration.UsernameInvalidException;
+import ar.edu.itba.paw.models.exceptions.registration.UsernameTakenException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureAlreadyUsedException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureExpiredException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureInvalidActionException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureNotFoundException;
 import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.persistence.EmailActionRequestDao;
-import ar.edu.itba.paw.persistence.UserDao;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
-import ar.edu.itba.paw.services.exceptions.PasswordResetException;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.mail.MailProperties;
 import java.nio.charset.StandardCharsets;
@@ -20,15 +31,12 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,28 +50,25 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private static final int MAX_PASSWORD_LENGTH = 72;
     private static final String EMPTY_PAYLOAD_JSON = "{}";
 
-    private final UserDao userDao;
+    private final UserDataService userDataService;
     private final EmailActionRequestDao emailActionRequestDao;
     private final MailProperties mailProperties;
     private final MailDispatchService mailDispatchService;
-    private final MessageSource messageSource;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     @Autowired
     public AccountAuthServiceImpl(
-            final UserDao userDao,
+            final UserDataService userDataService,
             final EmailActionRequestDao emailActionRequestDao,
             final MailProperties mailProperties,
             final MailDispatchService mailDispatchService,
-            final MessageSource messageSource,
             final PasswordEncoder passwordEncoder,
             final Clock clock) {
-        this.userDao = Objects.requireNonNull(userDao);
+        this.userDataService = Objects.requireNonNull(userDataService);
         this.emailActionRequestDao = Objects.requireNonNull(emailActionRequestDao);
         this.mailProperties = Objects.requireNonNull(mailProperties);
         this.mailDispatchService = Objects.requireNonNull(mailDispatchService);
-        this.messageSource = Objects.requireNonNull(messageSource);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.clock = Objects.requireNonNull(clock);
     }
@@ -73,60 +78,45 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     public VerificationRequestResult register(final RegisterAccountRequest request) {
         final Locale locale = currentLocale();
         final String normalizedEmail = normalizeEmail(request.getEmail());
-        final String normalizedUsername = normalizeUsername(request.getUsername(), locale);
-        final String normalizedName = normalizeRequiredText(request.getName(), 150, "name", locale);
-        final String normalizedLastName =
-                normalizeRequiredText(request.getLastName(), 150, "lastName", locale);
-        final String normalizedPhone = normalizeRequiredPhone(request.getPhone(), locale);
-        validatePassword(request.getPassword(), locale);
+        final String normalizedUsername = normalizeUsername(request.getUsername());
+        final String normalizedName = normalizeName(request.getName(), 150);
+        final String normalizedLastName = normalizeLastName(request.getLastName(), 150);
+        final String normalizedPhone = normalizeRequiredPhone(request.getPhone());
+        validatePassword(request.getPassword());
 
-        final Optional<UserAccount> existingAccount = userDao.findAccountByEmail(normalizedEmail);
+        final Optional<UserAccount> existingAccount =
+                userDataService.findAccountByEmail(normalizedEmail);
         if (existingAccount.isPresent()) {
             if (existingAccount.get().isEmailVerified()) {
-                throw new AccountRegistrationException(
-                        "email_taken", message("auth.registration.error.emailTaken", locale));
+                throw new EmailTakenException();
             }
-            throw new AccountRegistrationException(
-                    "email_pending_verification",
-                    message("auth.registration.error.emailPending", locale));
+            throw new EmailPendingVerificationException();
         }
 
-        if (userDao.findByUsername(normalizedUsername).isPresent()) {
-            throw new AccountRegistrationException(
-                    "username_taken", message("auth.registration.error.usernameTaken", locale));
+        if (userDataService.findByUsername(normalizedUsername).isPresent()) {
+            throw new UsernameTakenException();
         }
 
-        try {
-            final UserAccount createdAccount =
-                    userDao.createAccount(
-                            normalizedEmail,
-                            normalizedUsername,
-                            normalizedName,
-                            normalizedLastName,
-                            normalizedPhone,
-                            UserLanguages.fromLocale(locale),
-                            passwordEncoder.encode(request.getPassword()),
-                            UserRole.USER,
-                            null);
-            return createAccountVerificationRequest(createdAccount, locale);
-        } catch (final DataIntegrityViolationException exception) {
-            if (userDao.findAccountByEmail(normalizedEmail).isPresent()) {
-                throw new AccountRegistrationException(
-                        "email_taken", message("auth.registration.error.emailTaken", locale));
-            }
-            if (userDao.findByUsername(normalizedUsername).isPresent()) {
-                throw new AccountRegistrationException(
-                        "username_taken", message("auth.registration.error.usernameTaken", locale));
-            }
-            throw exception;
-        }
+        final UserAccount createdAccount =
+                userDataService.createAccount(
+                        normalizedEmail,
+                        normalizedUsername,
+                        normalizedName,
+                        normalizedLastName,
+                        normalizedPhone,
+                        UserLanguages.fromLocale(locale),
+                        passwordEncoder.encode(request.getPassword()),
+                        UserRole.USER,
+                        null);
+        return createAccountVerificationRequest(createdAccount, locale);
     }
 
     @Override
     @Transactional
     public Optional<VerificationRequestResult> resendVerification(final String email) {
         final Locale locale = currentLocale();
-        final Optional<UserAccount> account = userDao.findAccountByEmail(normalizeEmail(email));
+        final Optional<UserAccount> account =
+                userDataService.findAccountByEmail(normalizeEmail(email));
         if (account.isEmpty() || account.get().isEmailVerified()) {
             return Optional.empty();
         }
@@ -141,18 +131,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
                 getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.ACCOUNT_VERIFICATION,
-                        false,
-                        locale,
-                        "verification.message.accountUnavailable");
-        return new VerificationPreview(
-                message("verification.preview.account.title", locale),
-                message("verification.preview.account.summary", locale),
-                request.getEmail(),
-                request.getExpiresAt(),
-                message("verification.preview.account.confirm", locale),
-                List.of());
+                        rawToken, EmailActionType.ACCOUNT_VERIFICATION, false, locale);
+        return new VerificationPreview(request.getEmail(), request.getExpiresAt());
     }
 
     @Override
@@ -161,18 +141,12 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
                 getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.ACCOUNT_VERIFICATION,
-                        true,
-                        locale,
-                        "verification.message.accountUnavailable");
-        final UserAccount account =
-                getRequiredAccount(
-                        request, locale, "verification.message.accountUnavailable", false);
+                        rawToken, EmailActionType.ACCOUNT_VERIFICATION, true, locale);
+        final UserAccount account = getRequiredAccount(request, locale, false);
         final Instant now = Instant.now(clock);
 
         if (!account.isEmailVerified()) {
-            userDao.markEmailVerified(account.getId(), now);
+            userDataService.markEmailVerified(account.getId(), now);
         }
 
         emailActionRequestDao.updateStatus(
@@ -181,16 +155,16 @@ public class AccountAuthServiceImpl implements AccountAuthService {
         final UserAccount verifiedAccount =
                 account.isEmailVerified()
                         ? account
-                        : userDao.findAccountById(account.getId()).orElse(account);
-        return new VerificationConfirmationResult(
-                verifiedAccount, message("verification.message.accountVerified", locale));
+                        : userDataService.findAccountById(account.getId()).orElse(account);
+        return new VerificationConfirmationResult(verifiedAccount);
     }
 
     @Override
     @Transactional
     public Optional<VerificationRequestResult> requestPasswordReset(final String email) {
         final Locale locale = currentLocale();
-        final Optional<UserAccount> account = userDao.findAccountByEmail(normalizeEmail(email));
+        final Optional<UserAccount> account =
+                userDataService.findAccountByEmail(normalizeEmail(email));
         if (account.isEmpty() || !account.get().isEmailVerified()) {
             return Optional.empty();
         }
@@ -203,13 +177,8 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     public PasswordResetPreview getPasswordResetPreview(final String rawToken) {
         final Locale locale = currentLocale();
         final EmailActionRequest request =
-                getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.PASSWORD_RESET,
-                        false,
-                        locale,
-                        "passwordReset.message.unavailable");
-        getRequiredAccount(request, locale, "passwordReset.message.unavailable", true);
+                getRequiredPendingRequest(rawToken, EmailActionType.PASSWORD_RESET, false, locale);
+        getRequiredAccount(request, locale, true);
         return new PasswordResetPreview(request.getEmail(), request.getExpiresAt());
     }
 
@@ -218,31 +187,24 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     public VerificationConfirmationResult resetPassword(
             final String rawToken, final String newPassword) {
         final Locale locale = currentLocale();
-        validateResetPassword(newPassword, locale);
+        validatePassword(newPassword);
 
         final EmailActionRequest request =
-                getRequiredPendingRequest(
-                        rawToken,
-                        EmailActionType.PASSWORD_RESET,
-                        true,
-                        locale,
-                        "passwordReset.message.unavailable");
-        final UserAccount account =
-                getRequiredAccount(request, locale, "passwordReset.message.unavailable", true);
+                getRequiredPendingRequest(rawToken, EmailActionType.PASSWORD_RESET, true, locale);
+        final UserAccount account = getRequiredAccount(request, locale, true);
         final Instant now = Instant.now(clock);
 
-        userDao.updatePasswordHash(account.getId(), passwordEncoder.encode(newPassword));
+        userDataService.updatePasswordHash(account.getId(), passwordEncoder.encode(newPassword));
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.COMPLETED, account.toUser(), now);
 
-        return new VerificationConfirmationResult(
-                account.getId(), message("passwordReset.message.completed", locale));
+        return new VerificationConfirmationResult(account.getId());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<UserAccount> findAccountByEmail(final String email) {
-        return userDao.findAccountByEmail(normalizeEmail(email));
+        return userDataService.findAccountByEmail(normalizeEmail(email));
     }
 
     private VerificationRequestResult createAccountVerificationRequest(
@@ -300,38 +262,28 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final String rawToken,
             final EmailActionType expectedActionType,
             final boolean forUpdate,
-            final Locale locale,
-            final String invalidActionCode) {
+            final Locale locale) {
         final String tokenHash = hashToken(rawToken);
         final EmailActionRequest request =
                 (forUpdate
                                 ? emailActionRequestDao.findByTokenHashForUpdate(tokenHash)
                                 : emailActionRequestDao.findByTokenHash(tokenHash))
-                        .orElseThrow(
-                                () ->
-                                        new VerificationFailureException(
-                                                VerificationFailureReason.NOT_FOUND,
-                                                message("verification.message.notFound", locale)));
+                        .orElseThrow(() -> new VerificationFailureNotFoundException());
 
         if (request.getStatus() == EmailActionStatus.COMPLETED
                 || request.getStatus() == EmailActionStatus.FAILED) {
-            throw new VerificationFailureException(
-                    VerificationFailureReason.ALREADY_USED,
-                    message("verification.message.alreadyUsed", locale));
+            throw new VerificationFailureAlreadyUsedException();
         }
 
         final Instant now = Instant.now(clock);
         if (request.getStatus() == EmailActionStatus.EXPIRED || request.isExpired(now)) {
             emailActionRequestDao.updateStatus(
                     request.getId(), EmailActionStatus.EXPIRED, request.getUser(), now);
-            throw new VerificationFailureException(
-                    VerificationFailureReason.EXPIRED,
-                    message("verification.message.expired", locale));
+            throw new VerificationFailureExpiredException();
         }
 
         if (request.getActionType() != expectedActionType) {
-            throw new VerificationFailureException(
-                    VerificationFailureReason.INVALID_ACTION, message(invalidActionCode, locale));
+            throw new VerificationFailureInvalidActionException();
         }
 
         return request;
@@ -340,19 +292,18 @@ public class AccountAuthServiceImpl implements AccountAuthService {
     private UserAccount getRequiredAccount(
             final EmailActionRequest request,
             final Locale locale,
-            final String invalidActionCode,
             final boolean requireVerifiedAccount) {
         final Optional<UserAccount> account =
                 request.getUser().getId() == null
-                        ? userDao.findAccountByEmail(request.getEmail())
-                        : userDao.findAccountById(request.getUser().getId());
+                        ? userDataService.findAccountByEmail(request.getEmail())
+                        : userDataService.findAccountById(request.getUser().getId());
 
         if (account.isEmpty()) {
-            throw invalidateRequest(request, message(invalidActionCode, locale));
+            throw invalidateRequest(request, "verification.message.accountUnavailable");
         }
 
         if (requireVerifiedAccount && !account.get().isEmailVerified()) {
-            throw invalidateRequest(request, message(invalidActionCode, locale));
+            throw invalidateRequest(request, "verification.message.accountUnavailable");
         }
 
         return account.get();
@@ -362,7 +313,7 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             final EmailActionRequest request, final String message) {
         emailActionRequestDao.updateStatus(
                 request.getId(), EmailActionStatus.FAILED, null, Instant.now(clock));
-        return new VerificationFailureException(VerificationFailureReason.INVALID_ACTION, message);
+        return new VerificationFailureException(message);
     }
 
     private String buildVerificationUrl(final String rawToken, final Locale locale) {
@@ -385,57 +336,56 @@ public class AccountAuthServiceImpl implements AccountAuthService {
 
     private static String normalizeEmail(final String email) {
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("email cannot be blank");
+            throw new EmailInvalidException();
         }
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
-    private String normalizeUsername(final String username, final Locale locale) {
+    private String normalizeUsername(final String username) {
         if (username == null) {
-            throw new AccountRegistrationException(
-                    "username_invalid", message("auth.registration.error.usernameInvalid", locale));
+            throw new UsernameInvalidException();
         }
 
         final String normalized = username.trim().toLowerCase(Locale.ROOT);
         if (!USERNAME_PATTERN.matcher(normalized).matches()) {
-            throw new AccountRegistrationException(
-                    "username_invalid", message("auth.registration.error.usernameInvalid", locale));
+            throw new UsernameInvalidException();
         }
         return normalized;
     }
 
-    private void validatePassword(final String password, final Locale locale) {
+    private void validatePassword(final String password) {
         if (isPasswordLengthInvalid(password)) {
-            throw new AccountRegistrationException(
-                    "password_invalid", message("auth.registration.error.passwordInvalid", locale));
+            throw new PasswordInvalidException();
         }
     }
 
-    private void validateResetPassword(final String password, final Locale locale) {
-        if (isPasswordLengthInvalid(password)) {
-            throw new PasswordResetException(
-                    "password_invalid", message("auth.registration.error.passwordInvalid", locale));
-        }
-    }
-
-    private String normalizeRequiredText(
-            final String value, final int maxLength, final String fieldCode, final Locale locale) {
-        if (value == null) {
-            throw new AccountRegistrationException(
-                    fieldCode + "_invalid",
-                    message("auth.registration.error." + fieldCode + "Invalid", locale));
+    private String normalizeName(final String name, final int maxLength) {
+        if (name == null) {
+            throw new NameInvalidException();
         }
 
-        final String normalized = value.trim();
+        final String normalized = name.trim();
         if (normalized.isBlank() || normalized.length() > maxLength) {
-            throw new AccountRegistrationException(
-                    fieldCode + "_invalid",
-                    message("auth.registration.error." + fieldCode + "Invalid", locale));
+            throw new NameInvalidException();
         }
+
         return normalized;
     }
 
-    private String normalizeRequiredPhone(final String phone, final Locale locale) {
+    private String normalizeLastName(final String lastName, final int maxLength) {
+        if (lastName == null) {
+            throw new LastNameInvalidException();
+        }
+
+        final String normalized = lastName.trim();
+        if (normalized.isBlank() || normalized.length() > maxLength) {
+            throw new LastNameInvalidException();
+        }
+
+        return normalized;
+    }
+
+    private String normalizeRequiredPhone(final String phone) {
         if (phone == null) {
             return null;
         }
@@ -445,15 +395,10 @@ public class AccountAuthServiceImpl implements AccountAuthService {
             return null;
         }
 
-        if (normalized.length() > 50) {
-            throw new AccountRegistrationException(
-                    "phone_invalid", message("auth.registration.error.phoneInvalid", locale));
+        if (normalized.length() > 50 || !normalized.matches("^[0-9+()\\-\\s]{6,50}$")) {
+            throw new PhoneInvalidException();
         }
 
-        if (!normalized.matches("^[0-9+()\\-\\s]{6,50}$")) {
-            throw new AccountRegistrationException(
-                    "phone_invalid", message("auth.registration.error.phoneInvalid", locale));
-        }
         return normalized;
     }
 
@@ -462,15 +407,6 @@ public class AccountAuthServiceImpl implements AccountAuthService {
                 || password.isBlank()
                 || password.length() < MIN_PASSWORD_LENGTH
                 || password.length() > MAX_PASSWORD_LENGTH;
-    }
-
-    private String message(final String code, final Locale locale) {
-        return message(code, null, locale);
-    }
-
-    private String message(final String code, final Object[] args, final Locale locale) {
-        return messageSource.getMessage(
-                Objects.requireNonNull(code), args, code, Objects.requireNonNull(locale));
     }
 
     private static Locale currentLocale() {

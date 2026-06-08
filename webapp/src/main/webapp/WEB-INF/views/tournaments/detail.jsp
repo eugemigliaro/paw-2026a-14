@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
@@ -14,19 +15,19 @@
 			<main class="page-shell page-shell--detail tournament-detail">
 				<section class="detail-top">
 					<div class="detail-top__main">
-						<section class="event-hero tournament-hero ${not empty tournamentPage.bannerImageUrl ? 'event-hero--with-image' : ''}">
-							<c:if test="${not empty tournamentPage.bannerImageUrl}">
-								<c:url var="tournamentHeroBannerSrc" value="${tournamentPage.bannerImageUrl}" />
+						<section class="event-hero tournament-hero ${not empty tournamentBannerImageUrl ? 'event-hero--with-image' : ''}">
+							<c:if test="${not empty tournamentBannerImageUrl}">
+								<c:url var="tournamentHeroBannerSrc" value="${tournamentBannerImageUrl}" />
 								<img class="event-hero__image" src="${tournamentHeroBannerSrc}" alt="" loading="eager" decoding="async" />
 							</c:if>
 							<div class="event-heading">
 								<div class="tournament-hero__badges">
-									<span class="event-heading__badge"><c:out value="${tournamentPage.sportLabel}" /></span>
-									<span class="tournament-status tournament-status--${tournamentPage.statusTone}">
-										<c:out value="${tournamentPage.statusLabel}" />
+									<span class="event-heading__badge"><spring:message code="sport.${tournament.sport.dbValue}" /></span>
+									<span class="tournament-status tournament-status--${fn:replace(tournament.status.dbValue, '_', '-')}">
+										<spring:message code="tournament.status.${tournament.status.dbValue}" />
 									</span>
 								</div>
-								<h1 class="event-heading__title"><c:out value="${tournamentPage.title}" /></h1>
+								<h1 class="event-heading__title"><c:out value="${tournament.title}" /></h1>
 							</div>
 						</section>
 
@@ -40,7 +41,7 @@
 								</div>
 							</div>
 							<div class="detail-stack">
-								<c:forEach var="paragraph" items="${tournamentPage.aboutParagraphs}">
+								<c:forEach var="paragraph" items="${tournamentAboutParagraphs}">
 									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
 								</c:forEach>
 							</div>
@@ -58,51 +59,51 @@
 							<dl class="tournament-facts__grid">
 								<div class="tournament-fact">
 									<dt><spring:message code="tournament.detail.bracketSize" /></dt>
-									<dd><c:out value="${tournamentPage.bracketSizeLabel}" /></dd>
+									<dd><spring:message code="tournament.detail.bracketSize.value" arguments="${tournament.bracketSize}" /></dd>
 								</div>
 								<div class="tournament-fact">
 									<dt><spring:message code="tournament.detail.teamSize" /></dt>
-									<dd><c:out value="${tournamentPage.teamSizeLabel}" /></dd>
+									<dd><spring:message code="tournament.detail.teamSize.value" arguments="${tournament.teamSize}" /></dd>
 								</div>
 								<div class="tournament-fact">
 									<dt><spring:message code="tournament.detail.format" /></dt>
-									<dd><c:out value="${tournamentPage.formatLabel}" /></dd>
+									<dd><spring:message code="tournament.format.${tournament.format.dbValue}" /></dd>
 								</div>
 								<div class="tournament-fact">
 									<dt><spring:message code="tournament.detail.registrationMode" /></dt>
-									<dd><c:out value="${tournamentPage.joinModeLabel}" /></dd>
+									<dd><c:out value="${tournamentJoinModeLabel}" /></dd>
 								</div>
 							</dl>
 						</section>
 					</div>
 
 					<aside class="detail-top__sidebar">
-						<c:if test="${tournamentPage.canCloseRegistration or tournamentPage.canEditTournament or tournamentPage.canCancelTournament}">
+						<c:if test="${tournamentCapabilities.canCloseRegistration or tournamentCapabilities.canEditTournament or tournamentCapabilities.canCancelTournament}">
 							<article class="panel host-panel">
 								<div class="host-panel__note">
 									<p class="detail-label"><spring:message code="tournament.host.panel.label" /></p>
 									<p><spring:message code="tournament.host.panel.detail" /></p>
 								</div>
-								<c:if test="${tournamentPage.canCloseRegistration}">
+								<c:if test="${tournamentCapabilities.canCloseRegistration}">
 									<c:url var="closeRegistrationAction" value="${closeRegistrationPath}" />
 									<spring:message var="closeRegistrationLabel" code="tournament.host.closeRegistration" />
 									<spring:message var="closingRegistrationLabel" code="tournament.host.closeRegistration.loading" />
 									<form method="post" action="${closeRegistrationAction}" data-submit-guard="true" data-submit-loading-label="${closingRegistrationLabel}">
 										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="primary" disabled="${tournamentPage.closeRegistrationDisabled}" />
+										<ui:button label="${closeRegistrationLabel}" type="submit" fullWidth="${true}" variant="primary" disabled="${tournamentCapabilities.closeRegistrationDisabled}" />
 									</form>
-									<c:if test="${not empty tournamentPage.closeRegistrationDisabledMessage}">
+									<c:if test="${not empty tournamentCloseRegistrationDisabledMessage}">
 										<p class="booking-panel__notice booking-panel__notice--info">
-											<c:out value="${tournamentPage.closeRegistrationDisabledMessage}" />
+											<c:out value="${tournamentCloseRegistrationDisabledMessage}" />
 										</p>
 									</c:if>
 								</c:if>
-								<c:if test="${tournamentPage.canEditTournament}">
+								<c:if test="${tournamentCapabilities.canEditTournament}">
 									<c:url var="editTournamentHref" value="${editTournamentPath}" />
 									<spring:message var="editTournamentLabel" code="tournament.host.edit" />
 									<ui:button label="${editTournamentLabel}" href="${editTournamentHref}" fullWidth="${true}" variant="secondary" />
 								</c:if>
-								<c:if test="${tournamentPage.canCancelTournament}">
+								<c:if test="${tournamentCapabilities.canCancelTournament}">
 									<c:url var="cancelTournamentAction" value="${cancelTournamentPath}" />
 									<spring:message var="cancelTournamentLabel" code="tournament.host.cancel" />
 									<spring:message var="cancellingTournamentLabel" code="tournament.host.cancel.loading" />
@@ -113,24 +114,24 @@
 								</c:if>
 							</article>
 						</c:if>
-						<c:if test="${tournamentPage.canManageBracket}">
+						<c:if test="${tournamentCapabilities.canManageBracket}">
 							<article class="panel host-panel">
 								<div class="host-panel__note">
 									<p class="detail-label"><spring:message code="tournament.host.bracket.panel.label" /></p>
 									<p><spring:message code="tournament.host.bracket.panel.detail" /></p>
 								</div>
-								<c:url var="bracketSetupHref" value="/host/tournaments/${tournamentPage.id}/bracket/setup" />
+								<c:url var="bracketSetupHref" value="/host/tournaments/${tournament.id}/bracket/setup" />
 								<spring:message var="bracketSetupLabel" code="tournament.host.bracket.setup" />
 								<ui:button label="${bracketSetupLabel}" href="${bracketSetupHref}" fullWidth="${true}" variant="secondary" />
 							</article>
 						</c:if>
-						<c:if test="${tournamentPage.canViewBracket}">
+						<c:if test="${tournamentCapabilities.canViewBracket}">
 							<article class="panel host-panel">
 								<div class="host-panel__note">
 									<p class="detail-label"><spring:message code="tournament.bracket.panel.label" /></p>
 									<p><spring:message code="tournament.bracket.panel.detail" /></p>
 								</div>
-								<c:url var="publicBracketHref" value="/tournaments/${tournamentPage.id}/bracket" />
+								<c:url var="publicBracketHref" value="/tournaments/${tournament.id}/bracket" />
 								<spring:message var="publicBracketLabel" code="tournament.bracket.view" />
 								<ui:button label="${publicBracketLabel}" href="${publicBracketHref}" fullWidth="${true}" variant="secondary" />
 							</article>
@@ -150,19 +151,19 @@
 									<spring:message code="${tournamentErrorCode}" />
 								</p>
 							</c:if>
-							<c:if test="${not empty tournamentPage.participationLabel}">
+							<c:if test="${not empty tournamentParticipationLabel}">
 								<p class="booking-panel__notice booking-panel__notice--info">
-									<c:out value="${tournamentPage.participationLabel}" />
+									<c:out value="${tournamentParticipationLabel}" />
 								</p>
 							</c:if>
-							<c:if test="${not empty tournamentPage.nextStepLabel}">
+							<c:if test="${not empty tournamentNextStepLabel}">
 								<p class="booking-panel__notice booking-panel__notice--info">
-									<c:out value="${tournamentPage.nextStepLabel}" />
+									<c:out value="${tournamentNextStepLabel}" />
 								</p>
 							</c:if>
 
 							<c:choose>
-								<c:when test="${tournamentPage.canJoinSolo}">
+								<c:when test="${tournamentCapabilities.canJoinSolo}">
 									<c:url var="soloJoinAction" value="${soloJoinPath}" />
 									<spring:message var="soloJoinLabel" code="tournament.registration.joinSolo" />
 									<spring:message var="joiningSoloLabel" code="tournament.registration.joiningSolo" />
@@ -172,7 +173,7 @@
 									</form>
 									<p class="booking-panel__note"><spring:message code="tournament.registration.soloNote" /></p>
 								</c:when>
-								<c:when test="${tournamentPage.canLeaveSolo}">
+								<c:when test="${tournamentCapabilities.canLeaveSolo}">
 									<c:url var="soloLeaveAction" value="${soloLeavePath}" />
 									<spring:message var="soloLeaveLabel" code="tournament.registration.leaveSolo" />
 									<spring:message var="leavingSoloLabel" code="tournament.registration.leavingSolo" />
@@ -181,13 +182,13 @@
 										<ui:button label="${soloLeaveLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 									</form>
 								</c:when>
-								<c:when test="${tournamentPage.requiresLoginToJoin}">
+								<c:when test="${tournamentCapabilities.requiresLoginToJoin}">
 									<c:url var="loginHref" value="/login" />
 									<spring:message var="signInLabel" code="tournament.registration.signIn" />
 									<ui:button label="${signInLabel}" href="${loginHref}" fullWidth="${true}" />
 									<p class="booking-panel__note"><spring:message code="tournament.registration.signInNote" /></p>
 								</c:when>
-								<c:when test="${tournamentPage.registrationNotStarted}">
+								<c:when test="${tournamentCapabilities.registrationNotStarted}">
 									<spring:message var="registrationTurnedOffLabel" code="tournament.registration.turnedOff" />
 									<spring:message var="registrationNotStartedNote" code="tournament.registration.turnedOffNote" />
 									<ui:button label="${registrationTurnedOffLabel}" type="button" fullWidth="${true}" disabled="${true}" />
@@ -201,18 +202,31 @@
 							</c:choose>
 						</article>
 
-						<c:if test="${tournamentPage.hasParticipants}">
+						<c:if test="${tournament.status.dbValue eq 'registration' and (not empty tournamentTeamMembers or not empty tournamentActiveSoloEntries)}">
 							<article class="panel event-info-panel">
 								<p class="detail-label player-actions-panel__title">
 									<spring:message code="tournament.participants.title" />
 								</p>
 								<ul class="event-info-panel__list">
-									<c:forEach var="participant" items="${tournamentPage.participants}">
+									<c:forEach var="member" items="${tournamentTeamMembers}">
 										<li class="booking-panel__detail-row event-info-panel__row">
-											<span><c:out value="${participant.primaryLabel}" /></span>
-											<c:if test="${not empty participant.secondaryLabel}">
-												<span><c:out value="${participant.secondaryLabel}" /></span>
-											</c:if>
+											<span><c:out value="${member.user.username}" /></span>
+											<span>
+												<c:choose>
+													<c:when test="${not empty member.team.name}">
+														<c:out value="${member.team.name}" />
+													</c:when>
+													<c:otherwise>
+														<spring:message code="tournament.team.solo.name" arguments="${tournamentTeamDisplayNumbers[member.team.id]}" />
+													</c:otherwise>
+												</c:choose>
+											</span>
+										</li>
+									</c:forEach>
+									<c:forEach var="entry" items="${tournamentActiveSoloEntries}">
+										<li class="booking-panel__detail-row event-info-panel__row">
+											<span><c:out value="${entry.user.username}" /></span>
+											<span><spring:message code="tournament.participants.soloPool" /></span>
 										</li>
 									</c:forEach>
 								</ul>
@@ -223,25 +237,25 @@
 							<dl class="event-info-panel__list">
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.price" /></dt>
-									<dd><c:out value="${tournamentPage.priceLabel}" /></dd>
+									<dd><c:out value="${tournamentPriceLabel}" /></dd>
 								</div>
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.schedule" /></dt>
-									<dd><c:out value="${tournamentPage.scheduleLabel}" /></dd>
+									<dd><c:out value="${tournamentScheduleLabel}" /></dd>
 								</div>
 								<div class="booking-panel__detail-row event-info-panel__row event-info-panel__row--registration-window">
 									<dt><spring:message code="tournament.detail.registrationWindow" /></dt>
 									<dd class="event-info-panel__registration-window">
 										<c:choose>
-											<c:when test="${not empty tournamentPage.registrationWindowStartLabel and not empty tournamentPage.registrationWindowEndLabel}">
+											<c:when test="${not empty tournamentRegistrationWindowStartLabel and not empty tournamentRegistrationWindowEndLabel}">
 												<ul class="event-info-panel__registration-window-list">
 													<li class="event-info-panel__registration-window-item">
 														<span class="event-info-panel__registration-window-label"><spring:message code="tournament.detail.registrationWindow.startsAt" />:</span>
-														<c:out value="${tournamentPage.registrationWindowStartLabel}" />
+														<c:out value="${tournamentRegistrationWindowStartLabel}" />
 													</li>
 													<li class="event-info-panel__registration-window-item">
 														<span class="event-info-panel__registration-window-label"><spring:message code="tournament.detail.registrationWindow.endsAt" />:</span>
-														<c:out value="${tournamentPage.registrationWindowEndLabel}" />
+														<c:out value="${tournamentRegistrationWindowEndLabel}" />
 													</li>
 												</ul>
 											</c:when>
@@ -255,26 +269,46 @@
 								</div>
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.venue" /></dt>
-									<dd class="event-info-panel__value--truncate"><c:out value="${tournamentPage.address}" /></dd>
+									<dd class="event-info-panel__value--truncate"><c:out value="${tournament.address}" /></dd>
 								</div>
 							</dl>
 						</article>
+						<c:if test="${mapAvailable}">
+							<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
+							<c:url var="appRootUrl" value="/" />
+							<c:set var="contextAwareMapTileUrlTemplate"
+								value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
+							<div
+								class="event-detail-map"
+								data-event-map="true"
+								data-tile-url-template="${contextAwareMapTileUrlTemplate}"
+								data-attribution="${mapAttribution}"
+								data-latitude="${mapLatitude}"
+								data-longitude="${mapLongitude}"
+								data-zoom="${mapZoom}"
+								role="img"
+								aria-label="${eventMapAria}">
+								<c:if test="${not empty mapAttribution}">
+									<p class="event-detail-map__attribution"><c:out value="${mapAttribution}" /></p>
+								</c:if>
+							</div>
+						</c:if>
 
 						<article class="panel event-info-panel event-info-panel--hosted-by">
 							<dl class="event-info-panel__list">
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.host" /></dt>
 									<dd>
-										<c:url var="hostProfileImageSrc" value="${tournamentPage.hostProfileImageUrl}" />
+										<c:url var="hostProfileImageSrc" value="${tournamentHostProfileImageUrl}" />
 										<span class="event-info-panel__host">
 											<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
 											<c:choose>
-												<c:when test="${not empty tournamentPage.hostProfileHref}">
-													<c:url var="hostProfileHref" value="${tournamentPage.hostProfileHref}" />
-													<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${tournamentPage.hostLabel}" /></a>
+												<c:when test="${not empty tournamentHostProfileHref}">
+													<c:url var="hostProfileHref" value="${tournamentHostProfileHref}" />
+													<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${tournamentHostLabel}" /></a>
 												</c:when>
 												<c:otherwise>
-													<span class="event-info-panel__host-name"><c:out value="${tournamentPage.hostLabel}" /></span>
+													<span class="event-info-panel__host-name"><c:out value="${tournamentHostLabel}" /></span>
 												</c:otherwise>
 											</c:choose>
 										</span>

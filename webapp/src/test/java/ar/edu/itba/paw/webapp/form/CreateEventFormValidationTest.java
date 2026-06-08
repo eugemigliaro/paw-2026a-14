@@ -104,6 +104,34 @@ class CreateEventFormValidationTest {
         Assertions.assertTrue(hasViolation(violations, "recurrenceUntilDate"));
     }
 
+    @Test
+    void publicFormRejectsInviteOnlyJoinPolicy() {
+        // 1. Arrange
+        final CreateEventForm form = validForm();
+        form.setVisibility(EventVisibility.PUBLIC);
+        form.setJoinPolicy(EventJoinPolicy.INVITE_ONLY);
+
+        // 2. Exercise
+        final Set<ConstraintViolation<CreateEventForm>> violations = validator.validate(form);
+
+        // 3. Assert
+        Assertions.assertTrue(hasViolation(violations, "joinPolicy"));
+    }
+
+    @Test
+    void privateFormAllowsBlankJoinPolicy() {
+        // 1. Arrange
+        final CreateEventForm form = validForm();
+        form.setVisibility(EventVisibility.PRIVATE);
+        form.setJoinPolicy(null);
+
+        // 2. Exercise
+        final Set<ConstraintViolation<CreateEventForm>> violations = validator.validate(form);
+
+        // 3. Assert
+        Assertions.assertFalse(hasViolation(violations, "joinPolicy"));
+    }
+
     private static CreateEventForm validForm() {
         final CreateEventForm form = new CreateEventForm();
         form.setTitle("Weekly Padel");

@@ -3,6 +3,8 @@ package ar.edu.itba.paw.webapp.config;
 import ar.edu.itba.paw.services.AdminBootstrapService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventCategoryConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToEventFilterConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
@@ -17,9 +19,11 @@ import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
-import ar.edu.itba.paw.webapp.config.converters.StringToZoneIdConverter;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.concurrent.ThreadPoolExecutor;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -44,6 +48,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
@@ -195,7 +200,6 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventStatusConverter());
         registry.addConverter(new StringToEventVisibilityConverter());
         registry.addConverter(new StringToMatchSortConverter());
-        registry.addConverter(new StringToZoneIdConverter());
         registry.addConverter(new StringToEventTypeConverter());
         registry.addConverter(new StringToTournamentPairingStrategyConverter());
         registry.addConverter(new StringToReportTargetTypeConverter());
@@ -207,6 +211,13 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventJoinPolicyConverter());
         registry.addConverter(new StringToRecurrenceFrequencyConverter());
         registry.addConverter(new StringToRecurrenceEndModeConverter());
+        registry.addConverter(new StringToEventFilterConverter());
+        registry.addConverter(new StringToEventCategoryConverter());
+    }
+
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(new CurrentUserArgumentResolver());
     }
 
     @Override
@@ -214,18 +225,23 @@ public class WebConfig implements WebMvcConfigurer {
         return validator();
     }
 
-    @Override
-    public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-
+    @Bean
+    public ThreadPoolTaskExecutor mvcAsyncTaskExecutor() {
+        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(10);
         executor.setMaxPoolSize(50);
         executor.setQueueCapacity(100);
-
         executor.setThreadNamePrefix("async-image-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
+        return executor;
+    }
 
-        configurer.setTaskExecutor(executor);
+    @Override
+    public void configureAsyncSupport(final AsyncSupportConfigurer configurer) {
+        configurer.setTaskExecutor(mvcAsyncTaskExecutor());
         configurer.setDefaultTimeout(30000);
     }
 

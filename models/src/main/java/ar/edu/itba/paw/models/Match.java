@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -90,6 +91,8 @@ public class Match {
     @Transient private int joinedPlayers;
 
     @Transient private EventStatus derivedStatus;
+
+    @Transient private Double distanceKmFromViewer;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "banner_image_id")
@@ -219,8 +222,16 @@ public class Match {
         return startsAt;
     }
 
+    public OffsetDateTime getStartsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(startsAt);
+    }
+
     public Instant getEndsAt() {
         return endsAt;
+    }
+
+    public OffsetDateTime getEndsAtDateTime() {
+        return PlatformTime.toOffsetDateTime(endsAt);
     }
 
     public int getMaxPlayers() {
@@ -241,6 +252,10 @@ public class Match {
 
     public EventStatus getStatus() {
         return derivedStatus == null ? status : derivedStatus;
+    }
+
+    public Double getDistanceKmFromViewer() {
+        return distanceKmFromViewer;
     }
 
     public EventStatus getStoredStatus() {
@@ -281,6 +296,10 @@ public class Match {
 
     public Instant getDeletedAt() {
         return deletedAt;
+    }
+
+    public OffsetDateTime getDeletedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(deletedAt);
     }
 
     public User getDeletedByUser() {
@@ -350,6 +369,10 @@ public class Match {
 
     public void setDerivedStatus(final EventStatus derivedStatus) {
         this.derivedStatus = derivedStatus;
+    }
+
+    public void setDistanceKmFromViewer(final Double distanceKmFromViewer) {
+        this.distanceKmFromViewer = distanceKmFromViewer;
     }
 
     public void setBannerImageMetadata(final ImageMetadata bannerImageMetadata) {

@@ -9,7 +9,10 @@ import static org.mockito.Mockito.mock;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.query.EventCategory;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -21,7 +24,6 @@ import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,17 +86,16 @@ class MatchDashboardPageSupportTest {
     void buildListPagePreservesTournamentStateAndPaginationQueryParameters() {
         final SearchForm searchForm = new SearchForm();
         searchForm.setType(EventType.TOURNAMENT);
-        searchForm.setFilter("past");
+        searchForm.setFilter(EventFilter.PAST);
         searchForm.setQ("summer cup");
         searchForm.setSport(List.of(Sport.PADEL, Sport.TENNIS));
         searchForm.setStatus(List.of(EventStatus.OPEN));
         searchForm.setVisibility(List.of(EventVisibility.PUBLIC));
-        searchForm.setCategory(List.of("joined", "hosted"));
+        searchForm.setCategory(List.of(EventCategory.JOINED, EventCategory.HOSTED));
         searchForm.setMinPrice(new BigDecimal("12.50"));
         searchForm.setMaxPrice(new BigDecimal("50.00"));
         searchForm.setStartDate(LocalDate.of(2099, 4, 10));
         searchForm.setEndDate(LocalDate.of(2099, 4, 11));
-        searchForm.setTimezone(ZoneId.of("UTC"));
         searchForm.setPage(2);
 
         final MatchDashboardQueryState.DashboardSelection selection =
@@ -104,6 +105,7 @@ class MatchDashboardPageSupportTest {
 
         final ModelAndView mav =
                 MatchDashboardPageSupport.buildListPage(
+                        null,
                         "events/list",
                         "/events",
                         "page.title.events",
@@ -122,11 +124,11 @@ class MatchDashboardPageSupportTest {
         assertNull(mav.getModel().get("selectedStartDateValue"));
         assertNull(mav.getModel().get("selectedEndDateValue"));
         assertEquals(
-                LocalDate.now(ZoneId.of("UTC")).toString(),
-                mav.getModel().get("selectedDateMinValue"));
-        assertNull(mav.getModel().get("selectedDateMaxValue"));
+                LocalDate.now(PlatformTime.ZONE).toString(),
+                mav.getModel().get("selectedDateMaxValue"));
+        assertNull(mav.getModel().get("selectedDateMinValue"));
         assertEquals(List.of(), mav.getModel().get("selectedCategories"));
-        assertEquals("UTC", mav.getModel().get("selectedTimezone"));
+        assertNull(mav.getModel().get("selectedTimezone"));
         assertEquals(2, mav.getModel().get("pageNumber"));
         assertTrue((Boolean) mav.getModel().get("pageHasPrevious"));
         assertFalse((Boolean) mav.getModel().get("pageHasNext"));
@@ -137,7 +139,7 @@ class MatchDashboardPageSupportTest {
         assertNotNull(paginationItems);
         assertEquals(2, paginationItems.size());
         assertTrue(paginationItems.get(0).getHref().contains("type=tournament"));
-        assertTrue(paginationItems.get(0).getHref().contains("filter=past"));
+        assertTrue(paginationItems.get(0).getHref().contains("filter=PAST"));
         assertTrue(paginationItems.get(0).getHref().contains("q=summer%20cup"));
         assertTrue(paginationItems.get(0).getHref().contains("sport=padel"));
         assertTrue(paginationItems.get(0).getHref().contains("minPrice=12.50"));
@@ -148,12 +150,10 @@ class MatchDashboardPageSupportTest {
     void buildListPageKeepsMatchCategoryAndStatusStateForMatchQueries() {
         final SearchForm searchForm = new SearchForm();
         searchForm.setType(EventType.MATCH);
-        searchForm.setFilter("upcoming");
-        searchForm.setCategory(List.of("joined", "pending"));
+        searchForm.setFilter(EventFilter.UPCOMING);
+        searchForm.setCategory(List.of(EventCategory.JOINED, EventCategory.PENDING));
         searchForm.setStatus(List.of(EventStatus.OPEN, EventStatus.COMPLETED));
         searchForm.setSport(List.of(Sport.PADEL));
-        searchForm.setTimezone(ZoneId.of("UTC"));
-
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final PaginatedResult<Match> matchResult = new PaginatedResult<>(List.of(), 0, 1, 1);
@@ -162,6 +162,7 @@ class MatchDashboardPageSupportTest {
 
         final ModelAndView mav =
                 MatchDashboardPageSupport.buildListPage(
+                        null,
                         "events/list",
                         "/events",
                         "page.title.events",
@@ -179,7 +180,7 @@ class MatchDashboardPageSupportTest {
         assertEquals("match", mav.getModel().get("selectedType"));
         assertEquals(List.of("joined", "pending"), mav.getModel().get("selectedCategories"));
         assertEquals(
-                LocalDate.now(ZoneId.of("UTC")).toString(),
+                LocalDate.now(PlatformTime.ZONE).toString(),
                 mav.getModel().get("selectedDateMinValue"));
         assertEquals(
                 List.of(

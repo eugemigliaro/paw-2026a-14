@@ -1,47 +1,49 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentDao;
-import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 public class TournamentServiceImplTest {
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
 
-    @Mock private TournamentDao tournamentDao;
-    @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
-    @Mock private TournamentTeamDao tournamentTeamDao;
+    @Mock private TournamentDataService tournamentDataService;
+    @Mock private TournamentRegistrationService tournamentRegistrationService;
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
     @Mock private SecurityService securityService;
-    @Mock private MessageSource messageSource;
 
     private TournamentServiceImpl tournamentService;
 
@@ -49,20 +51,18 @@ public class TournamentServiceImplTest {
     public void setUp() {
         tournamentService =
                 new TournamentServiceImpl(
-                        tournamentDao,
+                        tournamentDataService,
+                        tournamentRegistrationService,
                         tournamentMailService,
                         imageService,
                         securityService,
-                        messageSource,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
+        SecurityContextHolder.clearContext();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -72,7 +72,7 @@ public class TournamentServiceImplTest {
         final CreateTournamentRequest request = validCreateRequest();
         final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
         Mockito.when(
-                        tournamentDao.create(
+                        tournamentDataService.create(
                                 host,
                                 request.getSport(),
                                 request.getTitle(),
@@ -80,8 +80,9 @@ public class TournamentServiceImplTest {
                                 request.getAddress(),
                                 request.getLatitude(),
                                 request.getLongitude(),
-                                request.getStartsAt(),
-                                request.getEndsAt(),
+                                PlatformTime.toInstant(
+                                        request.getStartDate(), request.getStartTime()),
+                                PlatformTime.toInstant(request.getEndDate(), request.getEndTime()),
                                 request.getPricePerPlayer(),
                                 null,
                                 request.getFormat(),
@@ -89,8 +90,12 @@ public class TournamentServiceImplTest {
                                 request.getTeamSize(),
                                 request.isAllowSoloSignup(),
                                 request.isAllowTeamDraft(),
-                                request.getRegistrationOpensAt(),
-                                request.getRegistrationClosesAt(),
+                                PlatformTime.toInstant(
+                                        request.getRegistrationOpensDate(),
+                                        request.getRegistrationOpensTime()),
+                                PlatformTime.toInstant(
+                                        request.getRegistrationClosesDate(),
+                                        request.getRegistrationClosesTime()),
                                 TournamentStatus.REGISTRATION))
                 .thenReturn(tournament);
 
@@ -109,15 +114,10 @@ public class TournamentServiceImplTest {
                 createRequest(
                         5, 1, true, false, futureRegistrationOpen(), futureRegistrationClose());
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_BRACKET_SIZE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidBracketSizeException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -127,15 +127,10 @@ public class TournamentServiceImplTest {
                 createRequest(
                         4, 0, true, false, futureRegistrationOpen(), futureRegistrationClose());
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_TEAM_SIZE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidTeamSizeException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -150,16 +145,10 @@ public class TournamentServiceImplTest {
                         FIXED_NOW.plusSeconds(7200),
                         FIXED_NOW.plusSeconds(3600));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidRegistrationWindowException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
@@ -174,22 +163,77 @@ public class TournamentServiceImplTest {
                         FIXED_NOW.minusSeconds(7200),
                         FIXED_NOW.minusSeconds(3600));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidRegistrationWindowException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+    }
 
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                exception.getReason());
+    @Test
+    public void createFailsWithMissingSchedule() {
+        // 1. Arrange
+        final CreateTournamentRequest request =
+                createRequest(
+                        4,
+                        1,
+                        true,
+                        false,
+                        futureRegistrationOpen(),
+                        futureRegistrationClose(),
+                        null,
+                        null);
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+    }
+
+    @Test
+    public void createFailsWithStartBeforeRegistrationClose() {
+        // 1. Arrange
+        final CreateTournamentRequest request =
+                createRequest(
+                        4,
+                        1,
+                        true,
+                        false,
+                        futureRegistrationOpen(),
+                        futureRegistrationClose(),
+                        futureRegistrationClose(),
+                        futureRegistrationClose().plusSeconds(3600));
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
+    }
+
+    @Test
+    public void createFailsWithEndBeforeStart() {
+        // 1. Arrange
+        final Instant startsAt = FIXED_NOW.plusSeconds(86400);
+        final CreateTournamentRequest request =
+                createRequest(
+                        4,
+                        1,
+                        true,
+                        false,
+                        futureRegistrationOpen(),
+                        futureRegistrationClose(),
+                        startsAt,
+                        startsAt);
+
+        // 2. Exercise
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.createTournament(UserUtils.getUser(1L), request));
     }
 
     @Test
     public void nonHostCannotUpdateTournament() {
         // 1. Arrange
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(
                         Optional.of(
                                 tournament(
@@ -197,16 +241,10 @@ public class TournamentServiceImplTest {
                                         UserUtils.getUser(1L),
                                         TournamentStatus.REGISTRATION)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () ->
-                                tournamentService.update(
-                                        10L, UserUtils.getUser(2L), validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(TournamentLifecycleFailureReason.FORBIDDEN, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentForbiddenActionException.class,
+                () -> tournamentService.update(10L, UserUtils.getUser(2L), validUpdateRequest()));
     }
 
     @Test
@@ -215,8 +253,8 @@ public class TournamentServiceImplTest {
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
         final UpdateTournamentRequest request = validUpdateRequest();
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentDao.update(tournament))
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.update(tournament))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
@@ -225,29 +263,35 @@ public class TournamentServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(request.getTitle(), result.getTitle());
         Assertions.assertEquals(request.getAddress(), result.getAddress());
-        Assertions.assertEquals(request.getStartsAt(), result.getStartsAt());
+        Assertions.assertEquals(
+                PlatformTime.toInstant(request.getStartDate(), request.getStartTime()),
+                result.getStartsAt());
         Assertions.assertEquals(request.getBracketSize(), result.getBracketSize());
         Assertions.assertEquals(request.getTeamSize(), result.getTeamSize());
-        Assertions.assertEquals(request.getRegistrationOpensAt(), result.getRegistrationOpensAt());
         Assertions.assertEquals(
-                request.getRegistrationClosesAt(), result.getRegistrationClosesAt());
+                PlatformTime.toInstant(
+                        request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                result.getRegistrationOpensAt());
+        Assertions.assertEquals(
+                PlatformTime.toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()),
+                result.getRegistrationClosesAt());
         Assertions.assertEquals(FIXED_NOW, result.getUpdatedAt());
     }
 
     @Test
     public void adminModCanUpdateTournamentForAnotherHost() {
         // 1. Arrange
-        final User actingUser = UserUtils.getUser(99L);
-        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
+        authenticateAdminMod();
         final Tournament tournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
         final UpdateTournamentRequest request = validUpdateRequest();
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentDao.update(tournament))
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.update(tournament))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
-        final Tournament result = tournamentService.update(10L, actingUser, request);
+        final Tournament result = tournamentService.update(10L, UserUtils.getUser(99L), request);
 
         // 3. Assert
         Assertions.assertEquals(request.getTitle(), result.getTitle());
@@ -255,215 +299,88 @@ public class TournamentServiceImplTest {
     }
 
     @Test
-    public void findEditableTournamentForHostReturnsRegistrationTournamentForHost() {
+    public void updateFailsWithMissingSchedule() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise
-        final Optional<Tournament> result =
-                tournamentService.findEditableTournamentForHost(10L, host);
-
-        // 3. Assert
-        Assertions.assertTrue(result.isPresent());
-        Assertions.assertEquals(tournament, result.get());
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.update(10L, host, updateRequest(null, null)));
     }
 
     @Test
-    public void findEditableTournamentForHostRejectsPostRegistrationTournament() {
+    public void updateFailsWithStartBeforeRegistrationClose() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
-                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
+        Mockito.when(tournamentDataService.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise
-        final Optional<Tournament> result =
-                tournamentService.findEditableTournamentForHost(10L, host);
-
-        // 3. Assert
-        Assertions.assertTrue(result.isEmpty());
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () ->
+                        tournamentService.update(
+                                10L,
+                                host,
+                                updateRequest(
+                                        futureRegistrationClose(),
+                                        futureRegistrationClose().plusSeconds(3600))));
     }
 
     @Test
-    public void findEditableTournamentForHostAllowsAdminModOverride() {
-        // 1. Arrange
-        final User actingUser = UserUtils.getUser(99L);
-        final Tournament tournament =
-                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
-        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-
-        // 2. Exercise
-        final Optional<Tournament> result =
-                tournamentService.findEditableTournamentForHost(10L, actingUser);
-
-        // 3. Assert
-        Assertions.assertTrue(result.isPresent());
-        Assertions.assertEquals(tournament, result.get());
-    }
-
-    @Test
-    public void hostCanManageRegistrationTournament() {
+    public void updateFailsWithEndBeforeStart() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        final Tournament tournament = tournament(10L, host, TournamentStatus.REGISTRATION);
+        final Instant startsAt = FIXED_NOW.plusSeconds(86400);
+        Mockito.when(tournamentDataService.findById(10L))
+                .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.REGISTRATION)));
 
         // 2. Exercise
-        final TournamentManagementPermissions permissions =
-                tournamentService.getManagementPermissions(tournament, host);
-
-        // 3. Assert
-        Assertions.assertTrue(permissions.canCloseRegistration());
-        Assertions.assertTrue(permissions.canEditTournament());
-        Assertions.assertTrue(permissions.canCancelTournament());
-        Assertions.assertFalse(permissions.canManageBracket());
-        Assertions.assertFalse(permissions.canViewBracket());
-    }
-
-    @Test
-    public void unrelatedUserCannotManageTournament() {
-        // 1. Arrange
-        final Tournament tournament =
-                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
-
-        // 2. Exercise
-        final TournamentManagementPermissions permissions =
-                tournamentService.getManagementPermissions(tournament, UserUtils.getUser(2L));
-
-        // 3. Assert
-        Assertions.assertFalse(permissions.canCloseRegistration());
-        Assertions.assertFalse(permissions.canEditTournament());
-        Assertions.assertFalse(permissions.canCancelTournament());
-        Assertions.assertFalse(permissions.canManageBracket());
-    }
-
-    @Test
-    public void adminModCanManageAcrossOwnershipBoundaries() {
-        // 1. Arrange
-        final User actingUser = UserUtils.getUser(99L);
-        final Tournament tournament =
-                tournament(10L, UserUtils.getUser(1L), TournamentStatus.BRACKET_SETUP);
-        Mockito.when(securityService.canActAsAdminMod(actingUser)).thenReturn(true);
-
-        // 2. Exercise
-        final TournamentManagementPermissions permissions =
-                tournamentService.getManagementPermissions(tournament, actingUser);
-
-        // 3. Assert
-        Assertions.assertFalse(permissions.canCloseRegistration());
-        Assertions.assertFalse(permissions.canEditTournament());
-        Assertions.assertTrue(permissions.canCancelTournament());
-        Assertions.assertTrue(permissions.canManageBracket());
-        Assertions.assertTrue(permissions.canDefineMatchDates());
-    }
-
-    @Test
-    public void completedTournamentBlocksMutatingManagementActions() {
-        // 1. Arrange
-        final User host = UserUtils.getUser(1L);
-        final Tournament tournament = tournament(10L, host, TournamentStatus.COMPLETED);
-
-        // 2. Exercise
-        final TournamentManagementPermissions permissions =
-                tournamentService.getManagementPermissions(tournament, host);
-
-        // 3. Assert
-        Assertions.assertFalse(permissions.canCloseRegistration());
-        Assertions.assertFalse(permissions.canEditTournament());
-        Assertions.assertFalse(permissions.canCancelTournament());
-        Assertions.assertFalse(permissions.canManageBracket());
-        Assertions.assertTrue(permissions.canViewBracket());
-    }
-
-    @Test
-    public void cancelledTournamentBlocksMutatingManagementActions() {
-        // 1. Arrange
-        final User host = UserUtils.getUser(1L);
-        final Tournament tournament = tournament(10L, host, TournamentStatus.CANCELLED);
-
-        // 2. Exercise
-        final TournamentManagementPermissions permissions =
-                tournamentService.getManagementPermissions(tournament, host);
-
-        // 3. Assert
-        Assertions.assertFalse(permissions.canCloseRegistration());
-        Assertions.assertFalse(permissions.canEditTournament());
-        Assertions.assertFalse(permissions.canCancelTournament());
-        Assertions.assertFalse(permissions.canManageBracket());
-        Assertions.assertTrue(permissions.canViewBracket());
-    }
-
-    @Test
-    public void hostCanManageResultsOnlyWhenTournamentIsInProgress() {
-        // 1. Arrange
-        final User host = UserUtils.getUser(1L);
-        final Tournament tournament = tournament(10L, host, TournamentStatus.IN_PROGRESS);
-
-        // 2. Exercise
-        final TournamentManagementPermissions permissions =
-                tournamentService.getManagementPermissions(tournament, host);
-
-        // 3. Assert
-        Assertions.assertTrue(permissions.canCancelTournament());
-        Assertions.assertFalse(permissions.canManageBracket());
-        Assertions.assertFalse(permissions.canDefineMatchDates());
-        Assertions.assertTrue(permissions.canManageResults());
-        Assertions.assertTrue(permissions.canViewBracket());
+        Assertions.assertThrows(
+                TournamentLifecycleInvalidScheduleException.class,
+                () -> tournamentService.update(10L, host, updateRequest(startsAt, startsAt)));
     }
 
     @Test
     public void updateFailsWhenTournamentIsCompleted() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotEditableException.class,
+                () -> tournamentService.update(10L, host, validUpdateRequest()));
     }
 
     @Test
     public void updateFailsAfterRegistrationState() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.BRACKET_SETUP)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.update(10L, host, validUpdateRequest()));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_EDITABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotEditableException.class,
+                () -> tournamentService.update(10L, host, validUpdateRequest()));
     }
 
     @Test
     public void cancelFailsWhenTournamentIsCompleted() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
-        Mockito.when(tournamentDao.findById(10L))
+        Mockito.when(tournamentDataService.findById(10L))
                 .thenReturn(Optional.of(tournament(10L, host, TournamentStatus.COMPLETED)));
 
-        // 2. Exercise
-        final TournamentLifecycleException exception =
-                Assertions.assertThrows(
-                        TournamentLifecycleException.class,
-                        () -> tournamentService.cancel(10L, host, "No longer available"));
-
-        // 3. Assert
-        Assertions.assertEquals(
-                TournamentLifecycleFailureReason.NOT_CANCELLABLE, exception.getReason());
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentLifecycleNotCancellableException.class,
+                () -> tournamentService.cancel(10L, host, "No longer available"));
     }
 
     @Test
@@ -471,8 +388,8 @@ public class TournamentServiceImplTest {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
         final Tournament tournament = tournament(10L, host, TournamentStatus.IN_PROGRESS);
-        Mockito.when(tournamentDao.findById(10L)).thenReturn(Optional.of(tournament));
-        Mockito.when(tournamentDao.update(tournament))
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentDataService.update(tournament))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // 2. Exercise
@@ -485,25 +402,155 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void viewerCapabilitiesAllowHostRegistrationActions() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        host,
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+                .thenReturn(new TournamentRegistrationReadiness(0, 2, 2, false));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, host);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanCloseRegistration());
+        Assertions.assertTrue(result.isCanEditTournament());
+        Assertions.assertTrue(result.isCanCancelTournament());
+        Assertions.assertFalse(result.isCloseRegistrationDisabled());
+    }
+
+    @Test
+    public void viewerCapabilitiesPromptAnonymousUserToLoginWhenRegistrationIsOpen() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        UserUtils.getUser(1L),
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, null);
+
+        // 3. Assert
+        Assertions.assertFalse(result.isCanJoinSolo());
+        Assertions.assertTrue(result.isRequiresLoginToJoin());
+        Assertions.assertFalse(result.isCanEditTournament());
+    }
+
+    @Test
+    public void viewerCapabilitiesAllowSoloPoolUserToLeave() {
+        // 1. Arrange
+        final User player = UserUtils.getUser(2L);
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        UserUtils.getUser(1L),
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(10L, player))
+                .thenReturn(
+                        Optional.of(
+                                new TournamentSoloEntry(
+                                        20L,
+                                        tournament,
+                                        player,
+                                        TournamentSoloEntryStatus.IN_POOL,
+                                        null,
+                                        FIXED_NOW,
+                                        null)));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, player);
+
+        // 3. Assert
+        Assertions.assertFalse(result.isCanJoinSolo());
+        Assertions.assertTrue(result.isCanLeaveSolo());
+    }
+
+    @Test
+    public void viewerCapabilitiesBlockCloseRegistrationWhenCapacityIsUnsafe() {
+        // 1. Arrange
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament =
+                tournamentWithRegistrationWindow(
+                        10L,
+                        host,
+                        TournamentStatus.REGISTRATION,
+                        FIXED_NOW.minusSeconds(3600),
+                        FIXED_NOW.plusSeconds(3600));
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+                .thenReturn(new TournamentRegistrationReadiness(1, 0, 1, true));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, host);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanCloseRegistration());
+        Assertions.assertTrue(result.isCloseRegistrationDisabled());
+        Assertions.assertTrue(result.isCloseRegistrationBlockedByCapacity());
+    }
+
+    @Test
+    public void viewerCapabilitiesAllowAdminModToManageInProgressResults() {
+        // 1. Arrange
+        authenticateAdminMod();
+        final User admin = UserUtils.getUser(99L);
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.IN_PROGRESS);
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, admin);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanManageResults());
+        Assertions.assertTrue(result.isCanCancelTournament());
+        Assertions.assertTrue(result.isCanViewBracket());
+    }
+
+    @Test
     public void searchPublicTournamentsPaginatesAndNormalizesInvalidSortToSoonest() {
         // 1. Arrange
         final Tournament expectedTournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
         Mockito.when(
-                        tournamentDao.countPublicTournaments(
+                        tournamentDataService.countPublicTournaments(
                                 "cup",
                                 List.of(Sport.PADEL),
-                                Instant.parse("2026-04-06T00:00:00Z"),
-                                Instant.parse("2026-04-10T00:00:00Z"),
+                                LocalDate.parse("2026-04-06")
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
+                                LocalDate.parse("2026-04-10")
+                                        .plusDays(1)
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN))
                 .thenReturn(25);
         Mockito.when(
-                        tournamentDao.findPublicTournaments(
+                        tournamentDataService.findPublicTournaments(
                                 "cup",
                                 List.of(Sport.PADEL),
-                                Instant.parse("2026-04-06T00:00:00Z"),
-                                Instant.parse("2026-04-10T00:00:00Z"),
+                                LocalDate.parse("2026-04-06")
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
+                                LocalDate.parse("2026-04-10")
+                                        .plusDays(1)
+                                        .atStartOfDay(PlatformTime.ZONE)
+                                        .toInstant(),
                                 BigDecimal.ZERO,
                                 BigDecimal.TEN,
                                 EventSort.SOONEST,
@@ -518,12 +565,11 @@ public class TournamentServiceImplTest {
                 tournamentService.searchPublicTournaments(
                         "cup",
                         List.of(Sport.PADEL),
-                        Instant.parse("2026-04-06T00:00:00Z"),
-                        Instant.parse("2026-04-10T00:00:00Z"),
+                        LocalDate.parse("2026-04-06"),
+                        LocalDate.parse("2026-04-10"),
                         EventSort.SOONEST,
                         9,
                         10,
-                        ZoneId.of("UTC"),
                         BigDecimal.ZERO,
                         BigDecimal.TEN,
                         null,
@@ -541,10 +587,12 @@ public class TournamentServiceImplTest {
         // 1. Arrange
         final Tournament expectedTournament =
                 tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
-        Mockito.when(tournamentDao.countPublicTournaments("", List.of(), null, null, null, null))
+        Mockito.when(
+                        tournamentDataService.countPublicTournaments(
+                                "", List.of(), null, null, null, null))
                 .thenReturn(1);
         Mockito.when(
-                        tournamentDao.findPublicTournaments(
+                        tournamentDataService.findPublicTournaments(
                                 "",
                                 List.of(),
                                 null,
@@ -568,7 +616,6 @@ public class TournamentServiceImplTest {
                         EventSort.DISTANCE,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         -34.60,
@@ -580,6 +627,53 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void testSearchPublicTournamentsWithDistanceFilterHydratesDistanceProperty() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
+        tournament.setLatitude(40.7578);
+        tournament.setLongitude(-74.0060);
+        Mockito.when(
+                        tournamentDataService.countPublicTournaments(
+                                "", List.of(Sport.FOOTBALL), null, null, null, null))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentDataService.findPublicTournaments(
+                                "",
+                                List.of(Sport.FOOTBALL),
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.DISTANCE,
+                                40.7128,
+                                -74.0060,
+                                0,
+                                12))
+                .thenReturn(List.of(tournament));
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.searchPublicTournaments(
+                        "",
+                        List.of(Sport.FOOTBALL),
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        12,
+                        null,
+                        null,
+                        40.7128,
+                        -74.0060);
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(List.of(tournament), result.getItems());
+        Assertions.assertEquals(5.0, result.getItems().get(0).getDistanceKmFromViewer(), 0.1);
+    }
+
+    @Test
     public void findHostedTournamentsIncludesSoloPoolAndTeamMemberships() {
         // 1. Arrange
         final User user = UserUtils.getUser(1L);
@@ -587,7 +681,7 @@ public class TournamentServiceImplTest {
         tournament(11L, UserUtils.getUser(2L), TournamentStatus.REGISTRATION);
         tournament(12L, UserUtils.getUser(3L), TournamentStatus.IN_PROGRESS);
         Mockito.when(
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -604,7 +698,7 @@ public class TournamentServiceImplTest {
                                 12))
                 .thenReturn(List.of(hosted));
         Mockito.when(
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -629,7 +723,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -649,7 +742,7 @@ public class TournamentServiceImplTest {
         final Tournament completed =
                 tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
         Mockito.when(
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -666,7 +759,7 @@ public class TournamentServiceImplTest {
                                 12))
                 .thenReturn(List.of(unscheduled, completed));
         Mockito.when(
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 user,
                                 Boolean.FALSE,
                                 Boolean.TRUE,
@@ -691,7 +784,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -710,7 +802,7 @@ public class TournamentServiceImplTest {
         final Tournament completed =
                 tournamentWithSchedule(11L, user, TournamentStatus.COMPLETED, null, null);
         Mockito.when(
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 user,
                                 Boolean.TRUE,
                                 Boolean.TRUE,
@@ -727,7 +819,7 @@ public class TournamentServiceImplTest {
                                 12))
                 .thenReturn(List.of(completed));
         Mockito.when(
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 user, Boolean.TRUE, Boolean.TRUE, "", null, null, null, null, null))
                 .thenReturn(1);
 
@@ -744,7 +836,6 @@ public class TournamentServiceImplTest {
                         EventSort.SOONEST,
                         1,
                         12,
-                        ZoneId.of("UTC"),
                         null,
                         null,
                         null,
@@ -767,6 +858,26 @@ public class TournamentServiceImplTest {
             final boolean allowTeamDraft,
             final Instant registrationOpensAt,
             final Instant registrationClosesAt) {
+        return createRequest(
+                bracketSize,
+                teamSize,
+                allowSoloSignup,
+                allowTeamDraft,
+                registrationOpensAt,
+                registrationClosesAt,
+                FIXED_NOW.plusSeconds(86400),
+                FIXED_NOW.plusSeconds(90000));
+    }
+
+    private static CreateTournamentRequest createRequest(
+            final int bracketSize,
+            final int teamSize,
+            final boolean allowSoloSignup,
+            final boolean allowTeamDraft,
+            final Instant registrationOpensAt,
+            final Instant registrationClosesAt,
+            final Instant startsAt,
+            final Instant endsAt) {
         return new CreateTournamentRequest(
                 Sport.FOOTBALL,
                 "Saturday Cup",
@@ -774,8 +885,10 @@ public class TournamentServiceImplTest {
                 "Club Street 123",
                 -34.60,
                 -58.38,
-                FIXED_NOW.plusSeconds(86400),
-                FIXED_NOW.plusSeconds(90000),
+                dateOf(startsAt),
+                timeOf(startsAt),
+                dateOf(endsAt),
+                timeOf(endsAt),
                 BigDecimal.ZERO,
                 null,
                 TournamentFormat.SINGLE_ELIMINATION,
@@ -783,11 +896,26 @@ public class TournamentServiceImplTest {
                 teamSize,
                 allowSoloSignup,
                 allowTeamDraft,
-                registrationOpensAt,
-                registrationClosesAt);
+                dateOf(registrationOpensAt),
+                timeOf(registrationOpensAt),
+                dateOf(registrationClosesAt),
+                timeOf(registrationClosesAt));
+    }
+
+    private static LocalDate dateOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalDate();
+    }
+
+    private static LocalTime timeOf(final Instant instant) {
+        return instant == null ? null : instant.atZone(PlatformTime.ZONE).toLocalTime();
     }
 
     private static UpdateTournamentRequest validUpdateRequest() {
+        return updateRequest(FIXED_NOW.plusSeconds(172800), FIXED_NOW.plusSeconds(176400));
+    }
+
+    private static UpdateTournamentRequest updateRequest(
+            final Instant startsAt, final Instant endsAt) {
         return new UpdateTournamentRequest(
                 Sport.PADEL,
                 "Updated Cup",
@@ -795,14 +923,18 @@ public class TournamentServiceImplTest {
                 "Updated Street 456",
                 -34.61,
                 -58.39,
-                FIXED_NOW.plusSeconds(172800),
-                FIXED_NOW.plusSeconds(176400),
+                dateOf(startsAt),
+                timeOf(startsAt),
+                dateOf(endsAt),
+                timeOf(endsAt),
                 BigDecimal.TEN,
                 null,
                 8,
                 2,
-                FIXED_NOW.plusSeconds(3600),
-                FIXED_NOW.plusSeconds(7200));
+                dateOf(FIXED_NOW.plusSeconds(3600)),
+                timeOf(FIXED_NOW.plusSeconds(3600)),
+                dateOf(FIXED_NOW.plusSeconds(7200)),
+                timeOf(FIXED_NOW.plusSeconds(7200)));
     }
 
     private static Tournament tournament(
@@ -882,5 +1014,18 @@ public class TournamentServiceImplTest {
 
     private static Instant futureRegistrationClose() {
         return FIXED_NOW.plusSeconds(7200);
+    }
+
+    private void authenticateAdminMod() {
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        new UsernamePasswordAuthenticationToken(
+                                "admin",
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD"))));
+        Mockito.when(
+                        securityService.canActAsAdminMod(
+                                Mockito.argThat(user -> user != null && user.getId() == 99L)))
+                .thenReturn(true);
     }
 }

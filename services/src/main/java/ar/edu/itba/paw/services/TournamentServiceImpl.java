@@ -1,24 +1,25 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.*;
+import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
-import ar.edu.itba.paw.persistence.TournamentDao;
-import ar.edu.itba.paw.services.exceptions.TournamentLifecycleException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.utils.DistanceUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,25 +30,25 @@ public class TournamentServiceImpl implements TournamentService {
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final List<Integer> SUPPORTED_BRACKET_SIZES = List.of(4, 8, 16);
 
-    private final TournamentDao tournamentDao;
+    private final TournamentDataService tournamentDataService;
+    private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentMailService tournamentMailService;
     private final ImageService imageService;
     private final SecurityService securityService;
-    private final MessageSource messageSource;
     private final Clock clock;
 
     public TournamentServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
+            final TournamentRegistrationService tournamentRegistrationService,
             final TournamentMailService tournamentMailService,
             final ImageService imageService,
             final SecurityService securityService,
-            final MessageSource messageSource,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
+        this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentMailService = tournamentMailService;
         this.imageService = imageService;
         this.securityService = securityService;
-        this.messageSource = messageSource;
         this.clock = clock;
     }
 
@@ -56,8 +57,10 @@ public class TournamentServiceImpl implements TournamentService {
     public Tournament createTournament(final User host, final CreateTournamentRequest request) {
         validateHost(host);
         validateRequest(request);
+        final Instant startsAt = toInstant(request.getStartDate(), request.getStartTime());
+        final Instant endsAt = toInstant(request.getEndDate(), request.getEndTime());
 
-        return tournamentDao.create(
+        return tournamentDataService.create(
                 host,
                 request.getSport(),
                 request.getTitle(),
@@ -65,8 +68,8 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getAddress(),
                 request.getLatitude(),
                 request.getLongitude(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                startsAt,
+                endsAt,
                 request.getPricePerPlayer(),
                 imageService.resolveImageMetadata(request.getBannerImage()),
                 request.getFormat(),
@@ -74,19 +77,19 @@ public class TournamentServiceImpl implements TournamentService {
                 request.getTeamSize(),
                 request.isAllowSoloSignup(),
                 request.isAllowTeamDraft(),
-                request.getRegistrationOpensAt(),
-                request.getRegistrationClosesAt(),
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                toInstant(request.getRegistrationClosesDate(), request.getRegistrationClosesTime()),
                 TournamentStatus.REGISTRATION);
     }
 
     @Override
     public Optional<Tournament> findPublicTournament(final long tournamentId) {
-        return tournamentDao.findPublicById(tournamentId);
+        return tournamentDataService.findPublicById(tournamentId);
     }
 
     @Override
     public Optional<Tournament> findTournamentForHost(final long tournamentId, final User host) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
                 .filter(tournament -> canMutate(tournament, host));
@@ -132,45 +135,51 @@ public class TournamentServiceImpl implements TournamentService {
     public PaginatedResult<Tournament> searchPublicTournaments(
             final String query,
             final List<Sport> sport,
-            final Instant startDate,
-            final Instant endDate,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final EventSort sort,
             final int page,
             final int pageSize,
-            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
             final Double longitude) {
         final EventSort sortFilter =
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
-        final DateRange dateRange = new DateRange(startDate, endDate);
+        final DateRange dateRange = DateRange.of(startDate, endDate);
 
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        tournamentDao.countPublicTournaments(
-                                query,
-                                sport,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice),
-                (offset, safePageSize) ->
-                        tournamentDao.findPublicTournaments(
-                                query,
-                                sport,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                sortFilter,
-                                latitude,
-                                longitude,
-                                offset,
-                                safePageSize));
+        final PaginatedResult<Tournament> result =
+                paginate(
+                        page,
+                        pageSize,
+                        DEFAULT_PAGE_SIZE,
+                        safePageSize ->
+                                tournamentDataService.countPublicTournaments(
+                                        query,
+                                        sport,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice),
+                        (offset, safePageSize) ->
+                                tournamentDataService.findPublicTournaments(
+                                        query,
+                                        sport,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice,
+                                        sortFilter,
+                                        latitude,
+                                        longitude,
+                                        offset,
+                                        safePageSize));
+
+        if (sort == EventSort.DISTANCE && hasCoordinates(latitude, longitude)) {
+            hydrateDistances(result.getItems(), latitude, longitude);
+        }
+
+        return result;
     }
 
     @Override
@@ -180,40 +189,40 @@ public class TournamentServiceImpl implements TournamentService {
             final Boolean includeHosted,
             final String query,
             final List<Sport> sport,
-            final Instant startDate,
-            final Instant endDate,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final EventSort sort,
             final int page,
             final int pageSize,
-            final ZoneId timezone,
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final Double latitude,
             final Double longitude) {
+        final DateRange dateRange = DateRange.of(startDate, endDate);
         return paginate(
                 page,
                 pageSize,
                 DEFAULT_PAGE_SIZE,
                 safePageSize ->
-                        tournamentDao.countDashboardTournaments(
+                        tournamentDataService.countDashboardTournaments(
                                 host,
                                 upcoming,
                                 includeHosted,
                                 query,
                                 sport,
-                                startDate,
-                                endDate,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice),
                 (offset, safePageSize) ->
-                        tournamentDao.findDashboardTournaments(
+                        tournamentDataService.findDashboardTournaments(
                                 host,
                                 upcoming,
                                 includeHosted,
                                 query,
                                 sport,
-                                startDate,
-                                endDate,
+                                dateRange.start(),
+                                dateRange.endExclusive(),
                                 minPrice,
                                 maxPrice,
                                 sort,
@@ -231,9 +240,7 @@ public class TournamentServiceImpl implements TournamentService {
         validateCanMutate(tournament, actingUser);
 
         if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.NOT_EDITABLE,
-                    "tournament.lifecycle.error.notEditable");
+            throw new TournamentLifecycleNotEditableException();
         }
 
         validateUpdateRequest(request);
@@ -244,8 +251,8 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setAddress(request.getAddress());
         tournament.setLatitude(request.getLatitude());
         tournament.setLongitude(request.getLongitude());
-        tournament.setStartsAt(request.getStartsAt());
-        tournament.setEndsAt(request.getEndsAt());
+        tournament.setStartsAt(toInstant(request.getStartDate(), request.getStartTime()));
+        tournament.setEndsAt(toInstant(request.getEndDate(), request.getEndTime()));
         tournament.setPricePerPlayer(request.getPricePerPlayer());
         if (!(request.getBannerImage() == null
                 || request.getBannerImage().getContentLength() <= 0)) {
@@ -254,10 +261,13 @@ public class TournamentServiceImpl implements TournamentService {
         }
         tournament.setBracketSize(request.getBracketSize());
         tournament.setTeamSize(request.getTeamSize());
-        tournament.setRegistrationOpensAt(request.getRegistrationOpensAt());
-        tournament.setRegistrationClosesAt(request.getRegistrationClosesAt());
+        tournament.setRegistrationOpensAt(
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()));
+        tournament.setRegistrationClosesAt(
+                toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
         tournament.setUpdatedAt(Instant.now(clock));
-        return tournamentDao.update(tournament);
+        return tournamentDataService.update(tournament);
     }
 
     @Override
@@ -267,9 +277,7 @@ public class TournamentServiceImpl implements TournamentService {
         validateCanMutate(tournament, actingUser);
 
         if (TournamentStatus.COMPLETED == tournament.getStatus()) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.NOT_CANCELLABLE,
-                    "tournament.lifecycle.error.notCancellable");
+            throw new TournamentLifecycleNotCancellableException();
         }
 
         if (TournamentStatus.CANCELLED == tournament.getStatus()) {
@@ -281,27 +289,96 @@ public class TournamentServiceImpl implements TournamentService {
         tournament.setCancelledAt(now);
         tournament.setCancelReason(reason);
         tournament.setUpdatedAt(now);
-        final Tournament updatedTournament = tournamentDao.update(tournament);
+        final Tournament updatedTournament = tournamentDataService.update(tournament);
         tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
         return updatedTournament;
     }
 
+    @Override
+    public TournamentViewerCapabilities viewerCapabilities(
+            final Tournament tournament, final User viewer) {
+        if (tournament == null) {
+            return new TournamentViewerCapabilities(
+                    false, false, false, false, false, false, false, false, false, false, true,
+                    false);
+        }
+
+        final Instant now = Instant.now(clock);
+        final boolean registrationOpen = isRegistrationOpenNow(tournament, now);
+        final boolean registrationNotStarted = isRegistrationNotStarted(tournament, now);
+        final boolean canMutate = canMutate(tournament, viewer);
+        final boolean canCloseRegistration =
+                TournamentStatus.REGISTRATION == tournament.getStatus() && canMutate;
+        final boolean canEditTournament =
+                TournamentStatus.REGISTRATION == tournament.getStatus() && canMutate;
+        final boolean canCancelTournament =
+                TournamentStatus.COMPLETED != tournament.getStatus()
+                        && TournamentStatus.CANCELLED != tournament.getStatus()
+                        && canMutate;
+        final boolean canManageBracket =
+                TournamentStatus.BRACKET_SETUP == tournament.getStatus() && canMutate;
+        final boolean canManageResults =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus() && canMutate;
+        final boolean canViewBracket =
+                TournamentStatus.IN_PROGRESS == tournament.getStatus()
+                        || TournamentStatus.COMPLETED == tournament.getStatus()
+                        || TournamentStatus.CANCELLED == tournament.getStatus();
+
+        final boolean authenticatedViewer = viewer != null && viewer.getId() != null;
+        final TournamentSoloEntryStatus soloStatus =
+                tournamentRegistrationService
+                        .findSoloEntry(tournament.getId(), viewer)
+                        .map(entry -> entry.getStatus())
+                        .orElse(null);
+        final boolean userHasTeam =
+                tournamentRegistrationService.findUserTeam(tournament.getId(), viewer).isPresent();
+        final boolean canJoinSolo =
+                authenticatedViewer
+                        && registrationOpen
+                        && tournament.isAllowSoloSignup()
+                        && !tournamentRegistrationService.isSoloPoolFull(tournament.getId())
+                        && !userHasTeam
+                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
+                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
+        final boolean canLeaveSolo =
+                authenticatedViewer
+                        && registrationOpen
+                        && soloStatus == TournamentSoloEntryStatus.IN_POOL;
+        final boolean requiresLoginToJoin =
+                !authenticatedViewer && registrationOpen && tournament.isAllowSoloSignup();
+        final boolean closeRegistrationBlockedByCapacity =
+                canCloseRegistration
+                        && tournamentRegistrationService
+                                .getRegistrationReadiness(tournament.getId(), viewer)
+                                .isCancellationRisk();
+        final boolean closeRegistrationDisabled =
+                !registrationOpen || closeRegistrationBlockedByCapacity;
+
+        return new TournamentViewerCapabilities(
+                canJoinSolo,
+                canLeaveSolo,
+                requiresLoginToJoin,
+                registrationNotStarted,
+                canCloseRegistration,
+                canEditTournament,
+                canCancelTournament,
+                canManageBracket,
+                canManageResults,
+                canViewBracket,
+                closeRegistrationDisabled,
+                closeRegistrationBlockedByCapacity);
+    }
+
     private Tournament findByIdOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
-                .orElseThrow(
-                        () ->
-                                lifecycleException(
-                                        TournamentLifecycleFailureReason.TOURNAMENT_NOT_FOUND,
-                                        "tournament.lifecycle.error.notFound"));
+                .orElseThrow(() -> new TournamentNotFoundException());
     }
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
         if (!canMutate(tournament, actingUser)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.FORBIDDEN,
-                    "tournament.lifecycle.error.forbidden");
+            throw new TournamentForbiddenActionException();
         }
     }
 
@@ -313,8 +390,29 @@ public class TournamentServiceImpl implements TournamentService {
                 || securityService.canActAsAdminMod(actingUser);
     }
 
+    private boolean isRegistrationOpenNow(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        final Instant closesAt = tournament.getRegistrationClosesAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && closesAt != null
+                && !now.isBefore(opensAt)
+                && now.isBefore(closesAt);
+    }
+
+    private boolean isRegistrationNotStarted(final Tournament tournament, final Instant now) {
+        final Instant opensAt = tournament.getRegistrationOpensAt();
+        return TournamentStatus.REGISTRATION == tournament.getStatus()
+                && opensAt != null
+                && now.isBefore(opensAt);
+    }
+
     private static boolean hasCoordinates(final Double latitude, final Double longitude) {
         return latitude != null && longitude != null;
+    }
+
+    private static Instant toInstant(final LocalDate date, final LocalTime time) {
+        return date == null || time == null ? null : PlatformTime.toInstant(date, time);
     }
 
     private static EventSort withoutDistance(final EventSort sort) {
@@ -323,20 +421,21 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateHost(final User host) {
         if (host == null || host.getId() == null) {
-            throw new IllegalArgumentException(message("user.error.null"));
+            throw new IllegalArgumentException("exception.user.notNull");
         }
     }
 
     private void validateRequest(final CreateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException(message("tournament.lifecycle.error.invalid"));
+            throw new IllegalArgumentException("invalidRequest");
         }
+        validateSport(request.getSport());
         validateCommonFields(
                 request.getSport(),
                 request.getTitle(),
                 request.getAddress(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 request.getPricePerPlayer(),
                 request.getLatitude(),
                 request.getLongitude());
@@ -344,30 +443,43 @@ public class TournamentServiceImpl implements TournamentService {
         validateBracketSize(request.getBracketSize());
         validateTeamSize(request.getTeamSize());
         validateJoinMode(request.isAllowSoloSignup(), request.isAllowTeamDraft());
-        validateRegistrationWindow(
-                request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
-        validateFutureRegistrationClose(request.getRegistrationClosesAt());
+        final Instant registrationOpensAt =
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime());
+        final Instant registrationClosesAt =
+                toInstant(request.getRegistrationClosesDate(), request.getRegistrationClosesTime());
+        validateRegistrationWindow(registrationOpensAt, registrationClosesAt);
+        validateFutureRegistrationClose(registrationClosesAt);
+        validateSchedule(
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
+                registrationClosesAt);
     }
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
         if (request == null) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.NOT_EDITABLE,
-                    "tournament.lifecycle.error.notEditable");
+            throw new IllegalArgumentException("invalidRequest");
         }
+        validateSport(request.getSport());
         validateCommonFields(
                 request.getSport(),
                 request.getTitle(),
                 request.getAddress(),
-                request.getStartsAt(),
-                request.getEndsAt(),
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
                 request.getPricePerPlayer(),
                 request.getLatitude(),
                 request.getLongitude());
         validateBracketSize(request.getBracketSize());
         validateTeamSize(request.getTeamSize());
         validateRegistrationWindow(
-                request.getRegistrationOpensAt(), request.getRegistrationClosesAt());
+                toInstant(request.getRegistrationOpensDate(), request.getRegistrationOpensTime()),
+                toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
+        validateSchedule(
+                toInstant(request.getStartDate(), request.getStartTime()),
+                toInstant(request.getEndDate(), request.getEndTime()),
+                toInstant(
+                        request.getRegistrationClosesDate(), request.getRegistrationClosesTime()));
     }
 
     private void validateCommonFields(
@@ -380,66 +492,52 @@ public class TournamentServiceImpl implements TournamentService {
             final Double latitude,
             final Double longitude) {
         if (sport == null || isBlank(title) || isBlank(address)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_DETAILS,
-                    "tournament.lifecycle.error.invalidDetails");
+            throw new TournamentLifecycleException("invalidRequest");
         }
         if (pricePerPlayer != null && pricePerPlayer.signum() < 0) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_DETAILS,
-                    "tournament.lifecycle.error.invalidDetails");
+            throw new TournamentLifecycleException("invalidRequest");
         }
         if (startsAt != null && endsAt != null && !endsAt.isAfter(startsAt)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
-                    "tournament.lifecycle.error.invalidSchedule");
+            throw new TournamentLifecycleInvalidScheduleException();
         }
         if ((latitude == null) != (longitude == null)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
-                    "tournament.lifecycle.error.invalidLocation");
+            throw new TournamentLifecycleInvalidLocationException();
         }
         if (latitude != null && (latitude < -90 || latitude > 90)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
-                    "tournament.lifecycle.error.invalidLocation");
+            throw new TournamentLifecycleInvalidLocationException();
         }
         if (longitude != null && (longitude < -180 || longitude > 180)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_SCHEDULE,
-                    "tournament.lifecycle.error.invalidLocation");
+            throw new TournamentLifecycleInvalidLocationException();
+        }
+    }
+
+    private void validateSport(final Sport sport) {
+        if (sport == null) {
+            throw new TournamentLifecycleException("invalidSport");
         }
     }
 
     private void validateFormat(final TournamentFormat format) {
         if (TournamentFormat.SINGLE_ELIMINATION != format) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_FORMAT,
-                    "tournament.lifecycle.error.invalidFormat");
+            throw new TournamentLifecycleInvalidFormatException();
         }
     }
 
     private void validateBracketSize(final int bracketSize) {
         if (!SUPPORTED_BRACKET_SIZES.contains(bracketSize)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_BRACKET_SIZE,
-                    "tournament.lifecycle.error.invalidBracketSize");
+            throw new TournamentLifecycleInvalidBracketSizeException();
         }
     }
 
     private void validateTeamSize(final int teamSize) {
         if (teamSize < 1) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_TEAM_SIZE,
-                    "tournament.lifecycle.error.invalidTeamSize");
+            throw new TournamentLifecycleInvalidTeamSizeException();
         }
     }
 
     private void validateJoinMode(final boolean allowSoloSignup, final boolean allowTeamDraft) {
         if (!allowSoloSignup && !allowTeamDraft) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_JOIN_MODE,
-                    "tournament.lifecycle.error.invalidJoinMode");
+            throw new TournamentLifecycleInvalidJoinModeException();
         }
     }
 
@@ -448,33 +546,45 @@ public class TournamentServiceImpl implements TournamentService {
         if (registrationOpensAt == null
                 || registrationClosesAt == null
                 || !registrationClosesAt.isAfter(registrationOpensAt)) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                    "tournament.lifecycle.error.invalidRegistrationWindow");
+            throw new TournamentLifecycleInvalidRegistrationWindowException();
+        }
+    }
+
+    private void validateSchedule(
+            final Instant startsAt, final Instant endsAt, final Instant registrationClosesAt) {
+        if (startsAt == null || endsAt == null) {
+            throw new TournamentLifecycleInvalidScheduleException();
+        }
+        if (!endsAt.isAfter(startsAt)) {
+            throw new TournamentLifecycleInvalidScheduleException();
+        }
+        if (registrationClosesAt != null && !startsAt.isAfter(registrationClosesAt)) {
+            throw new TournamentLifecycleInvalidScheduleException();
         }
     }
 
     private void validateFutureRegistrationClose(final Instant registrationClosesAt) {
         if (!registrationClosesAt.isAfter(Instant.now(clock))) {
-            throw lifecycleException(
-                    TournamentLifecycleFailureReason.INVALID_REGISTRATION_WINDOW,
-                    "tournament.lifecycle.error.invalidRegistrationWindow");
+            throw new TournamentLifecycleInvalidRegistrationWindowException();
+        }
+    }
+
+    private void hydrateDistances(
+            final List<Tournament> tournaments, final Double latitude, final Double longitude) {
+        for (Tournament tournament : tournaments) {
+            if (tournament.getLatitude() != null && tournament.getLongitude() != null) {
+                tournament.setDistanceKmFromViewer(
+                        DistanceUtils.distanceKm(
+                                latitude,
+                                longitude,
+                                tournament.getLatitude(),
+                                tournament.getLongitude()));
+            }
         }
     }
 
     private static boolean isBlank(final String value) {
         return value == null || value.isBlank();
-    }
-
-    private TournamentLifecycleException lifecycleException(
-            final TournamentLifecycleFailureReason reason, final String messageCode) {
-        return new TournamentLifecycleException(reason, message(messageCode));
-    }
-
-    private String message(final String code) {
-        final Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(
-                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
     }
 
     private PaginatedResult<Tournament> paginate(
@@ -505,5 +615,13 @@ public class TournamentServiceImpl implements TournamentService {
         List<Tournament> items(int offset, int safePageSize);
     }
 
-    private record DateRange(Instant start, Instant endExclusive) {}
+    private record DateRange(Instant start, Instant endExclusive) {
+        static DateRange of(final LocalDate start, final LocalDate end) {
+            return new DateRange(
+                    start == null ? null : start.atStartOfDay(PlatformTime.ZONE).toInstant(),
+                    end == null
+                            ? null
+                            : end.plusDays(1).atStartOfDay(PlatformTime.ZONE).toInstant());
+        }
+    }
 }

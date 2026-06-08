@@ -72,15 +72,12 @@
 									</c:if>
 									<input type="hidden" name="sort"
 										value="<c:out value='${searchForm.sort}' />" />
-									<input type="hidden" name="tz"
-										value="<c:out value='${searchForm.timezone}' />"
-										data-browser-timezone-field="true" />
 									<input type="hidden" name="minPrice"
 										value="<c:out value='${searchForm.minPrice}' />" />
 									<input type="hidden" name="maxPrice"
 										value="<c:out value='${searchForm.maxPrice}' />" />
-									<c:if test="${searchForm.filter eq 'past'}">
-										<input type="hidden" name="filter" value="past" />
+									<c:if test="${searchForm.filterName eq 'PAST'}">
+										<input type="hidden" name="filter" value="${searchForm.filterName}" />
 									</c:if>
 									<input type="hidden" name="page" id="eventsSearchForm_page" value="${pageNumber}" />
 									<div class="filters-bar__search-row">
@@ -94,7 +91,7 @@
 							</div>
 
 							<!-- Toggle -->
-							<ui:eventsFilterToggle currentFilter="${searchForm.filter}" />
+							<ui:eventsFilterToggle currentFilter="${searchForm.filterName}" />
 						</div>
 					</div>
 
@@ -262,9 +259,6 @@
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
 												value="<c:out value='${searchForm.sort}' />" />
-											<input type="hidden" name="tz"
-												value="<c:out value='${searchForm.timezone}' />"
-												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
 												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
@@ -292,8 +286,8 @@
 												value="<c:out value='${searchForm.minPrice}' />" />
 											<input type="hidden" name="maxPrice"
 												value="<c:out value='${searchForm.maxPrice}' />" />
-											<c:if test="${searchForm.filter eq 'past'}">
-												<input type="hidden" name="filter" value="past" />
+											<c:if test="${searchForm.filterName eq 'PAST'}">
+												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
 
 											<div class="field filter-rail__field">
@@ -320,7 +314,6 @@
 												<c:url var="clearDateHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
 													<c:param name="sort" value="${searchForm.sort}" />
-													<c:param name="tz" value="${searchForm.timezone}" />
 													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
@@ -338,8 +331,8 @@
 													</c:forEach>
 													<c:param name="minPrice" value="${searchForm.minPrice}" />
 													<c:param name="maxPrice" value="${searchForm.maxPrice}" />
-													<c:if test="${searchForm.filter eq 'past'}">
-														<c:param name="filter" value="past" />
+													<c:if test="${searchForm.filterName eq 'PAST'}">
+														<c:param name="filter" value="${searchForm.filterName}" />
 													</c:if>
 												</c:url>
 												<spring:message var="applyDateLabel"
@@ -391,9 +384,6 @@
 												value="<c:out value='${listControls.searchQuery}' />" />
 											<input type="hidden" name="sort"
 												value="<c:out value='${searchForm.sort}' />" />
-											<input type="hidden" name="tz"
-												value="<c:out value='${searchForm.timezone}' />"
-												data-browser-timezone-field="true" />
 											<c:forEach var="selectedSport"
 												items="${searchForm.sport}">
 												<input type="hidden" name="sport"
@@ -423,8 +413,8 @@
 												<input type="hidden" name="endDate"
 													value="<c:out value='${searchForm.endDate}' />" />
 											</c:if>
-											<c:if test="${searchForm.filter eq 'past'}">
-												<input type="hidden" name="filter" value="past" />
+											<c:if test="${searchForm.filterName eq 'PAST'}">
+												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
 
 											<div
@@ -466,7 +456,6 @@
 												<c:url var="clearPriceHref" value="${listControls.searchAction}">
 													<c:param name="q" value="${listControls.searchQuery}" />
 													<c:param name="sort" value="${searchForm.sort}" />
-													<c:param name="tz" value="${searchForm.timezone}" />
 													<c:forEach var="selectedSport" items="${searchForm.sport}">
 														<c:param name="sport" value="${selectedSport}" />
 													</c:forEach>
@@ -488,8 +477,8 @@
 													</c:if>
 													<c:param name="minPrice" value="" />
 													<c:param name="maxPrice" value="" />
-													<c:if test="${searchForm.filter eq 'past'}">
-														<c:param name="filter" value="past" />
+													<c:if test="${searchForm.filterName eq 'PAST'}">
+														<c:param name="filter" value="${searchForm.filterName}" />
 													</c:if>
 												</c:url>
 												<spring:message var="applyPriceLabel"
@@ -521,21 +510,18 @@
 										</c:if>
 									</div>
 
-								<c:url var="clearSearchHref"
-									value="${listControls.cleanSearchAction}">
-									<c:param name="sort" value="${searchForm.sort}" />
-									<c:param name="tz" value="${searchForm.timezone}" />
-									<c:if test="${searchForm.filter eq 'past'}">
-										<c:param name="filter" value="past" />
-									</c:if>
+								<c:url var="clearSearchHref" value="${listControls.cleanSearchAction}">
+									<c:param name="type" value="${searchForm.type}" />
+									<c:param name="filter" value="${searchForm.filterName}" />
 								</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />
 									<ui:button label="${clearAllLabel}" href="${clearSearchHref}"
 										variant="primary" size="sm" className="filter-rail__clear" />
 
+									<spring:message var="sortByLabel" code="feed.sortBy" />
 									<ui:sortSelect
 										id="events-sort-select"
-										label="${listControls.sortLabel}"
+										label="${sortByLabel}"
 										ariaLabel="${sortAriaLabel}"
 										options="${listControls.sortOptions}" />
 								</div>
@@ -561,99 +547,22 @@
 								<c:otherwise>
 									<div class="event-grid">
 										<c:forEach var="event" items="${events}">
-											<c:url var="eventHref" value="${event.href}" />
-
-											<ui:card href="${eventHref}" className="event-card"
-												ariaLabel="${event.title}">
-
-												<div class="event-card__media ${event.mediaClass}">
-													<c:if test="${not empty event.bannerImageUrl}">
-														<c:url var="eventBannerSrc"
-															value="${event.bannerImageUrl}" />
-														<img class="event-card__image"
-															src="${eventBannerSrc}" alt=""
-															loading="lazy" decoding="async" />
-													</c:if>
-													<div class="event-card__media-badges">
-														<span class="event-card__badge">
-															<c:out value="${event.badge}" />
-														</span>
-														<c:forEach var="relationshipBadge" items="${event.relationshipBadges}">
-															<span class="event-badge event-badge--${relationshipBadge.type}">
-																<c:out value="${relationshipBadge.label}" />
-															</span>
-														</c:forEach>
-													</div>
-												</div>
-
-												<div class="event-card__body">
-													<div class="event-card__sport-row">
-														<span class="event-card__sport">
-															<c:out value="${event.sport}" />
-														</span>
-														<c:if test="${event.recurring}">
-															<span class="event-card__recurring">
-																<c:out value="${event.recurringLabel}" />
-															</span>
-														</c:if>
-													</div>
-
-													<h2 class="event-card__title">
-														<c:out value="${event.title}" />
-													</h2>
-
-													<div class="event-card__meta">
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon"
-																aria-hidden="true">
-																<icon:locationPin fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
-															<span class="event-card__meta-text">
-																<c:out value="${event.venue}" />
-															</span>
-
-														</span>
-														<span class="event-card__meta-item">
-															<span class="event-card__meta-icon"
-																aria-hidden="true">
-																<icon:calendar fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-															</span>
-															<c:out value="${empty event.dateLabel ? event.schedule : event.dateLabel}" />
-														</span>
-														<c:if test="${not empty event.timeLabel}">
-															<span class="event-card__meta-item">
-																<span class="event-card__meta-icon"
-																	aria-hidden="true">
-																	<icon:clock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-																</span>
-																<c:out value="${event.timeLabel}" />
-															</span>
-														</c:if>
-														<c:if test="${not empty event.hostLabel}">
-															<span class="event-card__meta-item">
-																<span class="event-card__meta-icon"
-																	aria-hidden="true">
-																	<icon:profile fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-																</span>
-																<span class="event-card__meta-text">
-																	<spring:message code="event.card.hostedBy" />
-																	<c:out value="${event.hostLabel}" />
-																</span>
-															</span>
-														</c:if>
-													</div>
-
-													<div class="event-card__footer">
-														<div class="event-card__cta">
-															<span>
-																<c:out
-																	value="${event.priceLabel}" />
-															</span>
-														</div>
-													</div>
-												</div>
-
-											</ui:card>
+											<c:choose>
+												<c:when test="${eventType.dbValue == 'tournament'}">
+													<ui:eventCard
+														tournament="${event}"
+														badgeLabel="${eventBadgeLabels[event.id]}"
+														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+														headingLevel="h2" />
+												</c:when>
+												<c:otherwise>
+													<ui:eventCard
+														match="${event}"
+														badgeLabel="${eventBadgeLabels[event.id]}"
+														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+														headingLevel="h2" />
+												</c:otherwise>
+											</c:choose>
 										</c:forEach>
 									</div>
 								</c:otherwise>

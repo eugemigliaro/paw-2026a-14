@@ -1,15 +1,14 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationException;
 import ar.edu.itba.paw.services.MatchInvitationResult;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
 import ar.edu.itba.paw.webapp.form.InviteForm;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PendingRequestViewModel;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
@@ -45,38 +44,36 @@ public class HostParticipationController {
 
     @GetMapping("/host/matches/{matchId:\\d+}/participants")
     public ModelAndView showRoster(
-            @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        try {
-            matchParticipationService.findConfirmedParticipants(matchId, host);
-        } catch (final MatchParticipationException e) {
-            throw participationAccessStatus(e);
-        }
+            @AuthenticatedUser final User user,
+            @PathVariable("matchId") final Long matchId,
+            final Locale locale) {
+        matchParticipationService.findConfirmedParticipants(matchId, user);
         return new ModelAndView("redirect:/matches/" + matchId + "#participants");
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/requests")
     public ModelAndView showPendingRequests(
-            @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+            @AuthenticatedUser final User user,
+            @PathVariable("matchId") final Long matchId,
+            final Locale locale) {
         try {
-            matchParticipationService.findPendingRequests(matchId, host);
-        } catch (final MatchParticipationException e) {
-            throw participationAccessStatus(e);
+            matchParticipationService.findPendingRequests(matchId, user);
+        } catch (final MatchException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-
         return new ModelAndView("redirect:/matches/" + matchId + "#pending-requests");
     }
 
     @GetMapping("/host/requests")
-    public ModelAndView showAllPendingRequests(final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
+    public ModelAndView showAllPendingRequests(
+            @AuthenticatedUser final User user,
+            final Locale locale) { // TODO: this method is never used
         final List<PendingJoinRequest> pending =
-                matchParticipationService.findPendingRequestsForHost(host);
+                matchParticipationService.findPendingRequestsForHost(user);
 
         final ModelAndView mav = new ModelAndView("host/participation/aggregate-requests");
         mav.addObject("aggregateRequests", true);
-        mav.addObject("pendingRequests", toHostPendingRequestViewModels(pending));
+        mav.addObject("pendingRequests", pending);
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
         mav.addObject("matchesUrl", "/events");
@@ -85,46 +82,44 @@ public class HostParticipationController {
 
     @PostMapping("/host/matches/{matchId:\\d+}/requests/{userId:\\d+}/approve")
     public ModelAndView approveRequest(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final User user = findUserOrThrow(userId);
+        final User targetUser = findUserOrThrow(userId);
 
         try {
-            matchParticipationService.approveRequest(matchId, host, user);
+            matchParticipationService.approveRequest(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "requestApproved");
-            return redirectToMatch(matchId);
-        } catch (final MatchParticipationException e) {
-            throwIfAccessFailure(e);
+        } catch (final MatchException e) {
+            final String errorKey = "event.host.requests.error." + e.getMessage();
+            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
-            redirectAttributes.addFlashAttribute(
-                    "hostActionError", requestErrorMessage(e.getCode(), locale));
-            return redirectToMatch(matchId);
+            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
         }
+        return redirectToMatch(matchId);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/requests/{userId:\\d+}/reject")
     public ModelAndView rejectRequest(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final User user = findUserOrThrow(userId);
+        final User targetUser = findUserOrThrow(userId);
 
         try {
-            matchParticipationService.rejectRequest(matchId, host, user);
+            matchParticipationService.rejectRequest(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "requestRejected");
-            return redirectToMatch(matchId);
         } catch (final MatchParticipationException e) {
-            throwIfAccessFailure(e);
+            final String errorKey = "event.host.requests.error." + e.getMessage();
+            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
-            redirectAttributes.addFlashAttribute(
-                    "hostActionError", requestErrorMessage(e.getCode(), locale));
-            return redirectToMatch(matchId);
+            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
         }
+        return redirectToMatch(matchId);
     }
 
     @ModelAttribute("inviteForm")
@@ -134,19 +129,16 @@ public class HostParticipationController {
 
     @GetMapping("/host/matches/{matchId:\\d+}/invites")
     public ModelAndView showInvitePage(
-            @PathVariable("matchId") final Long matchId, final Locale locale) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        try {
-            matchParticipationService.findInvitedUsers(matchId, host);
-        } catch (final MatchParticipationException e) {
-            throw participationAccessStatus(e);
-        }
-
+            @AuthenticatedUser final User user,
+            @PathVariable("matchId") final Long matchId,
+            final Locale locale) {
+        matchParticipationService.findInvitedUsers(matchId, user);
         return new ModelAndView("redirect:/matches/" + matchId + "#pending-invitations");
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/invites")
     public ModelAndView sendInvite(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
             final BindingResult bindingResult,
@@ -160,109 +152,43 @@ public class HostParticipationController {
             return redirectToMatch(matchId);
         }
 
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-
         try {
             final MatchInvitationResult invitationResult =
                     matchParticipationService.inviteUserWithResult(
-                            matchId, host, inviteForm.getEmail(), inviteForm.isInviteSeries());
+                            matchId, user, inviteForm.getEmail(), inviteForm.isInviteSeries());
             redirectAttributes.addFlashAttribute(
                     "hostAction",
                     invitationResult.isSeriesInvitation() ? "seriesInviteSent" : "inviteSent");
             return redirectToMatch(matchId);
-        } catch (final MatchParticipationException e) {
-            throwIfAccessFailure(e);
-            final String errorMsg = inviteErrorMessage(e.getCode(), inviteForm.getEmail(), locale);
+        } catch (final MatchException e) {
+            final String errorKey = "host.invites.error." + e.getMessage();
+            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
             redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
-            return redirectToMatch(matchId);
         }
-    }
-
-    private String inviteErrorMessage(final String code, final String email, final Locale locale) {
-        switch (code) {
-            case "user_not_found":
-                return messageSource.getMessage(
-                        "host.invites.error.userNotFound", new Object[] {email}, locale);
-            case "already_joined":
-                return messageSource.getMessage("host.invites.error.alreadyJoined", null, locale);
-            case "already_invited":
-                return messageSource.getMessage("host.invites.error.alreadyInvited", null, locale);
-            case "full":
-                return messageSource.getMessage("host.invites.error.full", null, locale);
-            case "is_host":
-                return messageSource.getMessage("host.invites.error.isHost", null, locale);
-            case "closed":
-                return messageSource.getMessage("host.invites.error.closed", null, locale);
-            case "series_started":
-                return messageSource.getMessage("host.invites.error.seriesStarted", null, locale);
-            case "series_closed":
-                return messageSource.getMessage("host.invites.error.seriesClosed", null, locale);
-            case "series_already_joined":
-                return messageSource.getMessage(
-                        "host.invites.error.seriesAlreadyJoined", null, locale);
-            case "series_already_invited":
-                return messageSource.getMessage(
-                        "host.invites.error.seriesAlreadyInvited", null, locale);
-            case "series_already_covered":
-                return messageSource.getMessage(
-                        "host.invites.error.seriesAlreadyCovered", null, locale);
-            case "series_full":
-                return messageSource.getMessage("host.invites.error.seriesFull", null, locale);
-            default:
-                return messageSource.getMessage("host.invites.error.generic", null, locale);
-        }
+        return redirectToMatch(matchId);
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/participants/{userId:\\d+}/remove")
     public ModelAndView removeParticipant(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final User host = SecurityControllerUtils.requireAuthenticatedUser();
-        final User user = findUserOrThrow(userId);
+        final User targetUser = findUserOrThrow(userId);
 
         try {
-            matchParticipationService.removeParticipant(matchId, host, user);
+            matchParticipationService.removeParticipant(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "participantRemoved");
-            return redirectToMatch(matchId);
-        } catch (final MatchParticipationException e) {
-            throwIfAccessFailure(e);
+        } catch (final MatchException e) {
+            final String errorKey = "event.host.participants.error." + e.getMessage();
+            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "participants");
-            redirectAttributes.addFlashAttribute(
-                    "hostActionError", participantErrorMessage(e.getCode(), locale));
-            return redirectToMatch(matchId);
+            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
         }
-    }
-
-    private List<PendingRequestViewModel> toHostPendingRequestViewModels(
-            final List<PendingJoinRequest> requests) {
-        return requests.stream()
-                .map(
-                        request -> {
-                            final User user = request.getUser();
-                            final Match match = request.getMatch();
-                            final Long matchId = match.getId();
-                            return new PendingRequestViewModel(
-                                    user.getUsername(),
-                                    avatarLabel(user.getUsername()),
-                                    "/host/matches/"
-                                            + matchId
-                                            + "/requests/"
-                                            + user.getId()
-                                            + "/approve",
-                                    "/host/matches/"
-                                            + matchId
-                                            + "/requests/"
-                                            + user.getId()
-                                            + "/reject",
-                                    match.getTitle(),
-                                    "/matches/" + matchId,
-                                    request.isSeriesRequest());
-                        })
-                .toList();
+        return redirectToMatch(matchId);
     }
 
     private User findUserOrThrow(final Long userId) {
@@ -275,22 +201,6 @@ public class HostParticipationController {
         return new ModelAndView("redirect:/matches/" + matchId);
     }
 
-    private void throwIfAccessFailure(final MatchParticipationException e) {
-        if ("forbidden".equals(e.getCode()) || "not_found".equals(e.getCode())) {
-            throw participationAccessStatus(e);
-        }
-    }
-
-    private ResponseStatusException participationAccessStatus(final MatchParticipationException e) {
-        if ("not_found".equals(e.getCode())) {
-            return new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        if ("forbidden".equals(e.getCode())) {
-            return new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST);
-    }
-
     private String inviteValidationErrorMessage(
             final BindingResult bindingResult, final Locale locale) {
         return bindingResult.getAllErrors().stream()
@@ -298,48 +208,5 @@ public class HostParticipationController {
                 .map(error -> messageSource.getMessage(error, locale))
                 .orElseGet(
                         () -> messageSource.getMessage("host.invites.error.generic", null, locale));
-    }
-
-    private String requestErrorMessage(final String code, final Locale locale) {
-        if ("full".equals(code)) {
-            return messageSource.getMessage("event.host.requests.error.full", null, locale);
-        }
-        if ("closed".equals(code)) {
-            return messageSource.getMessage("event.host.requests.error.closed", null, locale);
-        }
-        return messageSource.getMessage("event.host.requests.error.noPendingRequest", null, locale);
-    }
-
-    private String participantErrorMessage(final String code, final Locale locale) {
-        switch (code) {
-            case "started":
-                return messageSource.getMessage(
-                        "event.host.participants.error.started", null, locale);
-            case "not_cancellable":
-                return messageSource.getMessage(
-                        "event.host.participants.error.notCancellable", null, locale);
-            case "not_joined":
-            case "not_participant":
-                return messageSource.getMessage(
-                        "event.host.participants.error.notParticipant", null, locale);
-            default:
-                return messageSource.getMessage(
-                        "event.host.participants.error.generic", null, locale);
-        }
-    }
-
-    private static String avatarLabel(final String username) {
-        if (username == null || username.isBlank()) {
-            return "?";
-        }
-        final String[] parts = username.trim().split("[^A-Za-z0-9]+");
-        if (parts.length >= 2) {
-            return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
-        }
-        final String compact = username.replaceAll("[^A-Za-z0-9]", "");
-        if (compact.length() >= 2) {
-            return compact.substring(0, 2).toUpperCase();
-        }
-        return compact.isEmpty() ? "?" : compact.substring(0, 1).toUpperCase();
     }
 }

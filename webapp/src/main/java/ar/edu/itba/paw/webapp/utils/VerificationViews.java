@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.webapp.utils;
 
-import ar.edu.itba.paw.services.VerificationFailureReason;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
@@ -17,29 +15,14 @@ public final class VerificationViews {
                 .withLocale(locale == null ? Locale.ENGLISH : locale);
     }
 
-    public static String titleFor(
-            final VerificationFailureReason reason, final MessageSource ms, final Locale locale) {
-        switch (reason) {
-            case EXPIRED:
-                return ms.getMessage("verification.error.expired", null, locale);
-            case ALREADY_USED:
-                return ms.getMessage("verification.error.alreadyUsed", null, locale);
-            case INVALID_ACTION:
-                return ms.getMessage("verification.error.invalidAction", null, locale);
-            case NOT_FOUND:
-            default:
-                return ms.getMessage("verification.error.notFound", null, locale);
-        }
-    }
-
     public static ModelAndView buildErrorView(
-            final VerificationFailureException ex,
+            final String messageKey,
             final MessageSource ms,
             final Locale locale,
             final String backHref) {
         final ModelAndView mav = new ModelAndView("verification/error");
-        mav.addObject("title", titleFor(ex.getReason(), ms, locale));
-        mav.addObject("message", ex.getMessage());
+        mav.addObject("title", ms.getMessage(messageKey, null, locale));
+        mav.addObject("message", ms.getMessage(messageKey, null, locale));
         mav.addObject("backHref", backHref);
         return mav;
     }

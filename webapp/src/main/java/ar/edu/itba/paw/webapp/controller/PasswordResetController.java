@@ -1,16 +1,13 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
-import ar.edu.itba.paw.services.exceptions.PasswordResetException;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
 import ar.edu.itba.paw.webapp.form.ResetPasswordForm;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
-import java.time.ZoneId;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,13 +20,10 @@ import org.springframework.web.servlet.ModelAndView;
 public class PasswordResetController {
 
     private final AccountAuthService accountAuthService;
-    private final MessageSource messageSource;
 
     @Autowired
-    public PasswordResetController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
+    public PasswordResetController(final AccountAuthService accountAuthService) {
         this.accountAuthService = accountAuthService;
-        this.messageSource = messageSource;
     }
 
     @ModelAttribute("resetPasswordForm")
@@ -40,15 +34,11 @@ public class PasswordResetController {
     @GetMapping("/password-reset/{token}")
     public ModelAndView showPasswordReset(
             @PathVariable("token") final String token, final Locale locale) {
-        try {
-            return passwordResetView(
-                    token,
-                    accountAuthService.getPasswordResetPreview(token),
-                    new ResetPasswordForm(),
-                    locale);
-        } catch (final VerificationFailureException exception) {
-            return buildErrorView(exception, locale);
-        }
+        return passwordResetView(
+                token,
+                accountAuthService.getPasswordResetPreview(token),
+                new ResetPasswordForm(),
+                locale);
     }
 
     @PostMapping("/password-reset/{token}")
@@ -59,34 +49,15 @@ public class PasswordResetController {
             final Locale locale) {
 
         if (bindingResult.hasErrors()) {
-            try {
-                return passwordResetView(
-                        token,
-                        accountAuthService.getPasswordResetPreview(token),
-                        resetPasswordForm,
-                        locale);
-            } catch (final VerificationFailureException exception) {
-                return buildErrorView(exception, locale);
-            }
+            return passwordResetView(
+                    token,
+                    accountAuthService.getPasswordResetPreview(token),
+                    resetPasswordForm,
+                    locale);
         }
 
-        try {
-            accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
-            return new ModelAndView("redirect:/login?reset=1");
-        } catch (final PasswordResetException exception) {
-            bindingResult.rejectValue("password", exception.getCode(), exception.getMessage());
-            try {
-                return passwordResetView(
-                        token,
-                        accountAuthService.getPasswordResetPreview(token),
-                        resetPasswordForm,
-                        locale);
-            } catch (final VerificationFailureException verificationFailureException) {
-                return buildErrorView(verificationFailureException, locale);
-            }
-        } catch (final VerificationFailureException exception) {
-            return buildErrorView(exception, locale);
-        }
+        accountAuthService.resetPassword(token, resetPasswordForm.getPassword());
+        return new ModelAndView("redirect:/login?reset=1");
     }
 
     private ModelAndView passwordResetView(
@@ -100,14 +71,8 @@ public class PasswordResetController {
         mav.addObject(
                 "expiresAtLabel",
                 VerificationViews.expiryFormatter(locale)
-                        .format(preview.getExpiresAt().atZone(ZoneId.systemDefault())));
+                        .format(preview.getExpiresAt().atZone(PlatformTime.ZONE)));
         mav.addObject("resetPasswordForm", resetPasswordForm);
         return mav;
-    }
-
-    private ModelAndView buildErrorView(
-            final VerificationFailureException exception, final Locale locale) {
-        return VerificationViews.buildErrorView(
-                exception, messageSource, locale, "/forgot-password");
     }
 }

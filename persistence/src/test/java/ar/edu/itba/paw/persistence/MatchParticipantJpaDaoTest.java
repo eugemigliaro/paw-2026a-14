@@ -423,6 +423,70 @@ public class MatchParticipantJpaDaoTest {
     }
 
     @Test
+    public void testFindPendingRequestMatchesReturnsMatchesAndExcludesHostedMatches() {
+        final Instant now = Instant.now();
+        final Match hostedByPlayer =
+                createMatch(
+                        player,
+                        "Address",
+                        "Hosted",
+                        now.plusSeconds(86400),
+                        5,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
+        final Match hostedByOther =
+                createMatch(
+                        host,
+                        "Address",
+                        "Pending",
+                        now.plusSeconds(172800),
+                        5,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
+        createParticipant(hostedByPlayer, player, ParticipantStatus.PENDING_APPROVAL);
+        createParticipant(hostedByOther, player, ParticipantStatus.PENDING_APPROVAL);
+        flushAndClear();
+
+        final List<Match> pendingMatches = matchParticipantDao.findPendingRequestMatches(player);
+
+        Assertions.assertEquals(List.of(hostedByOther.getId()), matchIds(pendingMatches));
+    }
+
+    @Test
+    public void testFindInvitedMatchesReturnsMatchesCollapsesSeriesAndExcludesHostedMatches() {
+        final Instant now = Instant.now();
+        final MatchSeries series = createSeries(host);
+        final Match m1 = createMatchInSeries(series, host, now.plusSeconds(86400), 1);
+        final Match m2 = createMatchInSeries(series, host, now.plusSeconds(172800), 2);
+        final Match singleInvite =
+                createMatch(
+                        host,
+                        "Address",
+                        "Single",
+                        now.plusSeconds(259200),
+                        5,
+                        EventJoinPolicy.INVITE_ONLY);
+        final Match hostedByPlayer =
+                createMatch(
+                        player,
+                        "Address",
+                        "Hosted",
+                        now.plusSeconds(345600),
+                        5,
+                        EventJoinPolicy.INVITE_ONLY);
+
+        createParticipant(m1, player, ParticipantStatus.INVITED, ParticipantScope.SERIES);
+        createParticipant(m2, player, ParticipantStatus.INVITED, ParticipantScope.SERIES);
+        createParticipant(singleInvite, player, ParticipantStatus.INVITED, ParticipantScope.MATCH);
+        createParticipant(
+                hostedByPlayer, player, ParticipantStatus.INVITED, ParticipantScope.MATCH);
+        flushAndClear();
+
+        final List<Match> invitedMatches = matchParticipantDao.findInvitedMatches(player);
+
+        Assertions.assertEquals(
+                List.of(m1.getId(), singleInvite.getId()), matchIds(invitedMatches));
+    }
+
+    @Test
     public void testCancelPendingInvitations() {
         createParticipant(match, player, ParticipantStatus.INVITED);
         flushAndClear();
@@ -691,6 +755,53 @@ public class MatchParticipantJpaDaoTest {
         Assertions.assertEquals(ParticipantStatus.CANCELLED, participant.getStatus());
     }
 
+    @Test
+    public void testCancelFutureReservationsCancelsOnlyFutureActiveReservations() {
+        final Instant now = Instant.now();
+        final Match futureJoined =
+                createMatch(
+                        host,
+                        "Address",
+                        "Future",
+                        now.plusSeconds(86400),
+                        5,
+                        EventJoinPolicy.DIRECT);
+        final Match pastJoined =
+                createMatch(
+                        host,
+                        "Address",
+                        "Past",
+                        now.minusSeconds(86400),
+                        5,
+                        EventJoinPolicy.DIRECT);
+        final Match futurePending =
+                createMatch(
+                        host,
+                        "Address",
+                        "Pending",
+                        now.plusSeconds(172800),
+                        5,
+                        EventJoinPolicy.DIRECT);
+        createParticipant(futureJoined, player, ParticipantStatus.JOINED);
+        createParticipant(pastJoined, player, ParticipantStatus.JOINED);
+        createParticipant(futurePending, player, ParticipantStatus.PENDING_APPROVAL);
+        flushAndClear();
+
+        final int cancelled = matchParticipantDao.cancelFutureReservations(player, now);
+
+        Assertions.assertEquals(1, cancelled);
+        flushAndClear();
+        Assertions.assertEquals(
+                ParticipantStatus.CANCELLED,
+                findParticipant(futureJoined.getId(), player.getId()).getStatus());
+        Assertions.assertEquals(
+                ParticipantStatus.JOINED,
+                findParticipant(pastJoined.getId(), player.getId()).getStatus());
+        Assertions.assertEquals(
+                ParticipantStatus.PENDING_APPROVAL,
+                findParticipant(futurePending.getId(), player.getId()).getStatus());
+    }
+
     private User createUser(String username, String email) {
         User user = new User(null, email, username, "Name", "Last", "123", null, "en");
         em.persist(user);
@@ -790,6 +901,10 @@ public class MatchParticipantJpaDaoTest {
                         .setParameter("userId", userId)
                         .getResultList();
         return results.isEmpty() ? null : results.get(0);
+    }
+
+    private static List<Long> matchIds(List<Match> matches) {
+        return matches.stream().map(Match::getId).toList();
     }
 
     private void flushAndClear() {

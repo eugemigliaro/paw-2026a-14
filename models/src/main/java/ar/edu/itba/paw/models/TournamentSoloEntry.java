@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import ar.edu.itba.paw.models.converters.TournamentSoloEntryStatusConverter;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -103,8 +104,16 @@ public class TournamentSoloEntry {
         return joinedAt;
     }
 
+    public OffsetDateTime getJoinedAtDateTime() {
+        return PlatformTime.toOffsetDateTime(joinedAt);
+    }
+
     public Instant getLeftAt() {
         return leftAt;
+    }
+
+    public OffsetDateTime getLeftAtDateTime() {
+        return PlatformTime.toOffsetDateTime(leftAt);
     }
 
     public Long getVersion() {

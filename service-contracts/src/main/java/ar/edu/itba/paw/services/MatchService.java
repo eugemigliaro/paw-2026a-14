@@ -8,8 +8,7 @@ import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +28,8 @@ public interface MatchService {
             Match match, List<Match> seriesOccurrences, User viewer);
 
     Optional<Match> findPublicMatchById(Long matchId);
+
+    MatchActionCapabilities actionCapabilities(Match match, User viewer);
 
     Match findEditableMatchForHost(Long matchId, User actingUser);
 
@@ -52,12 +53,11 @@ public interface MatchService {
     PaginatedResult<Match> searchPublicMatches(
             String query,
             List<Sport> sport,
-            Instant startDate,
-            Instant endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             EventSort sort,
             int page,
             int pageSize,
-            ZoneId timezone,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Double latitude,
@@ -70,12 +70,11 @@ public interface MatchService {
             String query,
             List<Sport> sports,
             List<EventStatus> statuses,
-            Instant startDate,
-            Instant endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             EventSort sort,
-            ZoneId timezone,
             List<ParticipantStatus> participantStatuses,
             int page,
             int pageSize);

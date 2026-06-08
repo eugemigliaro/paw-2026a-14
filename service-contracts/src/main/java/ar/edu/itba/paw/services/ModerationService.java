@@ -69,5 +69,5 @@ public interface ModerationService {
 
     boolean restoreMatch(Long matchId);
 
-    String resolveTargetName(ReportTargetType targetType, Long targetId);
+    ModerationTargetSummary resolveTarget(ReportTargetType targetType, Long targetId);
 }

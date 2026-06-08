@@ -9,21 +9,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureExpiredException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureNotFoundException;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.VerificationConfirmationResult;
-import ar.edu.itba.paw.services.VerificationFailureReason;
 import ar.edu.itba.paw.services.VerificationPreview;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
-import ar.edu.itba.paw.services.exceptions.VerificationFailureException;
-import ar.edu.itba.paw.webapp.security.SecurityAuthorities;
+import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
+import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
+import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
+import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +37,10 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -43,6 +51,7 @@ class AuthFlowControllerTest {
 
     private MockMvc mockMvc;
     private AccountAuthService accountAuthService;
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
@@ -50,20 +59,29 @@ class AuthFlowControllerTest {
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
-        final MessageSource messageSource = messageSource();
-        final LocalValidatorFactoryBean validator = validator(messageSource);
 
         accountAuthService = Mockito.mock(AccountAuthService.class);
+        userService = Mockito.mock(UserService.class);
+        UserEmailValidator userEmailValidator = new UserEmailValidator(userService);
+        UsernameValidator usernameValidator = new UsernameValidator(userService);
+
+        final MessageSource messageSource = messageSource();
+        final LocalValidatorFactoryBean validator =
+                validator(messageSource, userEmailValidator, usernameValidator);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new AuthController(accountAuthService, messageSource),
-                                new PasswordResetController(accountAuthService, messageSource),
-                                new VerificationController(accountAuthService, messageSource))
+                                new PasswordResetController(accountAuthService),
+                                new VerificationController(accountAuthService))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .setValidator(validator)
+                        .setControllerAdvice(
+                                new AccessExceptionHandler(),
+                                new PasswordResetExceptionHandler(messageSource),
+                                new VerificationExceptionHandler(messageSource))
                         .build();
     }
 
@@ -158,41 +176,46 @@ class AuthFlowControllerTest {
     }
 
     @Test
-    void postRegisterWithServiceNameErrorRerendersRegisterViewWithNameError() throws Exception {
-        Mockito.when(
-                        accountAuthService.register(
-                                ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new AccountRegistrationException("name_invalid", "Invalid name"));
-
-        mockMvc.perform(validRegisterRequest())
+    void postRegisterWithNameErrorRerendersRegisterViewWithNameError() throws Exception {
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "")
+                                .param("lastName", "Rivera")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "name"));
     }
 
     @Test
-    void postRegisterWithServiceLastNameErrorRerendersRegisterViewWithLastNameError()
-            throws Exception {
-        Mockito.when(
-                        accountAuthService.register(
-                                ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(
-                        new AccountRegistrationException("lastName_invalid", "Invalid last name"));
-
-        mockMvc.perform(validRegisterRequest())
+    void postRegisterWithLastNameErrorRerendersRegisterViewWithLastNameError() throws Exception {
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "lastName"));
     }
 
     @Test
-    void postRegisterWithServicePhoneErrorRerendersRegisterViewWithPhoneError() throws Exception {
-        Mockito.when(
-                        accountAuthService.register(
-                                ArgumentMatchers.any(RegisterAccountRequest.class)))
-                .thenThrow(new AccountRegistrationException("phone_invalid", "Invalid phone"));
-
-        mockMvc.perform(validRegisterRequest())
+    void postRegisterWithPhoneErrorRerendersRegisterViewWithPhoneError() throws Exception {
+        mockMvc.perform(
+                        post("/register")
+                                .param("email", "new@test.com")
+                                .param("username", "new_user")
+                                .param("name", "Jamie")
+                                .param("lastName", "Rivera")
+                                .param("phone", "invalid-phone")
+                                .param("password", "Password123!")
+                                .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/register"))
                 .andExpect(model().attributeHasFieldErrors("registerForm", "phone"));
@@ -227,7 +250,7 @@ class AuthFlowControllerTest {
     @Test
     void postPasswordResetSuccessRedirectsToLogin() throws Exception {
         Mockito.when(accountAuthService.resetPassword("reset-token", "NewPassword123!"))
-                .thenReturn(new VerificationConfirmationResult(10L, "Password reset"));
+                .thenReturn(new VerificationConfirmationResult(10L));
 
         mockMvc.perform(
                         post("/password-reset/reset-token")
@@ -242,12 +265,7 @@ class AuthFlowControllerTest {
         Mockito.when(accountAuthService.getVerificationPreview("account-token"))
                 .thenReturn(
                         new VerificationPreview(
-                                "Verify your account",
-                                "Confirm your email address.",
-                                "player@test.com",
-                                Instant.parse("2026-04-11T18:00:00Z"),
-                                "Verify account",
-                                List.of()));
+                                "player@test.com", Instant.parse("2026-04-11T18:00:00Z")));
 
         mockMvc.perform(get("/verifications/account-token"))
                 .andExpect(status().isOk())
@@ -257,64 +275,59 @@ class AuthFlowControllerTest {
     }
 
     @Test
-    void postAccountVerificationAuthenticatesAdminModWithMappedAuthorities() throws Exception {
-        final UserAccount account =
-                new UserAccount(
-                        10L,
-                        "admin@test.com",
-                        "admin",
-                        null,
-                        null,
-                        null,
-                        null,
-                        "{bcrypt}hash",
-                        UserRole.ADMIN_MOD,
-                        Instant.parse("2026-04-10T18:00:00Z"),
-                        UserLanguages.DEFAULT_LANGUAGE);
-        Mockito.when(accountAuthService.confirmVerification("account-token"))
-                .thenReturn(new VerificationConfirmationResult(account, "Verified"));
+    void postVerificationConfirmAuthenticatesAndRedirectsHome() throws Exception {
+        Mockito.when(accountAuthService.confirmVerification("abc123"))
+                .thenReturn(
+                        new VerificationConfirmationResult(
+                                new UserAccount(
+                                        9L,
+                                        "player@test.com",
+                                        "player_account",
+                                        "Player",
+                                        "Account",
+                                        null,
+                                        null,
+                                        "{bcrypt}hash",
+                                        UserRole.USER,
+                                        Instant.parse("2026-04-05T00:00:00Z"),
+                                        UserLanguages.DEFAULT_LANGUAGE)));
 
-        mockMvc.perform(post("/verifications/account-token/confirm"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/"));
+        final MvcResult result =
+                mockMvc.perform(post("/verifications/abc123/confirm"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/"))
+                        .andReturn();
 
-        Assertions.assertTrue(
-                SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                        .anyMatch(
-                                authority ->
-                                        SecurityAuthorities.ADMIN_MOD.equals(
-                                                authority.getAuthority())));
-        Assertions.assertTrue(
-                SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                        .anyMatch(
-                                authority ->
-                                        SecurityAuthorities.USER.equals(authority.getAuthority())));
+        final SecurityContext securityContext =
+                (SecurityContext)
+                        result.getRequest().getSession().getAttribute("SPRING_SECURITY_CONTEXT");
+        Assertions.assertNotNull(securityContext);
+        Assertions.assertTrue(securityContext.getAuthentication().isAuthenticated());
+        Assertions.assertEquals(
+                9L,
+                ((AuthenticatedUserPrincipal) securityContext.getAuthentication().getPrincipal())
+                        .getUser()
+                        .getId());
+    }
+
+    @Test
+    void getInvalidVerificationRendersNotFoundPage() throws Exception {
+        Mockito.when(accountAuthService.getVerificationPreview("invalid"))
+                .thenThrow(new VerificationFailureNotFoundException());
+
+        mockMvc.perform(get("/verifications/invalid")).andExpect(status().isNotFound());
     }
 
     @Test
     void getPasswordResetWithExpiredTokenRendersErrorPage() throws Exception {
         Mockito.when(accountAuthService.getPasswordResetPreview("expired-token"))
-                .thenThrow(
-                        new VerificationFailureException(
-                                VerificationFailureReason.EXPIRED, "Expired token"));
+                .thenThrow(new VerificationFailureExpiredException());
 
         mockMvc.perform(get("/password-reset/expired-token"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/error"))
                 .andExpect(model().attribute("backHref", "/forgot-password"))
                 .andReturn();
-    }
-
-    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validRegisterRequest() {
-        return post("/register")
-                .param("email", "new@test.com")
-                .param("username", "new_user")
-                .param("name", "Jamie")
-                .param("lastName", "Rivera")
-                .param("phone", "+1 555 123 4567")
-                .param("password", "Password123!")
-                .param("confirmPassword", "Password123!");
     }
 
     private static MessageSource messageSource() {
@@ -337,9 +350,34 @@ class AuthFlowControllerTest {
         return localeChangeInterceptor;
     }
 
-    private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {
+    private static LocalValidatorFactoryBean validator(
+            final MessageSource messageSource,
+            final UserEmailValidator userEmailValidator,
+            final UsernameValidator usernameValidator) {
+        ConstraintValidatorFactory customConstraintFactory =
+                new ConstraintValidatorFactory() {
+                    @Override
+                    public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
+                        if (key == UserEmailValidator.class) {
+                            return (T) userEmailValidator;
+                        } else if (key == UsernameValidator.class) {
+                            return (T) usernameValidator;
+                        }
+                        try {
+                            return key.getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    @Override
+                    public void releaseInstance(ConstraintValidator<?, ?> instance) {}
+                }; // TODO: find a better way to inject the custom validator without having to
+        // reimplement the whole factory
+
         final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.setValidationMessageSource(messageSource);
+        validator.setConstraintValidatorFactory(customConstraintFactory);
         validator.afterPropertiesSet();
         return validator;
     }

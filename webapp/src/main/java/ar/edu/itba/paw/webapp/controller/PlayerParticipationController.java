@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.services.MatchParticipationService;
-import ar.edu.itba.paw.services.exceptions.MatchParticipationException;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,16 +24,16 @@ public class PlayerParticipationController {
 
     @PostMapping("/matches/{matchId}/join-requests")
     public ModelAndView requestToJoin(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
-
         try {
             matchParticipationService.requestToJoin(matchId, user);
             redirectAttributes.addFlashAttribute("joinRequested", true);
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationException e) {
-            return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + e.getCode());
+        } catch (MatchException e) {
+            final String errorCode = e.getMessage();
+            return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + errorCode);
         }
     }
 
@@ -42,58 +42,58 @@ public class PlayerParticipationController {
         "/matches/{matchId}/series-join-requests"
     })
     public ModelAndView requestToJoinSeries(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
-
         try {
             matchParticipationService.requestToJoinSeries(matchId, user);
             redirectAttributes.addFlashAttribute("seriesJoinRequested", true);
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationException e) {
-            return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + e.getCode());
+        } catch (final MatchException e) {
+            final String errorCode = e.getMessage();
+            return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + errorCode);
         }
     }
 
     @PostMapping("/matches/{matchId}/join-requests/cancel")
     public ModelAndView cancelJoinRequest(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
-
         try {
             matchParticipationService.cancelJoinRequest(matchId, user);
             redirectAttributes.addFlashAttribute("joinStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationException e) {
-            return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + e.getCode());
+        } catch (final MatchException e) {
+            final String errorCode = e.getMessage();
+            return new ModelAndView("redirect:/matches/" + matchId + "?joinError=" + errorCode);
         }
     }
 
     @PostMapping("/matches/{matchId}/invites/accept")
     public ModelAndView acceptInvite(
+            @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
-
         try {
             matchParticipationService.acceptInvite(matchId, user);
             redirectAttributes.addFlashAttribute("inviteStatus", "accepted");
             return new ModelAndView("redirect:/matches/" + matchId);
-        } catch (final MatchParticipationException e) {
-            return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + e.getCode());
+        } catch (final MatchException e) {
+            final String errorCode = e.getMessage();
+            return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + errorCode);
         }
     }
 
     @PostMapping("/matches/{matchId}/invites/decline")
-    public ModelAndView declineInvite(@PathVariable("matchId") final Long matchId) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
-
+    public ModelAndView declineInvite(
+            @AuthenticatedUser final User user, @PathVariable("matchId") final Long matchId) {
         try {
             matchParticipationService.declineInvite(matchId, user);
             return new ModelAndView("redirect:/events");
-        } catch (final MatchParticipationException e) {
-            return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + e.getCode());
+        } catch (MatchException e) {
+            final String errorCode = e.getMessage();
+            return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + errorCode);
         }
     }
 }

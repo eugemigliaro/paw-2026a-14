@@ -8,17 +8,7 @@ import javax.validation.Valid;
 @ValidBracketPublishForm
 public class BracketPublishForm {
 
-    private String tz = "";
-
     @Valid private List<BracketPublishScheduleForm> schedules = new ArrayList<>();
-
-    public String getTz() {
-        return tz;
-    }
-
-    public void setTz(final String tz) {
-        this.tz = tz;
-    }
 
     public List<BracketPublishScheduleForm> getSchedules() {
         return schedules;

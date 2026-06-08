@@ -1,23 +1,26 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ModerationReport;
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
-import java.time.ZoneId;
+import ar.edu.itba.paw.webapp.form.ReportAppealForm;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
+import javax.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -35,9 +38,14 @@ public class UserBanAppealController {
         this.messageSource = messageSource;
     }
 
+    @ModelAttribute("reportAppealForm")
+    public ReportAppealForm reportAppealForm() {
+        return new ReportAppealForm();
+    }
+
     @GetMapping
-    public ModelAndView showBanPage(final Model model, final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+    public ModelAndView showBanPage(
+            @AuthenticatedUser final User user, final Model model, final Locale locale) {
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
@@ -53,44 +61,53 @@ public class UserBanAppealController {
         mav.addObject(
                 "banDescription",
                 messageSource.getMessage(
-                        moderationService.canAppealReport(report, user)
-                                ? "account.ban.description.appeal.available"
-                                : "account.ban.description",
+                        report.getAppealCount() > 0
+                                ? "account.ban.description"
+                                : "account.ban.description.appeal.available",
                         null,
                         locale));
         mav.addObject(
                 "banUntilLabel",
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                         .withLocale(locale)
-                        .withZone(ZoneId.systemDefault())
+                        .withZone(PlatformTime.ZONE)
                         .format(activeBan.getBannedUntil()));
         mav.addObject(
                 "banReason",
                 messageSource.getMessage(
                         "moderation.reason." + report.getReason().getDbValue(), null, locale));
         mav.addObject("appealReason", report.getAppealReason());
-        mav.addObject("appealAllowed", moderationService.canAppealReport(report, user));
+        mav.addObject("appealAllowed", report.getAppealCount() < 1);
         mav.addObject("action", model.asMap().get("action"));
         return mav;
     }
 
     @PostMapping("/appeal")
     public ModelAndView appealBan(
-            @RequestParam("appealReason") final String appealReason,
+            @AuthenticatedUser final User user,
+            @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
         final UserBan activeBan =
                 moderationService
                         .findActiveBan(user)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            return new ModelAndView("redirect:/account/ban");
+        }
+
         try {
             moderationService.appealReport(
-                    activeBan.getModerationReport().getId(), user, appealReason);
+                    activeBan.getModerationReport().getId(), user, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/account/ban");
-        } catch (final ModerationException exception) {
-            return new ModelAndView("redirect:/account/ban?error=" + exception.getCode());
+        } catch (final ModerationException e) {
+            return new ModelAndView("redirect:/account/ban?error=" + e.getMessage());
         }
     }
 }

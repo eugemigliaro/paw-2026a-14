@@ -2,12 +2,15 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.match.*;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
+import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesNotJoinedException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
-import ar.edu.itba.paw.persistence.MatchDao;
-import ar.edu.itba.paw.persistence.MatchParticipantDao;
-import ar.edu.itba.paw.services.exceptions.MatchReservationException;
+import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -23,19 +26,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class MatchReservationServiceImpl implements MatchReservationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchReservationServiceImpl.class);
-    private final MatchDao matchDao;
-    private final MatchParticipantDao matchParticipantDao;
+    private final MatchDataService matchDataService;
+    private final MatchParticipantDataService matchParticipantDataService;
     private final MatchNotificationService matchNotificationService;
     private final Clock clock;
 
     @Autowired
     public MatchReservationServiceImpl(
-            final MatchDao matchDao,
-            final MatchParticipantDao matchParticipantDao,
+            final MatchDataService matchDataService,
+            final MatchParticipantDataService matchParticipantDataService,
             final MatchNotificationService matchNotificationService,
             final Clock clock) {
-        this.matchDao = matchDao;
-        this.matchParticipantDao = matchParticipantDao;
+        this.matchDataService = matchDataService;
+        this.matchParticipantDataService = matchParticipantDataService;
         this.matchNotificationService = matchNotificationService;
         this.clock = clock;
     }
@@ -43,7 +46,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
     @Override
     public boolean hasActiveReservation(final Long matchId, final User user) {
 
-        return matchParticipantDao.hasActiveReservation(matchId, user);
+        return matchParticipantDataService.hasActiveReservation(matchId, user);
     }
 
     @Override
@@ -53,7 +56,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             return Set.of();
         }
         return Set.copyOf(
-                matchParticipantDao.findActiveFutureReservationMatchIdsForSeries(
+                matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
                         seriesId, user, Instant.now(clock)));
     }
 
@@ -63,27 +66,21 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         nonNullUser(user);
         LOGGER.info("Reservation requested matchId={} userId={}", matchId, user);
         final Match match =
-                matchDao.findMatchById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
                                             "Reservation rejected code=not_found matchId={} userId={}",
                                             matchId,
                                             user.getId());
-                                    return new MatchReservationException(
-                                            "not_found", "The event does not exist.");
+                                    return new MatchNotFoundException();
                                 });
 
         validateReservable(match, user);
 
-        if (!matchParticipantDao.createReservationIfSpace(matchId, user)) {
-            final MatchReservationException failure = buildReservationFailure(matchId, user);
-            LOGGER.warn(
-                    "Reservation rejected code={} matchId={} userId={}",
-                    failure.getCode(),
-                    matchId,
-                    user.getId());
-            throw failure;
+        if (!matchParticipantDataService.createReservationIfSpace(matchId, user)) {
+            throwReservationFailure(matchId, user);
         }
 
         LOGGER.info("Reservation created matchId={} userId={}", matchId, user.getId());
@@ -99,15 +96,15 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         nonNullUser(user);
         LOGGER.info("Recurring reservation requested matchId={} userId={}", matchId, user.getId());
         final Match match =
-                matchDao.findMatchById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
                                             "Recurring reservation rejected code=not_found matchId={} userId={}",
                                             matchId,
                                             user.getId());
-                                    return new MatchReservationException(
-                                            "not_found", "The event does not exist.");
+                                    return new MatchNotFoundException();
                                 });
 
         if (!match.isRecurringOccurrence()) {
@@ -115,40 +112,25 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "Recurring reservation rejected code=not_recurring matchId={} userId={}",
                     matchId,
                     user.getId());
-            throw new MatchReservationException(
-                    "not_recurring", "The event is not a recurring event.");
+            throw new MatchNotRecurringException();
         }
 
-        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeries().getId());
+        final List<Match> occurrences =
+                matchDataService.findSeriesOccurrences(match.getSeries().getId());
         final SeriesReservationEvaluation evaluation = evaluateSeriesOccurrences(occurrences, user);
         if (evaluation.reservableOccurrenceCount() == 0) {
-            final MatchReservationException failure =
-                    buildSeriesReservationFailure(matchId, user, evaluation);
-            LOGGER.warn(
-                    "Recurring reservation rejected code={} matchId={} seriesId={} userId={}",
-                    failure.getCode(),
-                    matchId,
-                    match.getSeries().getId(),
-                    user.getId());
-            throw failure;
+            throwSeriesReservationFailure(matchId, user, evaluation);
         }
 
         final int reservedOccurrences =
-                matchParticipantDao.createSeriesReservationsIfSpace(
+                matchParticipantDataService.createSeriesReservationsIfSpace(
                         match.getSeries().getId(), user, Instant.now(clock));
         if (reservedOccurrences <= 0) {
             final SeriesReservationEvaluation currentEvaluation =
                     evaluateSeriesOccurrences(
-                            matchDao.findSeriesOccurrences(match.getSeries().getId()), user);
-            final MatchReservationException failure =
-                    buildSeriesReservationFailure(matchId, user, currentEvaluation);
-            LOGGER.warn(
-                    "Recurring reservation rejected code={} matchId={} seriesId={} userId={}",
-                    failure.getCode(),
-                    matchId,
-                    match.getSeries().getId(),
-                    user.getId());
-            throw failure;
+                            matchDataService.findSeriesOccurrences(match.getSeries().getId()),
+                            user);
+            throwSeriesReservationFailure(matchId, user, currentEvaluation);
         }
 
         LOGGER.info(
@@ -172,15 +154,15 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 matchId,
                 user.getId());
         final Match match =
-                matchDao.findMatchById(matchId)
+                matchDataService
+                        .findById(matchId)
                         .orElseThrow(
                                 () -> {
                                     LOGGER.warn(
                                             "Recurring reservation cancellation rejected code=not_found matchId={} userId={}",
                                             matchId,
                                             user.getId());
-                                    return new MatchReservationException(
-                                            "not_found", "The event does not exist.");
+                                    return new MatchNotFoundException();
                                 });
 
         if (!match.isRecurringOccurrence()) {
@@ -188,40 +170,26 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     "Recurring reservation cancellation rejected code=not_recurring matchId={} userId={}",
                     matchId,
                     user.getId());
-            throw new MatchReservationException(
-                    "not_recurring", "The event is not a recurring event.");
+            throw new MatchNotRecurringException();
         }
 
-        final List<Match> occurrences = matchDao.findSeriesOccurrences(match.getSeries().getId());
+        final List<Match> occurrences =
+                matchDataService.findSeriesOccurrences(match.getSeries().getId());
         final SeriesCancellationEvaluation evaluation =
                 evaluateSeriesCancellations(occurrences, user);
         if (evaluation.activeFutureReservationCount() == 0) {
-            final MatchReservationException failure = buildSeriesCancellationFailure(evaluation);
-            LOGGER.warn(
-                    "Recurring reservation cancellation rejected code={} matchId={} seriesId={} userId={}",
-                    failure.getCode(),
-                    matchId,
-                    match.getSeries().getId(),
-                    user.getId());
-            throw failure;
+            throwSeriesCancellationFailure(evaluation);
         }
 
         final int cancelledReservations =
-                matchParticipantDao.cancelFutureSeriesReservations(
+                matchParticipantDataService.cancelFutureSeriesReservations(
                         match.getSeries().getId(), user, Instant.now(clock));
         if (cancelledReservations <= 0) {
             final SeriesCancellationEvaluation currentEvaluation =
                     evaluateSeriesCancellations(
-                            matchDao.findSeriesOccurrences(match.getSeries().getId()), user);
-            final MatchReservationException failure =
-                    buildSeriesCancellationFailure(currentEvaluation);
-            LOGGER.warn(
-                    "Recurring reservation cancellation rejected code={} matchId={} seriesId={} userId={}",
-                    failure.getCode(),
-                    matchId,
-                    match.getSeries().getId(),
-                    user.getId());
-            throw failure;
+                            matchDataService.findSeriesOccurrences(match.getSeries().getId()),
+                            user);
+            throwSeriesCancellationFailure(currentEvaluation);
         }
 
         LOGGER.info(
@@ -239,8 +207,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     match.getId(),
                     user,
                     match.getStatus());
-            throw new MatchReservationException(
-                    "closed", "The event is not open for reservations.");
+            throw new MatchClosedException();
         }
 
         final boolean hostReservation = isHost(match, user);
@@ -251,8 +218,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     match.getId(),
                     user,
                     match.getVisibility());
-            throw new MatchReservationException(
-                    "closed", "The event is not open for reservations.");
+            throw new MatchClosedException();
         }
 
         if (!hostReservation && match.getJoinPolicy() != EventJoinPolicy.DIRECT) {
@@ -261,8 +227,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     match.getId(),
                     user,
                     match.getJoinPolicy());
-            throw new MatchReservationException(
-                    "closed", "The event requires host approval to join.");
+            throw new MatchClosedException();
         }
 
         if (!match.getStartsAt().isAfter(Instant.now(clock))) {
@@ -271,17 +236,15 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     match.getId(),
                     user,
                     match.getStartsAt());
-            throw new MatchReservationException("started", "The event has already started.");
+            throw new MatchStartedException();
         }
 
-        if (matchParticipantDao.hasActiveReservation(match.getId(), user)) {
+        if (matchParticipantDataService.hasActiveReservation(match.getId(), user)) {
             LOGGER.warn(
                     "Reservation rejected code=already_joined matchId={} userId={}",
                     match.getId(),
                     user);
-            throw new MatchReservationException(
-                    "already_joined",
-                    "This email already has a confirmed reservation for the event.");
+            throw new MatchParticipationAlreadyJoinedException();
         }
 
         if (match.getJoinedPlayers() >= match.getMaxPlayers()) {
@@ -291,15 +254,15 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                     user,
                     match.getJoinedPlayers(),
                     match.getMaxPlayers());
-            throw new MatchReservationException("full", "The event is already full.");
+            throw new MatchFullException();
         }
     }
 
-    private MatchReservationException buildReservationFailure(final Long matchId, final User user) {
-        final Match currentMatch = matchDao.findMatchById(matchId).orElse(null);
+    private void throwReservationFailure(final Long matchId, final User user) {
+        final Match currentMatch = matchDataService.findById(matchId).orElse(null);
 
         if (currentMatch == null) {
-            return new MatchReservationException("not_found", "The event does not exist.");
+            throw new MatchNotFoundException();
         }
 
         final boolean hostReservation = isHost(currentMatch, user);
@@ -308,22 +271,18 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 || (!hostReservation
                         && (currentMatch.getVisibility() != EventVisibility.PUBLIC
                                 || currentMatch.getJoinPolicy() != EventJoinPolicy.DIRECT))) {
-            return new MatchReservationException(
-                    "closed", "The event is not open for reservations.");
+            throw new MatchClosedException();
         }
 
         if (!currentMatch.getStartsAt().isAfter(Instant.now(clock))) {
-            return new MatchReservationException("started", "The event has already started.");
+            throw new MatchStartedException();
         }
 
-        if (matchParticipantDao.hasActiveReservation(matchId, user)) {
-            return new MatchReservationException(
-                    "already_joined",
-                    "This email already has a confirmed reservation for the event.");
+        if (matchParticipantDataService.hasActiveReservation(matchId, user)) {
+            throw new MatchParticipationAlreadyJoinedException();
         }
 
-        return new MatchReservationException(
-                "full", "The event filled up before the reservation could be confirmed.");
+        throw new MatchFullException();
     }
 
     private SeriesReservationEvaluation evaluateSeriesOccurrences(
@@ -348,7 +307,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             futureOpenOccurrenceCount++;
             final boolean alreadyJoined =
                     user != null
-                            && matchParticipantDao.hasActiveReservation(occurrence.getId(), user);
+                            && matchParticipantDataService.hasActiveReservation(
+                                    occurrence.getId(), user);
             if (alreadyJoined) {
                 joinedFutureOpenOccurrenceCount++;
                 continue;
@@ -385,35 +345,29 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         return user != null && user.getId().equals(match.getHost().getId());
     }
 
-    private MatchReservationException buildSeriesReservationFailure(
+    private void throwSeriesReservationFailure(
             final Long matchId, final User user, final SeriesReservationEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
-            return new MatchReservationException(
-                    "series_started", "There are no upcoming dates left in this recurring event.");
+            throw new MatchSeriesStartedException();
         }
 
         if (evaluation.futureOpenOccurrenceCount() == 0) {
-            return new MatchReservationException(
-                    "series_closed", "The upcoming recurring dates are not open.");
+            throw new MatchClosedException();
         }
 
         if (evaluation.joined()) {
-            return new MatchReservationException(
-                    "series_already_joined",
-                    "This account already has reservations for the future recurring dates.");
+            throw new MatchParticipationSeriesAlreadyJoinedException();
         }
 
         if (evaluation.fullOccurrenceCount() > 0) {
-            return new MatchReservationException(
-                    "series_full", "The available future recurring dates are full.");
+            throw new MatchSeriesFullException();
         }
 
         LOGGER.warn(
                 "Recurring reservation rejected code=series_closed matchId={} userId={}",
                 matchId,
                 user != null ? user.getId() : null);
-        return new MatchReservationException(
-                "series_closed", "The upcoming recurring dates are not open.");
+        throw new MatchClosedException();
     }
 
     private SeriesCancellationEvaluation evaluateSeriesCancellations(
@@ -428,7 +382,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             }
 
             futureOccurrenceCount++;
-            if (matchParticipantDao.hasActiveReservation(occurrence.getId(), user)) {
+            if (matchParticipantDataService.hasActiveReservation(occurrence.getId(), user)) {
                 activeFutureReservationCount++;
             }
         }
@@ -443,16 +397,13 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         }
     }
 
-    private static MatchReservationException buildSeriesCancellationFailure(
+    private static void throwSeriesCancellationFailure(
             final SeriesCancellationEvaluation evaluation) {
         if (evaluation.futureOccurrenceCount() == 0) {
-            return new MatchReservationException(
-                    "series_started", "There are no upcoming dates left in this recurring event.");
+            throw new MatchSeriesStartedException();
         }
 
-        return new MatchReservationException(
-                "series_not_joined",
-                "This account does not have future reservations for this recurring event.");
+        throw new MatchParticipationSeriesNotJoinedException();
     }
 
     private record SeriesReservationEvaluation(

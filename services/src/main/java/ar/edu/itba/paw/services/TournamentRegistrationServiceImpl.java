@@ -5,22 +5,20 @@ import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentNotFoundException;
+import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
-import ar.edu.itba.paw.persistence.TournamentDao;
 import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
-import ar.edu.itba.paw.persistence.TournamentTeamDao;
-import ar.edu.itba.paw.services.exceptions.TournamentRegistrationException;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,25 +26,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class TournamentRegistrationServiceImpl implements TournamentRegistrationService {
 
-    private final TournamentDao tournamentDao;
-    private final TournamentSoloEntryDao tournamentSoloEntryDao;
-    private final TournamentTeamDao tournamentTeamDao;
     private final SecurityService securityService;
-    private final MessageSource messageSource;
+    private final TournamentDataService tournamentDataService;
+    private final TournamentSoloEntryDao tournamentSoloEntryDao;
+    private final TournamentTeamDataService tournamentTeamDataService;
     private final Clock clock;
 
     public TournamentRegistrationServiceImpl(
-            final TournamentDao tournamentDao,
+            final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
-            final TournamentTeamDao tournamentTeamDao,
             final SecurityService securityService,
-            final MessageSource messageSource,
+            final TournamentTeamDataService tournamentTeamDataService,
             final Clock clock) {
-        this.tournamentDao = tournamentDao;
+        this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
-        this.tournamentTeamDao = tournamentTeamDao;
         this.securityService = securityService;
-        this.messageSource = messageSource;
+        this.tournamentTeamDataService = tournamentTeamDataService;
         this.clock = clock;
     }
 
@@ -58,15 +53,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowSoloSignup()) {
-            throw registrationException(
-                    TournamentJoinFailureReason.SOLO_SIGNUP_DISABLED,
-                    "tournament.registration.error.soloDisabled");
+            throw new TournamentRegistrationSoloSignupDisabledException();
         }
 
-        if (tournamentTeamDao.findUserTeam(tournamentId, user.getId()).isPresent()) {
-            throw registrationException(
-                    TournamentJoinFailureReason.ALREADY_ON_TEAM,
-                    "tournament.registration.error.alreadyOnTeam");
+        if (tournamentTeamDataService.findUserTeam(tournamentId, user.getId()).isPresent()) {
+            throw new TournamentRegistrationAlreadyOnTeamException();
         }
 
         final Optional<TournamentSoloEntry> existing =
@@ -77,16 +68,12 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 return soloEntry;
             }
             if (TournamentSoloEntryStatus.ASSIGNED == soloEntry.getStatus()) {
-                throw registrationException(
-                        TournamentJoinFailureReason.ALREADY_ASSIGNED,
-                        "tournament.registration.error.alreadyAssigned");
+                throw new TournamentRegistrationAlreadyAssignedException();
             }
         }
 
         if (isSoloPoolFull(tournament)) {
-            throw registrationException(
-                    TournamentJoinFailureReason.SOLO_POOL_FULL,
-                    "tournament.registration.error.soloPoolFull");
+            throw new TournamentRegistrationSoloPoolFullException();
         }
 
         if (existing.isEmpty()) {
@@ -113,11 +100,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 tournamentSoloEntryDao
                         .findByTournamentAndUser(tournamentId, user.getId())
                         .filter(entry -> TournamentSoloEntryStatus.IN_POOL == entry.getStatus())
-                        .orElseThrow(
-                                () ->
-                                        registrationException(
-                                                TournamentJoinFailureReason.NOT_IN_SOLO_POOL,
-                                                "tournament.registration.error.notInSoloPool"));
+                        .orElseThrow(() -> new TournamentRegistrationNotInSoloPoolException());
 
         soloEntry.setStatus(TournamentSoloEntryStatus.LEFT);
         soloEntry.setAssignedTeam(null);
@@ -144,7 +127,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         if (user == null || user.getId() == null) {
             return Optional.empty();
         }
-        return tournamentTeamDao.findUserTeam(tournamentId, user.getId());
+        return tournamentTeamDataService.findUserTeam(tournamentId, user.getId());
     }
 
     @Override
@@ -159,7 +142,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     @Override
     public List<TournamentTeamMember> listTeamMembers(final long tournamentId) {
         findTournamentOrThrow(tournamentId);
-        return tournamentTeamDao.findMembersByTournament(tournamentId);
+        return tournamentTeamDataService.findMembersByTournament(tournamentId);
     }
 
     @Override
@@ -222,7 +205,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final int activeSoloEntries =
                 Math.toIntExact(tournamentSoloEntryDao.countActiveByTournament(tournamentId));
         final int existingTeamCount =
-                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+                Math.toIntExact(tournamentTeamDataService.countByTournament(tournamentId));
         final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
         final int soloTeamCount =
                 Math.min(activeSoloEntries / tournament.getTeamSize(), availableTeamSlots);
@@ -241,29 +224,27 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         final List<TournamentSoloEntry> activeEntries =
                 tournamentSoloEntryDao.findActiveByTournament(tournamentId);
         final int existingTeamCount =
-                Math.toIntExact(tournamentTeamDao.countByTournament(tournamentId));
+                Math.toIntExact(tournamentTeamDataService.countByTournament(tournamentId));
         final int availableTeamSlots = Math.max(0, tournament.getBracketSize() - existingTeamCount);
         final int soloTeamCount =
                 Math.min(activeEntries.size() / tournament.getTeamSize(), availableTeamSlots);
 
         final int finalTeamCount = existingTeamCount + soloTeamCount;
         if (finalTeamCount < 2) {
-            throw registrationException(
-                    TournamentJoinFailureReason.UNDER_CAPACITY,
-                    "tournament.registration.error.underCapacity");
+            throw new TournamentRegistrationUnderCapacityException();
         }
 
         final int assignableEntries = soloTeamCount * tournament.getTeamSize();
         for (int teamIndex = 0; teamIndex < soloTeamCount; teamIndex++) {
             final TournamentTeam team =
-                    tournamentTeamDao.create(
+                    tournamentTeamDataService.create(
                             tournament, null, TournamentTeamOrigin.SOLO_POOL, null);
 
             final int firstEntryIndex = teamIndex * tournament.getTeamSize();
             for (int playerOffset = 0; playerOffset < tournament.getTeamSize(); playerOffset++) {
                 final TournamentSoloEntry soloEntry =
                         activeEntries.get(firstEntryIndex + playerOffset);
-                tournamentTeamDao.addMember(team, soloEntry.getUser(), false);
+                tournamentTeamDataService.addMember(team, soloEntry.getUser(), false);
                 soloEntry.setStatus(TournamentSoloEntryStatus.ASSIGNED);
                 soloEntry.setAssignedTeam(team);
                 tournamentSoloEntryDao.update(soloEntry);
@@ -277,26 +258,20 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         tournament.setStatus(TournamentStatus.BRACKET_SETUP);
         tournament.setRegistrationClosedAt(now);
         tournament.setUpdatedAt(now);
-        return tournamentDao.update(tournament);
+        return tournamentDataService.update(tournament);
     }
 
     private Tournament findTournamentOrThrow(final long tournamentId) {
-        return tournamentDao
+        return tournamentDataService
                 .findById(tournamentId)
                 .filter(tournament -> !tournament.isDeleted())
-                .orElseThrow(
-                        () ->
-                                registrationException(
-                                        TournamentJoinFailureReason.TOURNAMENT_NOT_FOUND,
-                                        "tournament.registration.error.notFound"));
+                .orElseThrow(() -> new TournamentNotFoundException());
     }
 
     private void requireRegistrationOpen(final Tournament tournament) {
         if (TournamentStatus.REGISTRATION != tournament.getStatus()
                 || !isRegistrationOpenNow(tournament)) {
-            throw registrationException(
-                    TournamentJoinFailureReason.REGISTRATION_NOT_OPEN,
-                    "tournament.registration.error.notOpen");
+            throw new TournamentRegistrationNotOpenException();
         }
     }
 
@@ -324,9 +299,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateCanMutate(final Tournament tournament, final User actingUser) {
         if (!canMutate(tournament, actingUser)) {
-            throw registrationException(
-                    TournamentJoinFailureReason.FORBIDDEN,
-                    "tournament.registration.error.forbidden");
+            throw new TournamentForbiddenActionException();
         }
     }
 
@@ -336,27 +309,6 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         }
         return tournament.getHost().getId().equals(actingUser.getId())
                 || securityService.canActAsAdminMod(actingUser);
-    }
-
-    private void validateUser(final User user) {
-        if (user == null || user.getId() == null) {
-            throw new IllegalArgumentException(message("user.error.null"));
-        }
-    }
-
-    private void markUnassigned(final List<TournamentSoloEntry> soloEntries) {
-        for (final TournamentSoloEntry soloEntry : soloEntries) {
-            soloEntry.setStatus(TournamentSoloEntryStatus.UNASSIGNED);
-            soloEntry.setAssignedTeam(null);
-            tournamentSoloEntryDao.update(soloEntry);
-        }
-    }
-
-    private boolean isSoloPoolFull(final Tournament tournament) {
-        final long currentSoloEntries =
-                tournamentSoloEntryDao.countActiveByTournament(tournament.getId());
-        final long maxSoloEntries = (long) tournament.getBracketSize() * tournament.getTeamSize();
-        return currentSoloEntries >= maxSoloEntries;
     }
 
     private Optional<TournamentSoloEntry> findSoloEntry(
@@ -377,17 +329,27 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                 || user.getId() == null) {
             return Optional.empty();
         }
-        return tournamentTeamDao.findUserTeam(tournament.getId(), user.getId());
+        return tournamentTeamDataService.findUserTeam(tournament.getId(), user.getId());
     }
 
-    private TournamentRegistrationException registrationException(
-            final TournamentJoinFailureReason reason, final String messageCode) {
-        return new TournamentRegistrationException(reason, message(messageCode));
+    private void validateUser(final User user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("exception.user.notNull");
+        }
     }
 
-    private String message(final String code) {
-        final Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(
-                Objects.requireNonNull(code), null, code, Objects.requireNonNull(locale));
+    private void markUnassigned(final List<TournamentSoloEntry> soloEntries) {
+        for (final TournamentSoloEntry soloEntry : soloEntries) {
+            soloEntry.setStatus(TournamentSoloEntryStatus.UNASSIGNED);
+            soloEntry.setAssignedTeam(null);
+            tournamentSoloEntryDao.update(soloEntry);
+        }
+    }
+
+    private boolean isSoloPoolFull(final Tournament tournament) {
+        final long currentSoloEntries =
+                tournamentSoloEntryDao.countActiveByTournament(tournament.getId());
+        final long maxSoloEntries = (long) tournament.getBracketSize() * tournament.getTeamSize();
+        return currentSoloEntries >= maxSoloEntries;
     }
 }

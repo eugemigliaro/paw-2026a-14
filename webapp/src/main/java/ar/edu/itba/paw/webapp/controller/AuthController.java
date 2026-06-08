@@ -1,14 +1,13 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.services.AccountAuthService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationRequestResult;
-import ar.edu.itba.paw.services.exceptions.AccountRegistrationException;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
 import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.Instant;
 import java.util.Locale;
@@ -32,21 +31,12 @@ public class AuthController {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
     private final AccountAuthService accountAuthService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
     @Autowired
     public AuthController(
-            final AccountAuthService accountAuthService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
+            final AccountAuthService accountAuthService, final MessageSource messageSource) {
         this.accountAuthService = accountAuthService;
         this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
-    public AuthController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
-        this(accountAuthService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
     }
 
     @ModelAttribute("registerForm")
@@ -60,15 +50,18 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public ModelAndView showLogin(
-            @RequestParam(value = "error", required = false) final String error,
-            @RequestParam(value = "email", required = false) final String email,
-            @RequestParam(value = "verified", required = false) final String verified,
-            @RequestParam(value = "reset", required = false) final String reset,
-            @RequestParam(value = "logout", required = false) final String logout,
-            @RequestParam(value = "continue", required = false) final String continueFlag,
-            final Locale locale) {
-        if (CurrentAuthenticatedUser.get().isPresent()) {
+    public ModelAndView
+            showLogin( // TODO: consider typing these flags as boolean. "1".equals(flag) is a bit
+                    // weird
+                    @RequestParam(value = "error", required = false) final String error,
+                    @RequestParam(value = "email", required = false) final String email,
+                    @RequestParam(value = "verified", required = false) final String verified,
+                    @RequestParam(value = "reset", required = false) final String reset,
+                    @RequestParam(value = "logout", required = false) final String logout,
+                    @RequestParam(value = "continue", required = false) final String continueFlag,
+                    final Locale locale) {
+        if (SecurityControllerUtils.currentUserOrNull()
+                != null) { // TODO: redundant with SecurityConfig? check and remove if so
             LOGGER.debug("Authenticated user redirected from /login");
             return new ModelAndView("redirect:/");
         }
@@ -86,7 +79,8 @@ public class AuthController {
 
     @GetMapping("/register")
     public ModelAndView showRegister(final Locale locale) {
-        if (CurrentAuthenticatedUser.get().isPresent()) {
+        if (SecurityControllerUtils.currentUserOrNull()
+                != null) { // TODO: redundant with SecurityConfig? check and remove if so
             LOGGER.debug("Authenticated user redirected from /register");
             return new ModelAndView("redirect:/");
         }
@@ -102,32 +96,26 @@ public class AuthController {
             return registerView(registerForm, locale);
         }
 
-        try {
-            final VerificationRequestResult result =
-                    accountAuthService.register(
-                            new RegisterAccountRequest(
-                                    registerForm.getEmail(),
-                                    registerForm.getUsername(),
-                                    registerForm.getName(),
-                                    registerForm.getLastName(),
-                                    registerForm.getPhone(),
-                                    registerForm.getPassword()));
-            LOGGER.info("Registration verification requested locale={}", locale);
-            return checkEmailView(
-                    locale,
-                    messageSource.getMessage(
-                            "auth.checkEmail.registration.summary",
-                            new Object[] {result.getEmail()},
-                            locale),
-                    "/login",
-                    messageSource.getMessage("auth.backToLogin", null, locale),
-                    messageSource.getMessage("auth.registration.requested", null, locale),
-                    result.getExpiresAt());
-        } catch (final AccountRegistrationException exception) {
-            LOGGER.warn("Registration rejected code={}", exception.getCode());
-            applyRegistrationError(bindingResult, exception); // TODO: fix error handling
-            return registerView(registerForm, locale);
-        }
+        final VerificationRequestResult result =
+                accountAuthService.register(
+                        new RegisterAccountRequest(
+                                registerForm.getEmail(),
+                                registerForm.getUsername(),
+                                registerForm.getName(),
+                                registerForm.getLastName(),
+                                registerForm.getPhone(),
+                                registerForm.getPassword()));
+        LOGGER.info("Registration verification requested locale={}", locale);
+        return checkEmailView(
+                locale,
+                messageSource.getMessage(
+                        "auth.checkEmail.registration.summary",
+                        new Object[] {result.getEmail()},
+                        locale),
+                "/login",
+                messageSource.getMessage("auth.backToLogin", null, locale),
+                messageSource.getMessage("auth.registration.requested", null, locale),
+                result.getExpiresAt());
     }
 
     @PostMapping("/register/resend-verification")
@@ -141,7 +129,7 @@ public class AuthController {
                 LOGGER.info("Resend verification requested locale={}", locale);
             }
         } catch (final IllegalArgumentException ignored) {
-            LOGGER.warn("Resend verification rejected due to invalid email format");
+            LOGGER.debug("Resend verification rejected due to invalid email format");
             result = Optional.empty();
         }
 
@@ -157,7 +145,10 @@ public class AuthController {
     @GetMapping("/forgot-password")
     public ModelAndView showForgotPassword(final Locale locale) {
         if (CurrentAuthenticatedUser.get().isPresent()) {
-            LOGGER.debug("Authenticated user redirected from /forgot-password");
+            LOGGER.debug(
+                    "Authenticated user redirected from /forgot-password"); // TODO: redundant with
+            // SecurityConfig? check
+            // and remove if so
             return new ModelAndView("redirect:/");
         }
         return forgotPasswordView(new ForgotPasswordForm(), locale);
@@ -215,11 +206,14 @@ public class AuthController {
             mav.addObject(
                     "expiresAtLabel",
                     VerificationViews.expiryFormatter(locale)
-                            .format(expiresAt.atZone(platformTimeZoneService.defaultZone())));
+                            .format(expiresAt.atZone(PlatformTime.ZONE)));
         }
         return mav;
     }
 
+    // TODO: consider changing the errors to "verify", "passwordSetup" and "invalid", and removing
+    // the messageSource from this class.
+    // That way we can send "auth.login.error." + error as the msg key and resolve it in the view.
     private String loginErrorMessage(final String error, final Locale locale) {
         if ("verify".equalsIgnoreCase(error)) {
             return messageSource.getMessage("auth.login.error.verify", null, locale);
@@ -231,33 +225,5 @@ public class AuthController {
             return messageSource.getMessage("auth.login.error.invalid", null, locale);
         }
         return null;
-    }
-
-    private void applyRegistrationError(
-            final BindingResult bindingResult, final AccountRegistrationException exception) {
-        final String code = exception.getCode();
-        if ("email_taken".equals(code) || "email_pending_verification".equals(code)) {
-            bindingResult.rejectValue("email", code, exception.getMessage());
-            return;
-        }
-        if ("username_taken".equals(code) || "username_invalid".equals(code)) {
-            bindingResult.rejectValue("username", code, exception.getMessage());
-            return;
-        }
-        if ("password_invalid".equals(code)) {
-            bindingResult.rejectValue("password", code, exception.getMessage());
-            return;
-        }
-        if ("name_invalid".equals(code)) {
-            bindingResult.rejectValue("name", code, exception.getMessage());
-            return;
-        }
-        if ("lastName_invalid".equals(code)) {
-            bindingResult.rejectValue("lastName", code, exception.getMessage());
-            return;
-        }
-        if ("phone_invalid".equals(code)) {
-            bindingResult.rejectValue("phone", code, exception.getMessage());
-        }
     }
 }

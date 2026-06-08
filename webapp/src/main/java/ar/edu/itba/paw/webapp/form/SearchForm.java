@@ -1,13 +1,15 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.models.query.EventCategory;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.webapp.validation.ValidSearchForm;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,18 +19,21 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 
+@ValidSearchForm
 public class SearchForm {
 
-    private static final String DEFAULT_FILTER = "upcoming";
+    private static final EventFilter DEFAULT_FILTER = EventFilter.UPCOMING;
     private static final EventType DEFAULT_TYPE = EventType.MATCH;
-    private static final String DEFAULT_CATEGORY = "hosted";
+    private static final EventCategory DEFAULT_CATEGORY = EventCategory.HOSTED;
 
     @Size(max = 150, message = "{SearchForm.q.Size}")
-    @Pattern(regexp = "^[\\p{L}\\p{N} ]*$", message = "{SearchForm.q.Pattern}")
+    @Pattern(
+            regexp = "^[\\p{L}\\p{N} ,.;:()\"'\\-\\/ .!?\\n@&_*+=\\[\\]{}\\$#%^~|<>\\\\]*$",
+            message = "{SearchForm.q.Pattern}")
     private String q = "";
 
     private EventSort sort = EventSort.SOONEST;
-    private String filter = DEFAULT_FILTER;
+    private EventFilter filter = DEFAULT_FILTER;
     private EventType type = DEFAULT_TYPE;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -39,10 +44,9 @@ public class SearchForm {
 
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
-    private ZoneId timezone;
     private List<Sport> sport = new ArrayList<>();
     private List<EventStatus> status = new ArrayList<>();
-    private List<String> category = new ArrayList<>();
+    private List<EventCategory> category = new ArrayList<>();
     private List<EventVisibility> visibility = new ArrayList<>();
     private Double latitude;
     private Double longitude;
@@ -66,11 +70,15 @@ public class SearchForm {
         this.sort = sort;
     }
 
-    public String getFilter() {
+    public EventFilter getFilter() {
         return filter;
     }
 
-    public void setFilter(final String filter) {
+    public String getFilterName() {
+        return filter == null ? null : filter.name();
+    }
+
+    public void setFilter(final EventFilter filter) {
         this.filter = filter;
     }
 
@@ -114,14 +122,6 @@ public class SearchForm {
         this.maxPrice = maxPrice;
     }
 
-    public ZoneId getTimezone() {
-        return timezone;
-    }
-
-    public void setTimezone(final ZoneId timezone) {
-        this.timezone = timezone;
-    }
-
     public List<Sport> getSport() {
         return sport;
     }
@@ -138,12 +138,12 @@ public class SearchForm {
         this.status = copyEnumValues(status);
     }
 
-    public List<String> getCategory() {
+    public List<EventCategory> getCategory() {
         return category;
     }
 
-    public void setCategory(final List<String> category) {
-        this.category = category == null ? new ArrayList<>() : new ArrayList<>(category);
+    public void setCategory(final List<EventCategory> category) {
+        this.category = copyEnumValues(category);
     }
 
     public List<EventVisibility> getVisibility() {
@@ -182,7 +182,7 @@ public class SearchForm {
         if (sort == null) {
             sort = EventSort.SOONEST;
         }
-        if (filter == null || filter.isBlank()) {
+        if (filter == null) {
             filter = DEFAULT_FILTER;
         }
         if (type == null) {

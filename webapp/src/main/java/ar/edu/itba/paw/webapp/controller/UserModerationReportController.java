@@ -1,25 +1,30 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
-
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.exceptions.moderation.ModerationException;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.PlatformTimeZoneService;
-import ar.edu.itba.paw.services.PlatformTimeZoneServiceImpl;
-import ar.edu.itba.paw.services.exceptions.ModerationException;
+import ar.edu.itba.paw.services.ModerationTargetSummary;
+import ar.edu.itba.paw.webapp.form.ReportAppealForm;
+import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import javax.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,37 +41,33 @@ public class UserModerationReportController {
 
     private final ModerationService moderationService;
     private final MessageSource messageSource;
-    private final PlatformTimeZoneService platformTimeZoneService;
 
-    @org.springframework.beans.factory.annotation.Autowired
-    public UserModerationReportController(
-            final ModerationService moderationService,
-            final MessageSource messageSource,
-            final PlatformTimeZoneService platformTimeZoneService) {
-        this.moderationService = moderationService;
-        this.messageSource = messageSource;
-        this.platformTimeZoneService = platformTimeZoneService;
-    }
-
+    @Autowired
     public UserModerationReportController(
             final ModerationService moderationService, final MessageSource messageSource) {
-        this(moderationService, messageSource, PlatformTimeZoneServiceImpl.argentinaDefault());
+        this.moderationService = moderationService;
+        this.messageSource = messageSource;
+    }
+
+    @ModelAttribute("reportAppealForm")
+    public ReportAppealForm reportAppealForm() {
+        return new ReportAppealForm();
     }
 
     @GetMapping
     public ModelAndView showMyReports(
+            @CurrentUser final User user,
             @RequestParam(value = "type", required = false, defaultValue = "")
                     final List<ReportTargetType> typeFilters,
             @RequestParam(value = "status", required = false, defaultValue = "")
                     final List<ReportStatus> statusFilters,
             @RequestParam(value = "page", defaultValue = "1") final int page,
             final Locale locale) {
-        final User user = SecurityControllerUtils.currentUserOrNull();
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
                         user, typeFilters, statusFilters, page, PAGE_SIZE);
-        final List<UserReportViewModel> reports =
-                result.getItems().stream().map(report -> toViewModel(report, locale)).toList();
+        final Map<Long, ModerationTargetSummary> targetSummaries =
+                targetSummariesByReportId(result.getItems());
 
         final ModelAndView mav = new ModelAndView("reports/mine/list");
         mav.addObject("pageTitle", messageSource.getMessage("page.title.myReports", null, locale));
@@ -80,7 +81,8 @@ public class UserModerationReportController {
                 "reportCountLabel",
                 messageSource.getMessage(
                         "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
-        mav.addObject("reports", reports);
+        mav.addObject("reports", result.getItems());
+        mav.addObject("targetSummaries", targetSummaries);
         mav.addObject(
                 "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
@@ -116,12 +118,18 @@ public class UserModerationReportController {
 
     @GetMapping("/{reportId:\\d+}")
     public ModelAndView showMyReportDetail(
-            @PathVariable("reportId") final Long reportId, final Model model, final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+            @AuthenticatedUser final User user,
+            @PathVariable("reportId") final Long reportId,
+            final Model model,
+            final Locale locale) {
         final ModerationReport report =
                 moderationService
-                        .findReportByIdForReporter(reportId, user)
+                        .findReportById(reportId)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (report.getReporter() == null || !report.getReporter().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
         mav.addObject(
@@ -133,169 +141,51 @@ public class UserModerationReportController {
         mav.addObject(
                 "pageDescription",
                 messageSource.getMessage("reports.mine.detail.description", null, locale));
-        mav.addObject("appealAllowed", moderationService.canAppealReport(report, user));
-        mav.addObject("report", toViewModel(report, locale));
+        mav.addObject(
+                "appealAllowed",
+                report.getStatus() == ReportStatus.RESOLVED && report.getAppealCount() < 1);
+        mav.addObject("report", report);
+        mav.addObject(
+                "targetSummary",
+                moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
         mav.addObject("action", model.asMap().get("action"));
         return mav;
     }
 
     @PostMapping("/{reportId:\\d+}/appeal")
     public ModelAndView appealReport(
+            @AuthenticatedUser final User user,
             @PathVariable("reportId") final Long reportId,
-            @RequestParam("appealReason") final String appealReason,
+            @Valid @ModelAttribute("reportAppealForm") final ReportAppealForm reportAppealForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User user = SecurityControllerUtils.requireAuthenticatedUser();
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            return new ModelAndView("redirect:/reports/mine/" + reportId);
+        }
+
         try {
-            moderationService.appealReport(reportId, user, appealReason);
+            moderationService.appealReport(reportId, user, reportAppealForm.getDetails());
             redirectAttributes.addFlashAttribute("action", "appealed");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
-        } catch (final ModerationException exception) {
+        } catch (final ModerationException e) {
             return new ModelAndView(
-                    "redirect:/reports/mine/" + reportId + "?error=" + exception.getCode());
+                    "redirect:/reports/mine/" + reportId + "?error=" + e.getMessage());
         }
     }
 
-    private UserReportViewModel toViewModel(final ModerationReport report, final Locale locale) {
-        return new UserReportViewModel(
-                report.getId(),
-                report.getTargetType() == null ? "" : report.getTargetType().getDbValue(),
-                moderationService.resolveTargetName(report.getTargetType(), report.getTargetId()),
-                report.getReason() == null ? "" : report.getReason().getDbValue(),
-                report.getStatus() == null ? "" : report.getStatus().getDbValue(),
-                report.getResolution() == null ? "" : report.getResolution().getDbValue(),
-                report.getDetails(),
-                report.getResolutionDetails(),
-                report.getAppealReason(),
-                report.getAppealDecision() == null ? "" : report.getAppealDecision().getDbValue(),
-                report.getAppealCount(),
-                formatInstant(report.getCreatedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(report.getUpdatedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getReviewedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getAppealedAt(), locale, platformTimeZoneService.defaultZone()),
-                formatInstant(
-                        report.getAppealResolvedAt(),
-                        locale,
-                        platformTimeZoneService.defaultZone()));
-    }
-
-    public static final class UserReportViewModel {
-        private final Long id;
-        private final String targetTypeCode;
-        private final String targetKey;
-        private final String reasonCode;
-        private final String statusCode;
-        private final String resolutionCode;
-        private final String details;
-        private final String resolutionDetails;
-        private final String appealReason;
-        private final String appealResolutionCode;
-        private final int appealCount;
-        private final String createdAtLabel;
-        private final String updatedAtLabel;
-        private final String reviewedAtLabel;
-        private final String appealedAtLabel;
-        private final String appealResolvedAtLabel;
-
-        private UserReportViewModel(
-                final Long id,
-                final String targetTypeCode,
-                final String targetKey,
-                final String reasonCode,
-                final String statusCode,
-                final String resolutionCode,
-                final String details,
-                final String resolutionDetails,
-                final String appealReason,
-                final String appealResolutionCode,
-                final int appealCount,
-                final String createdAtLabel,
-                final String updatedAtLabel,
-                final String reviewedAtLabel,
-                final String appealedAtLabel,
-                final String appealResolvedAtLabel) {
-            this.id = id;
-            this.targetTypeCode = targetTypeCode;
-            this.targetKey = targetKey;
-            this.reasonCode = reasonCode;
-            this.statusCode = statusCode;
-            this.resolutionCode = resolutionCode;
-            this.details = details;
-            this.resolutionDetails = resolutionDetails;
-            this.appealReason = appealReason;
-            this.appealResolutionCode = appealResolutionCode;
-            this.appealCount = appealCount;
-            this.createdAtLabel = createdAtLabel;
-            this.updatedAtLabel = updatedAtLabel;
-            this.reviewedAtLabel = reviewedAtLabel;
-            this.appealedAtLabel = appealedAtLabel;
-            this.appealResolvedAtLabel = appealResolvedAtLabel;
+    private Map<Long, ModerationTargetSummary> targetSummariesByReportId(
+            final List<ModerationReport> reports) {
+        final Map<Long, ModerationTargetSummary> targetSummaries = new LinkedHashMap<>();
+        for (final ModerationReport report : reports) {
+            targetSummaries.put(
+                    report.getId(),
+                    moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
         }
-
-        public Long getId() {
-            return id;
-        }
-
-        public String getTargetTypeCode() {
-            return targetTypeCode;
-        }
-
-        public String getTargetKey() {
-            return targetKey;
-        }
-
-        public String getReasonCode() {
-            return reasonCode;
-        }
-
-        public String getStatusCode() {
-            return statusCode;
-        }
-
-        public String getResolutionCode() {
-            return resolutionCode;
-        }
-
-        public String getDetails() {
-            return details;
-        }
-
-        public String getResolutionDetails() {
-            return resolutionDetails;
-        }
-
-        public String getAppealReason() {
-            return appealReason;
-        }
-
-        public String getAppealResolutionCode() {
-            return appealResolutionCode;
-        }
-
-        public int getAppealCount() {
-            return appealCount;
-        }
-
-        public String getCreatedAtLabel() {
-            return createdAtLabel;
-        }
-
-        public String getUpdatedAtLabel() {
-            return updatedAtLabel;
-        }
-
-        public String getReviewedAtLabel() {
-            return reviewedAtLabel;
-        }
-
-        public String getAppealedAtLabel() {
-            return appealedAtLabel;
-        }
-
-        public String getAppealResolvedAtLabel() {
-            return appealResolvedAtLabel;
-        }
+        return targetSummaries;
     }
 }

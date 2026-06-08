@@ -65,6 +65,7 @@ Important product rules:
 - reservation cannot exceed capacity
 - cancelling a reservation releases the spot
 - a user can reserve their own event
+- match editability and "already started" checks must be based on `startsAt` compared to the current clock, not on `EventStatus.COMPLETED`; for standalone matches, `COMPLETED` is a persisted-or-derived ended/display status and must not be used as a proxy for whether a match has already started
 
 Moving beyond the MVP does not mean implementing the whole roadmap at once. Build the smallest coherent slice that satisfies the current request, and call out product-rule conflicts before coding.
 
@@ -220,7 +221,24 @@ When changing or adding behavior in `webapp`, `services`, or `persistence`:
 - prefer stable identifiers and business outcomes (`matchId`, `userId`, status transitions)
 - keep test logging console-based via `logback-test.xml`
 
-## 12. Do Not Repeat TP1 Mistakes
+## 12. Date And Time Display
+
+How date/time values are stored, converted, and rendered is documented in
+`./docs/datetime.md`. The webapp runs on JSTL 1.2, whose `<fmt:formatDate>` cannot
+format `java.time` types, so date/time display follows a specific convention.
+
+When showing or accepting date/time in `webapp`:
+
+- render in JSP with the `tf:date` / `tf:dateTime` EL functions
+  (`uri="http://paw.itba.edu.ar/tags/time-functions"`, in `functions.tld`) applied to
+  the model's `...DateTime` (`OffsetDateTime`) getters, wrapped in `<c:out>`
+- never use `<fmt:formatDate>` / `<fmt:parseDate>` on `java.time` values
+- keep all zone conversion inside `PlatformTime`; do not convert timestamps in
+  controllers for views/forms — use the `...DateTime` getter
+- format non-JSP surfaces (emails, flash, metadata) in Java via `ViewFormatUtils`
+  with the recipient/active locale; never a fixed locale or hardcoded pattern
+
+## 13. Do Not Repeat TP1 Mistakes
 
 The TP1 correction PDF exposed repeated class-wide failure patterns. This section is not a fix backlog; it constrains future work. Do not add new violations, and when touching nearby legacy code, clean up the violation if the cleanup is small and safe.
 
@@ -289,6 +307,9 @@ The TP1 correction PDF exposed repeated class-wide failure patterns. This sectio
 - mail services should own standardized business emails and templates; callers should request a specific email action, not assemble arbitrary `MailContent`
 - emails that require user action need clear CTAs back into the app with context-correct URLs
 - date/time handling must preserve the intended wall-clock time; use explicit zones and test locale/time-zone sensitive flows
+- controllers must not use `PlatformTime` to convert domain timestamps for forms or views; use model getters that expose `OffsetDateTime`, such as `getStartsAtDateTime()`, when available
+- when controllers pass date and time inputs to services, pass the bound `LocalDate`/`LocalTime` values or request object fields through unchanged; services own conversion to persisted instants and enforcement of time-related business rules
+- form validators (Bean Validation `ConstraintValidator`s) may use `PlatformTime` to check that submitted wall-clock date/time inputs are in the future and ordered correctly relative to each other, giving inline field-level errors before the service call; this is pre-submit input validation, not the authoritative rule — the service still re-validates and owns time-related business-rule enforcement
 
 ### Views And View Models
 
