@@ -59,6 +59,7 @@ public class SecurityServiceImpl implements SecurityService {
             return false;
         }
         return auth.getAuthorities().stream()
+                .filter(Objects::nonNull)
                 .anyMatch(authority -> ADMIN_MOD_AUTHORITY.equals(authority.getAuthority()));
     }
 
