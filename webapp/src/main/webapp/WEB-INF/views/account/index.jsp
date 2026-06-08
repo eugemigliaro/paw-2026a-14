@@ -4,6 +4,12 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
+<spring:message var="pageTitle" code="page.title.account" />
+<spring:message var="accountPublicProfileLabel" code="account.viewPublicProfile" />
+<spring:message var="accountProfileImageAlt" code="account.profileImage.alt" arguments="${accountProfile.username}" />
+<spring:message var="logoutLabel" code="nav.logout" />
+<spring:message var="accountSaveLabel" code="account.save" />
+<spring:message var="accountCancelLabel" code="common.cancel" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 <head>
@@ -23,9 +29,9 @@
 					</c:if>
 				</div>
 
-				<c:if test="${not empty accountUpdated}">
+				<c:if test="${accountUpdated}">
 					<p class="auth-notice auth-notice--success">
-						<c:out value="${accountUpdated}" />
+						<spring:message code="account.updated" />
 					</p>
 				</c:if>
 
@@ -51,7 +57,7 @@
 						<div class="account-profile-card-stack">
 							<div class="field account-profile-current-field">
 								<span class="field__label account-profile-media__label">
-									<c:out value="${accountProfileImageTitle}" />
+									<spring:message code="account.profileImage.title" />
 								</span>
 								<section class="account-profile-media account-profile-media--current">
 									<div class="account-profile-media__preview">
@@ -83,7 +89,7 @@
 											<c:out value="${profileImageChangeLabel}" />
 										</span>
 										<span class="field__hint">
-											<c:out value="${accountProfileImageHint}" />
+											<spring:message code="account.profileImage.hint" />
 										</span>
 									</span>
 									<input id="account-profile-image" name="profileImage" type="file"

@@ -49,7 +49,7 @@ class AccountControllerTest {
                 new UsernameValidator(Mockito.mock(UserService.class));
 
         mockMvc =
-                MockMvcBuilders.standaloneSetup(new AccountController(userService, messageSource))
+                MockMvcBuilders.standaloneSetup(new AccountController(userService))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setValidator(
                                 validator(messageSource, userEmailValidator, usernameValidator))
@@ -76,13 +76,13 @@ class AccountControllerTest {
     }
 
     @Test
-    void getAccountRouteWithSpanishLocaleLocalizesPublicProfileAction() throws Exception {
+    void getAccountRouteRendersPrivateAccountPageUnderSpanishLocale() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
 
         mockMvc.perform(get("/account").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/index"))
-                .andExpect(model().attribute("accountPublicProfileLabel", "Ver perfil público"));
+                .andExpect(model().attributeExists("accountProfile"));
     }
 
     @Test
