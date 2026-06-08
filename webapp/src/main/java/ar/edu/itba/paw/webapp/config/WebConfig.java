@@ -35,7 +35,6 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import org.springframework.lang.NonNull;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -122,7 +121,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public PlatformTransactionManager transactionManager(@NonNull final EntityManagerFactory emf) {
+    public PlatformTransactionManager transactionManager(final EntityManagerFactory emf) {
         return new JpaTransactionManager(emf);
     }
 
@@ -161,7 +160,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addInterceptors(@NonNull final InterceptorRegistry registry) {
+    public void addInterceptors(final InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
         registry.addInterceptor(
                 authenticatedLocalePersistenceInterceptor(userServiceProvider.getObject()));
@@ -175,7 +174,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean(initMethod = "migrate")
-    public Flyway flyway(@NonNull final DataSource dataSource) {
+    public Flyway flyway(final DataSource dataSource) {
         return Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
@@ -184,7 +183,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addResourceHandlers(@NonNull final ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/css/**").addResourceLocations("/css/");
         registry.addResourceHandler("/js/**").addResourceLocations("/js/");
         registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
