@@ -7,7 +7,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.UserAccount;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureExpiredException;
+import ar.edu.itba.paw.models.exceptions.verificationFailure.VerificationFailureNotFoundException;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.PasswordResetPreview;
 import ar.edu.itba.paw.services.RegisterAccountRequest;
@@ -18,6 +22,7 @@ import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
+import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
@@ -26,14 +31,17 @@ import java.util.Locale;
 import java.util.Optional;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorFactory;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -270,6 +278,51 @@ class AuthFlowControllerTest {
                 .andExpect(view().name("verification/confirm"))
                 .andExpect(model().attributeExists("preview"))
                 .andReturn();
+    }
+
+    @Test
+    void postVerificationConfirmAuthenticatesAndRedirectsHome() throws Exception {
+        Mockito.when(accountAuthService.confirmVerification("abc123"))
+                .thenReturn(
+                        new VerificationConfirmationResult(
+                                new UserAccount(
+                                        9L,
+                                        "player@test.com",
+                                        "player_account",
+                                        "Player",
+                                        "Account",
+                                        null,
+                                        null,
+                                        "{bcrypt}hash",
+                                        UserRole.USER,
+                                        Instant.parse("2026-04-05T00:00:00Z"),
+                                        UserLanguages.DEFAULT_LANGUAGE),
+                                "done"));
+
+        final MvcResult result =
+                mockMvc.perform(post("/verifications/abc123/confirm"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/"))
+                        .andReturn();
+
+        final SecurityContext securityContext =
+                (SecurityContext)
+                        result.getRequest().getSession().getAttribute("SPRING_SECURITY_CONTEXT");
+        Assertions.assertNotNull(securityContext);
+        Assertions.assertTrue(securityContext.getAuthentication().isAuthenticated());
+        Assertions.assertEquals(
+                9L,
+                ((AuthenticatedUserPrincipal) securityContext.getAuthentication().getPrincipal())
+                        .getUser()
+                        .getId());
+    }
+
+    @Test
+    void getInvalidVerificationRendersNotFoundPage() throws Exception {
+        Mockito.when(accountAuthService.getVerificationPreview("invalid"))
+                .thenThrow(new VerificationFailureNotFoundException());
+
+        mockMvc.perform(get("/verifications/invalid")).andExpect(status().isNotFound());
     }
 
     @Test
