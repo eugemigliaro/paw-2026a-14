@@ -16,7 +16,6 @@
 		<main class="page-shell account-shell">
 			<section class="panel account-panel">
 				<div class="public-profile-topbar">
-					<ui:returnButton />
 					<c:if test="${not empty accountPublicProfileHref}">
 						<c:url var="accountPublicProfileAction" value="${accountPublicProfileHref}" />
 						<ui:button label="${accountPublicProfileLabel}" href="${accountPublicProfileAction}" variant="secondary" />

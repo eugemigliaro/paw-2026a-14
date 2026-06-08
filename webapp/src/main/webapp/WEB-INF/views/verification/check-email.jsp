@@ -1,7 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 	<spring:message var="pageTitle" code="page.title.checkEmail" />
 	<!DOCTYPE html>
 	<html lang="${pageContext.response.locale.language}">
@@ -23,13 +22,6 @@
 					<spring:message code="verification.expiresOn" arguments="${expiresAtLabel}" />
 				</p>
 			</c:if>
-			<div class="verification-actions">
-				<spring:message var="defaultBack" code="common.back" />
-				<c:url var="backUrl" value="${backHref}" />
-				<ui:button
-					href="${backUrl}"
-					label="${empty actionLabel ? defaultBack : actionLabel}" />
-			</div>
 		</section>
 	</main>
 	</div>

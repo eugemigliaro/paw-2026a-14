@@ -70,12 +70,6 @@
 						<ui:button label="${resetPasswordSubmitLabel}" type="submit" fullWidth="${true}" />
 					</form:form>
 
-					<div class="auth-links">
-						<c:url var="loginHref" value="/login" />
-						<a class="auth-link auth-link--strong" href="${loginHref}">
-							<spring:message code="auth.backToLogin" />
-						</a>
-					</div>
 				</section>
 			</main>
 		</div>

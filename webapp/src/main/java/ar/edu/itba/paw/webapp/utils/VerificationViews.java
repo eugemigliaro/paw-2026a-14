@@ -19,11 +19,11 @@ public final class VerificationViews {
             final String messageKey,
             final MessageSource ms,
             final Locale locale,
-            final String backHref) {
+            final String actionHref) {
         final ModelAndView mav = new ModelAndView("verification/error");
         mav.addObject("title", ms.getMessage(messageKey, null, locale));
         mav.addObject("message", ms.getMessage(messageKey, null, locale));
-        mav.addObject("backHref", backHref);
+        mav.addObject("actionHref", actionHref);
         return mav;
     }
 }

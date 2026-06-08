@@ -112,8 +112,6 @@ public class AuthController {
                         "auth.checkEmail.registration.summary",
                         new Object[] {result.getEmail()},
                         locale),
-                "/login",
-                messageSource.getMessage("auth.backToLogin", null, locale),
                 messageSource.getMessage("auth.registration.requested", null, locale),
                 result.getExpiresAt());
     }
@@ -136,8 +134,6 @@ public class AuthController {
         return checkEmailView(
                 locale,
                 messageSource.getMessage("auth.checkEmail.resend.summary", null, locale),
-                "/login",
-                messageSource.getMessage("auth.backToLogin", null, locale),
                 messageSource.getMessage("auth.resendVerification.requested", null, locale),
                 result.map(VerificationRequestResult::getExpiresAt).orElse(null));
     }
@@ -170,8 +166,6 @@ public class AuthController {
         return checkEmailView(
                 locale,
                 messageSource.getMessage("auth.checkEmail.passwordReset.summary", null, locale),
-                "/login",
-                messageSource.getMessage("auth.backToLogin", null, locale),
                 messageSource.getMessage("auth.passwordReset.requested", null, locale),
                 result.map(VerificationRequestResult::getExpiresAt).orElse(null));
     }
@@ -192,15 +186,11 @@ public class AuthController {
     private ModelAndView checkEmailView(
             final Locale locale,
             final String summary,
-            final String backHref,
-            final String actionLabel,
             final String eyebrow,
             final Instant expiresAt) {
         final ModelAndView mav = new ModelAndView("verification/check-email");
         mav.addObject("title", messageSource.getMessage("verification.checkEmail", null, locale));
         mav.addObject("summary", summary);
-        mav.addObject("backHref", backHref);
-        mav.addObject("actionLabel", actionLabel);
         mav.addObject("eyebrow", eyebrow);
         if (expiresAt != null) {
             mav.addObject(

@@ -24,7 +24,6 @@
 			<c:url var="resolvedFormAction" value="${formAction}" />
 
 			<main class="page-shell">
-				<ui:returnButton />
 				<section class="create-layout__main tournament-create">
 					<header class="page-heading">
 						<h1 class="page-heading__title"><c:out value="${formTitle}" /></h1>

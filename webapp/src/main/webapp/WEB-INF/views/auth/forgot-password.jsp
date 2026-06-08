@@ -1,5 +1,4 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
@@ -45,12 +44,6 @@
 						<ui:button label="${forgotPasswordSubmitLabel}" type="submit" fullWidth="${true}" />
 					</form:form>
 
-					<div class="auth-links">
-						<c:url var="loginHref" value="/login" />
-						<a class="auth-link auth-link--strong" href="${loginHref}">
-							<spring:message code="auth.forgotPassword.backToLogin" />
-						</a>
-					</div>
 				</section>
 			</main>
 		</div>

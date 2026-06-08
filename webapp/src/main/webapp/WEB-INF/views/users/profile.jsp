@@ -17,7 +17,6 @@
 				<section class="panel public-profile-panel">
 
 					<div class="public-profile-topbar">
-						<ui:returnButton />
 
 						<c:if test="${not empty profileEditHref or reportUserCanSubmit}">
 							<div class="public-profile-actions">

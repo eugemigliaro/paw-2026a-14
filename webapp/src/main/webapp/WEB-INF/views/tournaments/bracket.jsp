@@ -16,7 +16,6 @@
 			<c:url var="detailHref" value="${tournamentDetailPath}" />
 
 			<main class="page-shell tournament-bracket-page tournament-bracket-page--public">
-				<ui:returnButton href="${detailHref}" />
 				<header class="page-heading tournament-bracket-page__heading">
 					<div>
 						<span class="tournament-status tournament-status--${fn:replace(bracketTournament.status.dbValue, '_', '-')}">
