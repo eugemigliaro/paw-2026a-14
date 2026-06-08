@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.utils.DistanceUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -113,31 +114,38 @@ public class TournamentServiceImpl implements TournamentService {
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
         final DateRange dateRange = DateRange.of(startDate, endDate);
 
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        tournamentDataService.countPublicTournaments(
-                                query,
-                                sport,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice),
-                (offset, safePageSize) ->
-                        tournamentDataService.findPublicTournaments(
-                                query,
-                                sport,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                sortFilter,
-                                latitude,
-                                longitude,
-                                offset,
-                                safePageSize));
+        final PaginatedResult<Tournament> result =
+                paginate(
+                        page,
+                        pageSize,
+                        DEFAULT_PAGE_SIZE,
+                        safePageSize ->
+                                tournamentDataService.countPublicTournaments(
+                                        query,
+                                        sport,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice),
+                        (offset, safePageSize) ->
+                                tournamentDataService.findPublicTournaments(
+                                        query,
+                                        sport,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice,
+                                        sortFilter,
+                                        latitude,
+                                        longitude,
+                                        offset,
+                                        safePageSize));
+
+        if (sort == EventSort.DISTANCE && hasCoordinates(latitude, longitude)) {
+            hydrateDistances(result.getItems(), latitude, longitude);
+        }
+
+        return result;
     }
 
     @Override
@@ -535,6 +543,20 @@ public class TournamentServiceImpl implements TournamentService {
     private void validateFutureRegistrationClose(final Instant registrationClosesAt) {
         if (!registrationClosesAt.isAfter(Instant.now(clock))) {
             throw new TournamentLifecycleInvalidRegistrationWindowException();
+        }
+    }
+
+    private void hydrateDistances(
+            final List<Tournament> tournaments, final Double latitude, final Double longitude) {
+        for (Tournament tournament : tournaments) {
+            if (tournament.getLatitude() != null && tournament.getLongitude() != null) {
+                tournament.setDistanceKmFromViewer(
+                        DistanceUtils.distanceKm(
+                                latitude,
+                                longitude,
+                                tournament.getLatitude(),
+                                tournament.getLongitude()));
+            }
         }
     }
 

@@ -19,6 +19,7 @@ import ar.edu.itba.paw.models.types.RecurrenceFrequency;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
+import ar.edu.itba.paw.services.utils.DistanceUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -792,33 +793,40 @@ public class MatchServiceImpl implements MatchService {
                 hasCoordinates(latitude, longitude) ? sort : withoutDistance(sort);
         final DateRange dateRange = DateRange.of(startDate, endDate);
 
-        return paginate(
-                page,
-                pageSize,
-                DEFAULT_PAGE_SIZE,
-                safePageSize ->
-                        matchDataService.countPublicMatches(
-                                query,
-                                sport,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice),
-                (offset, safePageSize) ->
-                        matchDataService.findPublicMatches(
-                                query,
-                                sport,
-                                EventTimeFilter.ALL,
-                                dateRange.start(),
-                                dateRange.endExclusive(),
-                                minPrice,
-                                maxPrice,
-                                sortFilter,
-                                latitude,
-                                longitude,
-                                offset,
-                                safePageSize));
+        final PaginatedResult<Match> result =
+                paginate(
+                        page,
+                        pageSize,
+                        DEFAULT_PAGE_SIZE,
+                        safePageSize ->
+                                matchDataService.countPublicMatches(
+                                        query,
+                                        sport,
+                                        EventTimeFilter.ALL,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice),
+                        (offset, safePageSize) ->
+                                matchDataService.findPublicMatches(
+                                        query,
+                                        sport,
+                                        EventTimeFilter.ALL,
+                                        dateRange.start(),
+                                        dateRange.endExclusive(),
+                                        minPrice,
+                                        maxPrice,
+                                        sortFilter,
+                                        latitude,
+                                        longitude,
+                                        offset,
+                                        safePageSize));
+
+        if (sort == EventSort.DISTANCE && hasCoordinates(latitude, longitude)) {
+            hydrateDistances(result.getItems(), latitude, longitude);
+        }
+
+        return result;
     }
 
     @Override
@@ -1009,6 +1017,17 @@ public class MatchServiceImpl implements MatchService {
     private void validateUpdateCapacityOrThrow(final int maxPlayers) {
         if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
             throw new MatchUpdateCapacityAboveMaxException();
+        }
+    }
+
+    private void hydrateDistances(
+            final List<Match> matches, final Double latitude, final Double longitude) {
+        for (Match match : matches) {
+            if (match.getLatitude() != null && match.getLongitude() != null) {
+                match.setDistanceKmFromViewer(
+                        DistanceUtils.distanceKm(
+                                latitude, longitude, match.getLatitude(), match.getLongitude()));
+            }
         }
     }
 

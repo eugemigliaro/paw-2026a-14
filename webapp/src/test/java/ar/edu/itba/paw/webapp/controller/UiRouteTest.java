@@ -961,6 +961,11 @@ class UiRouteTest {
                                         : sport.stream()
                                                 .map(Sport::getDbValue)
                                                 .collect(java.util.stream.Collectors.joining(","));
+
+                        if (sort == EventSort.DISTANCE && latitude != null && longitude != null) {
+                            realMatch.setDistanceKmFromViewer(5.0);
+                        }
+
                         return new PaginatedResult<>(
                                 List.of(realMatch, footballMatch), 2, 1, pageSize);
                     }
@@ -1796,7 +1801,8 @@ class UiRouteTest {
         final MvcResult result =
                 mockMvc.perform(
                                 get("/").sessionAttr("exploreLocationLatitude", -34.60)
-                                        .sessionAttr("exploreLocationLongitude", -58.38))
+                                        .sessionAttr("exploreLocationLongitude", -58.38)
+                                        .param("sort", "distance"))
                         .andExpect(status().isOk())
                         .andReturn();
 

@@ -625,6 +625,53 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void testSearchPublicTournamentsWithDistanceFilterHydratesDistanceProperty() {
+        // 1. Arrange
+        final Tournament tournament =
+                tournament(10L, UserUtils.getUser(1L), TournamentStatus.REGISTRATION);
+        tournament.setLatitude(40.7578);
+        tournament.setLongitude(-74.0060);
+        Mockito.when(
+                        tournamentDataService.countPublicTournaments(
+                                "", List.of(Sport.FOOTBALL), null, null, null, null))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentDataService.findPublicTournaments(
+                                "",
+                                List.of(Sport.FOOTBALL),
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.DISTANCE,
+                                40.7128,
+                                -74.0060,
+                                0,
+                                12))
+                .thenReturn(List.of(tournament));
+
+        // 2. Exercise
+        final PaginatedResult<Tournament> result =
+                tournamentService.searchPublicTournaments(
+                        "",
+                        List.of(Sport.FOOTBALL),
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        12,
+                        null,
+                        null,
+                        40.7128,
+                        -74.0060);
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(List.of(tournament), result.getItems());
+        Assertions.assertEquals(5.0, result.getItems().get(0).getDistanceKmFromViewer(), 0.1);
+    }
+
+    @Test
     public void findHostedTournamentsIncludesSoloPoolAndTeamMemberships() {
         // 1. Arrange
         final User user = UserUtils.getUser(1L);

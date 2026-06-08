@@ -543,6 +543,56 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testSearchPublicMatchesWithDistanceFilterHydratesDistanceProperty() {
+        Match match = createTestMatch(5L, "Nearby Match", "football");
+        match.setLatitude(40.7578);
+        match.setLongitude(-74.0060);
+        Mockito.when(
+                        matchDataService.findPublicMatches(
+                                null,
+                                List.of(Sport.FOOTBALL),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null,
+                                EventSort.DISTANCE,
+                                40.7128,
+                                -74.0060,
+                                0,
+                                12))
+                .thenReturn(List.of(match));
+        Mockito.when(
+                        matchDataService.countPublicMatches(
+                                null,
+                                List.of(Sport.FOOTBALL),
+                                EventTimeFilter.ALL,
+                                null,
+                                null,
+                                null,
+                                null))
+                .thenReturn(1);
+
+        final PaginatedResult<Match> result =
+                matchService.searchPublicMatches(
+                        null,
+                        List.of(Sport.FOOTBALL),
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        12,
+                        null,
+                        null,
+                        40.7128,
+                        -74.0060);
+
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals("Nearby Match", result.getItems().get(0).getTitle());
+        Assertions.assertEquals(5.0, result.getItems().get(0).getDistanceKmFromViewer(), 0.1);
+    }
+
+    @Test
     public void testCreateMatchDelegates() {
         final Instant now = FIXED_NOW.plusSeconds(3600);
         final Match expectedMatch = createTestMatch(1L, "Test Match", "football");

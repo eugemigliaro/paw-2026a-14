@@ -64,9 +64,7 @@ public final class EventCardAttributeUtils {
             final Locale locale) {
         final Map<Long, String> labels = new LinkedHashMap<>();
         for (final Match match : matches) {
-            final String label =
-                    distanceLabel(
-                            match.getLatitude(), match.getLongitude(), latitude, longitude, locale);
+            final String label = distanceLabel(match.getDistanceKmFromViewer(), locale);
             if (label != null) {
                 labels.put(match.getId(), label);
             }
@@ -81,13 +79,7 @@ public final class EventCardAttributeUtils {
             final Locale locale) {
         final Map<Long, String> labels = new LinkedHashMap<>();
         for (final Tournament tournament : tournaments) {
-            final String label =
-                    distanceLabel(
-                            tournament.getLatitude(),
-                            tournament.getLongitude(),
-                            latitude,
-                            longitude,
-                            locale);
+            final String label = distanceLabel(tournament.getDistanceKmFromViewer(), locale);
             if (label != null) {
                 labels.put(tournament.getId(), label);
             }
@@ -125,21 +117,10 @@ public final class EventCardAttributeUtils {
         return codes;
     }
 
-    private static String distanceLabel(
-            final Double eventLatitude,
-            final Double eventLongitude,
-            final Double viewerLatitude,
-            final Double viewerLongitude,
-            final Locale locale) {
-        if (eventLatitude == null
-                || eventLongitude == null
-                || viewerLatitude == null
-                || viewerLongitude == null) {
+    private static String distanceLabel(final Double distanceKm, final Locale locale) {
+        if (distanceKm == null) {
             return null;
         }
-        final double distanceKm =
-                distanceInKilometers(
-                        viewerLatitude, viewerLongitude, eventLatitude, eventLongitude);
         final Locale resolvedLocale = locale == null ? Locale.ENGLISH : locale;
         final NumberFormat formatter = NumberFormat.getNumberInstance(resolvedLocale);
         if (distanceKm < 1) {
@@ -149,25 +130,6 @@ public final class EventCardAttributeUtils {
         formatter.setMinimumFractionDigits(distanceKm < 10 ? 1 : 0);
         formatter.setMaximumFractionDigits(distanceKm < 10 ? 1 : 0);
         return formatter.format(distanceKm) + " km";
-    }
-
-    private static double distanceInKilometers(
-            final double fromLatitude,
-            final double fromLongitude,
-            final double toLatitude,
-            final double toLongitude) {
-        final double earthRadiusKm = 6371.0088;
-        final double fromLatRad = Math.toRadians(fromLatitude);
-        final double toLatRad = Math.toRadians(toLatitude);
-        final double deltaLatRad = Math.toRadians(toLatitude - fromLatitude);
-        final double deltaLonRad = Math.toRadians(toLongitude - fromLongitude);
-        final double a =
-                Math.sin(deltaLatRad / 2) * Math.sin(deltaLatRad / 2)
-                        + Math.cos(fromLatRad)
-                                * Math.cos(toLatRad)
-                                * Math.sin(deltaLonRad / 2)
-                                * Math.sin(deltaLonRad / 2);
-        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private static List<String> matchRelationshipBadgeCodes(

@@ -25,6 +25,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.persistence.Version;
 
 @Entity
@@ -155,6 +156,8 @@ public class Tournament {
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "tournament")
     private List<TournamentMatch> matches;
+
+    @Transient private Double distanceKmFromViewer;
 
     Tournament() {}
 
@@ -409,6 +412,10 @@ public class Tournament {
         return matches;
     }
 
+    public Double getDistanceKmFromViewer() {
+        return distanceKmFromViewer;
+    }
+
     public void setHost(final User host) {
         this.host = host;
     }
@@ -519,6 +526,10 @@ public class Tournament {
 
     public void setUpdatedAt(final Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public void setDistanceKmFromViewer(final Double distanceKmFromViewer) {
+        this.distanceKmFromViewer = distanceKmFromViewer;
     }
 
     @Override

@@ -92,6 +92,8 @@ public class Match {
 
     @Transient private EventStatus derivedStatus;
 
+    @Transient private Double distanceKmFromViewer;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "banner_image_id")
     private ImageMetadata bannerImageMetadata;
@@ -252,6 +254,10 @@ public class Match {
         return derivedStatus == null ? status : derivedStatus;
     }
 
+    public Double getDistanceKmFromViewer() {
+        return distanceKmFromViewer;
+    }
+
     public EventStatus getStoredStatus() {
         return status;
     }
@@ -363,6 +369,10 @@ public class Match {
 
     public void setDerivedStatus(final EventStatus derivedStatus) {
         this.derivedStatus = derivedStatus;
+    }
+
+    public void setDistanceKmFromViewer(final Double distanceKmFromViewer) {
+        this.distanceKmFromViewer = distanceKmFromViewer;
     }
 
     public void setBannerImageMetadata(final ImageMetadata bannerImageMetadata) {
