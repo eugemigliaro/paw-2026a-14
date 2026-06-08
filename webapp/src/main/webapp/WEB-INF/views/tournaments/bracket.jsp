@@ -5,6 +5,7 @@
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
+<spring:message var="pageTitle" code="page.title.tournamentBracket" arguments="${bracketTournament.title}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>

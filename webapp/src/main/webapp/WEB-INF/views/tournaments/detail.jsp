@@ -2,7 +2,9 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.tournamentDetail" arguments="${tournament.title}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -41,9 +43,18 @@
 								</div>
 							</div>
 							<div class="detail-stack">
-								<c:forEach var="paragraph" items="${tournamentAboutParagraphs}">
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
+								<c:choose>
+									<c:when test="${empty tournamentAboutParagraphs}">
+										<p class="body-copy detail-stack__paragraph">
+											<spring:message code="tournament.detail.defaultDescription" />
+										</p>
+									</c:when>
+									<c:otherwise>
+										<c:forEach var="paragraph" items="${tournamentAboutParagraphs}">
+											<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+										</c:forEach>
+									</c:otherwise>
+								</c:choose>
 							</div>
 						</section>
 
@@ -71,7 +82,7 @@
 								</div>
 								<div class="tournament-fact">
 									<dt><spring:message code="tournament.detail.registrationMode" /></dt>
-									<dd><c:out value="${tournamentJoinModeLabel}" /></dd>
+									<dd><spring:message code="${tournamentJoinModeCode}" /></dd>
 								</div>
 							</dl>
 						</section>
@@ -94,7 +105,7 @@
 									</form>
 									<c:if test="${not empty tournamentCloseRegistrationDisabledMessage}">
 										<p class="booking-panel__notice booking-panel__notice--info">
-											<c:out value="${tournamentCloseRegistrationDisabledMessage}" />
+											<spring:message code="${tournamentCloseRegistrationDisabledMessage}" />
 										</p>
 									</c:if>
 								</c:if>
@@ -151,14 +162,29 @@
 									<spring:message code="${tournamentErrorCode}" />
 								</p>
 							</c:if>
-							<c:if test="${not empty tournamentParticipationLabel}">
+							<c:if test="${not empty tournamentParticipationCode}">
 								<p class="booking-panel__notice booking-panel__notice--info">
-									<c:out value="${tournamentParticipationLabel}" />
+									<c:choose>
+										<c:when test="${empty tournamentParticipationTeam}">
+											<spring:message code="${tournamentParticipationCode}" />
+										</c:when>
+										<c:otherwise>
+											<c:choose>
+												<c:when test="${not empty tournamentParticipationTeam.name}">
+													<c:set var="tournamentParticipationTeamLabel" value="${tournamentParticipationTeam.name}" />
+												</c:when>
+												<c:otherwise>
+													<spring:message var="tournamentParticipationTeamLabel" code="tournament.team.solo.name" arguments="${tournamentTeamDisplayNumbers[tournamentParticipationTeam.id]}" />
+												</c:otherwise>
+											</c:choose>
+											<spring:message code="${tournamentParticipationCode}" arguments="${tournamentParticipationTeamLabel}" />
+										</c:otherwise>
+									</c:choose>
 								</p>
 							</c:if>
-							<c:if test="${not empty tournamentNextStepLabel}">
+							<c:if test="${not empty tournamentNextStepCode}">
 								<p class="booking-panel__notice booking-panel__notice--info">
-									<c:out value="${tournamentNextStepLabel}" />
+									<spring:message code="${tournamentNextStepCode}" />
 								</p>
 							</c:if>
 
@@ -237,25 +263,59 @@
 							<dl class="event-info-panel__list">
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.price" /></dt>
-									<dd><c:out value="${tournamentPriceLabel}" /></dd>
+									<dd>
+										<c:choose>
+											<c:when test="${empty tournament.pricePerPlayer}">
+												<spring:message code="price.tbd" />
+											</c:when>
+											<c:when test="${tournament.pricePerPlayer.signum() == 0}">
+												<spring:message code="price.free" />
+											</c:when>
+											<c:otherwise>
+												<spring:message code="price.amount" arguments="${tournament.pricePerPlayer}" />
+											</c:otherwise>
+										</c:choose>
+									</dd>
 								</div>
 								<div class="booking-panel__detail-row event-info-panel__row">
 									<dt><spring:message code="tournament.detail.schedule" /></dt>
-									<dd><c:out value="${tournamentScheduleLabel}" /></dd>
+									<dd>
+										<c:choose>
+											<c:when test="${empty tournament.startsAt}">
+												<spring:message code="tournament.detail.schedule.tbd" />
+											</c:when>
+											<c:when test="${empty tournament.endsAt}">
+												<c:out value="${tf:dateTime(tournament.startsAtDateTime)}" />
+											</c:when>
+											<c:when test="${tf:date(tournament.startsAtDateTime) eq tf:date(tournament.endsAtDateTime)}">
+												<spring:message code="tournament.detail.schedule.sameDay">
+													<spring:argument value="${tf:date(tournament.startsAtDateTime)}" />
+													<spring:argument value="${tf:time(tournament.startsAtDateTime)}" />
+													<spring:argument value="${tf:time(tournament.endsAtDateTime)}" />
+												</spring:message>
+											</c:when>
+											<c:otherwise>
+												<spring:message code="tournament.detail.schedule.range">
+													<spring:argument value="${tf:dateTime(tournament.startsAtDateTime)}" />
+													<spring:argument value="${tf:dateTime(tournament.endsAtDateTime)}" />
+												</spring:message>
+											</c:otherwise>
+										</c:choose>
+									</dd>
 								</div>
 								<div class="booking-panel__detail-row event-info-panel__row event-info-panel__row--registration-window">
 									<dt><spring:message code="tournament.detail.registrationWindow" /></dt>
 									<dd class="event-info-panel__registration-window">
 										<c:choose>
-											<c:when test="${not empty tournamentRegistrationWindowStartLabel and not empty tournamentRegistrationWindowEndLabel}">
+											<c:when test="${not empty tournament.registrationOpensAt and not empty tournament.registrationClosesAt}">
 												<ul class="event-info-panel__registration-window-list">
 													<li class="event-info-panel__registration-window-item">
 														<span class="event-info-panel__registration-window-label"><spring:message code="tournament.detail.registrationWindow.startsAt" />:</span>
-														<c:out value="${tournamentRegistrationWindowStartLabel}" />
+														<c:out value="${tf:dateTime(tournament.registrationOpensAtDateTime)}" />
 													</li>
 													<li class="event-info-panel__registration-window-item">
 														<span class="event-info-panel__registration-window-label"><spring:message code="tournament.detail.registrationWindow.endsAt" />:</span>
-														<c:out value="${tournamentRegistrationWindowEndLabel}" />
+														<c:out value="${tf:dateTime(tournament.registrationClosesAtDateTime)}" />
 													</li>
 												</ul>
 											</c:when>
@@ -305,10 +365,12 @@
 											<c:choose>
 												<c:when test="${not empty tournamentHostProfileHref}">
 													<c:url var="hostProfileHref" value="${tournamentHostProfileHref}" />
-													<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${tournamentHostLabel}" /></a>
+													<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${tournament.host.username}" /></a>
 												</c:when>
 												<c:otherwise>
-													<span class="event-info-panel__host-name"><c:out value="${tournamentHostLabel}" /></span>
+													<span class="event-info-panel__host-name">
+														<spring:message code="event.detail.unknownHost" arguments="${empty tournament.host ? '?' : tournament.host.id}" />
+													</span>
 												</c:otherwise>
 											</c:choose>
 										</span>

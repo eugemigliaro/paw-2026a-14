@@ -110,6 +110,9 @@ class HostTournamentControllerTest {
         mockMvc.perform(get("/host/tournaments/new").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
+                .andExpect(model().attribute("pageTitleCode", "page.title.hostTournamentCreate"))
+                .andExpect(model().attribute("formTitleCode", "tournament.create.title"))
+                .andExpect(model().attribute("submitLabelCode", "tournament.form.submit.create"))
                 .andExpect(model().attribute("mapPickerEnabled", true))
                 .andExpect(model().attribute("mapTileUrlTemplate", "/assets/tiles/{z}/{x}/{y}.png"))
                 .andExpect(model().attribute("mapAttribution", "Local Buenos Aires map tiles"))
@@ -848,8 +851,7 @@ class HostTournamentControllerTest {
                 .param("schedules[0].longitude", "-58.4")
                 .param("schedules[0].matchId", "10")
                 .param("schedules[0].roundNumber", "1")
-                .param("schedules[0].roundLabel", "Round 1")
-                .param("schedules[0].matchLabel", "Match 1")
+                .param("schedules[0].matchNumber", "1")
                 .param("schedules[1].startDate", "2030-04-10")
                 .param("schedules[1].startTime", "18:00")
                 .param("schedules[1].endDate", "2030-04-10")
@@ -859,8 +861,7 @@ class HostTournamentControllerTest {
                 .param("schedules[1].longitude", "-58.4")
                 .param("schedules[1].matchId", "11")
                 .param("schedules[1].roundNumber", "1")
-                .param("schedules[1].roundLabel", "Round 1")
-                .param("schedules[1].matchLabel", "Match 2");
+                .param("schedules[1].matchNumber", "2");
     }
 
     private static Tournament tournament(

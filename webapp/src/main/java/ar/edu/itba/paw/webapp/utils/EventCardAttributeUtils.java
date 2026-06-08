@@ -11,50 +11,33 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.springframework.context.MessageSource;
 
 public final class EventCardAttributeUtils {
 
     private EventCardAttributeUtils() {}
 
-    public static Map<Long, String> matchSpotsBadgeLabels(
-            final List<Match> matches, final Locale locale, final MessageSource messageSource) {
-        final Map<Long, String> labels = new LinkedHashMap<>();
+    public static Map<Long, String> matchSpotsBadgeCodes(final List<Match> matches) {
+        final Map<Long, String> codes = new LinkedHashMap<>();
         for (final Match match : matches) {
-            labels.put(
-                    match.getId(),
-                    messageSource.getMessage(
-                            "event.spotsLeft", new Object[] {match.getAvailableSpots()}, locale));
+            codes.put(match.getId(), "event.spotsLeft");
         }
-        return labels;
+        return codes;
     }
 
-    public static Map<Long, String> matchStatusBadgeLabels(
-            final List<Match> matches, final Locale locale, final MessageSource messageSource) {
-        final Map<Long, String> labels = new LinkedHashMap<>();
+    public static Map<Long, String> matchStatusBadgeCodes(final List<Match> matches) {
+        final Map<Long, String> codes = new LinkedHashMap<>();
         for (final Match match : matches) {
-            labels.put(
-                    match.getId(),
-                    messageSource.getMessage(
-                            "match.status." + match.getStatus().getValue(),
-                            null,
-                            match.getStatus().getValue(),
-                            locale));
+            codes.put(match.getId(), "match.status." + match.getStatus().getValue());
         }
-        return labels;
+        return codes;
     }
 
-    public static Map<Long, String> tournamentBadgeLabels(
-            final List<Tournament> tournaments,
-            final Locale locale,
-            final MessageSource messageSource) {
-        final Map<Long, String> labels = new LinkedHashMap<>();
+    public static Map<Long, String> tournamentBadgeCodes(final List<Tournament> tournaments) {
+        final Map<Long, String> codes = new LinkedHashMap<>();
         for (final Tournament tournament : tournaments) {
-            labels.put(
-                    tournament.getId(),
-                    messageSource.getMessage("tournament.card.badge", null, locale));
+            codes.put(tournament.getId(), "tournament.card.badge");
         }
-        return labels;
+        return codes;
     }
 
     public static Map<Long, String> matchDistanceLabels(

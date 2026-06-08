@@ -266,15 +266,16 @@ public class HostController {
             final Locale locale,
             final HostFormConfig formConfig) {
         final ModelAndView mav = new ModelAndView("host/create-match");
-        mav.addObject("pageTitle", formConfig.pageTitle());
+        mav.addObject("pageTitleCode", formConfig.pageTitleCode());
+        mav.addObject("pageTitleArgument", formConfig.pageTitleArgument());
         mav.addObject("createEventForm", form);
         mav.addObject("formError", formError);
-        mav.addObject("formEyebrow", formConfig.eyebrow());
-        mav.addObject("formTitle", formConfig.title());
-        mav.addObject("formDescription", formConfig.description());
+        mav.addObject("formEyebrowCode", formConfig.eyebrowCode());
+        mav.addObject("formTitleCode", formConfig.titleCode());
+        mav.addObject("formDescriptionCode", formConfig.descriptionCode());
         mav.addObject("formAction", formConfig.action());
-        mav.addObject("submitLabel", formConfig.submitLabel());
-        mav.addObject("submitLoadingLabel", formConfig.submitLoadingLabel());
+        mav.addObject("submitLabelCode", formConfig.submitLabelCode());
+        mav.addObject("submitLoadingLabelCode", formConfig.submitLoadingLabelCode());
         mav.addObject("submitButtonId", formConfig.submitButtonId());
         mav.addObject("isEditMode", formConfig.editMode());
         mav.addObject("isSeriesEditMode", formConfig.seriesEditMode());
@@ -296,13 +297,14 @@ public class HostController {
 
     private HostFormConfig createFormConfig(final Locale locale) {
         return new HostFormConfig(
-                messageSource.getMessage("page.title.hostMode", null, locale),
-                messageSource.getMessage("host.eyebrow", null, locale),
-                messageSource.getMessage("host.title", null, locale),
-                messageSource.getMessage("host.description", null, locale),
+                "page.title.hostMode",
+                null,
+                "host.eyebrow",
+                "host.title",
+                "host.description",
                 "/host/matches/new",
-                messageSource.getMessage("host.form.submit", null, locale),
-                messageSource.getMessage("host.form.submitting", null, locale),
+                "host.form.submit",
+                "host.form.submitting",
                 "publish-match-button",
                 null,
                 false,
@@ -311,14 +313,14 @@ public class HostController {
 
     private HostFormConfig editFormConfig(final Match match, final Locale locale) {
         return new HostFormConfig(
-                messageSource.getMessage(
-                        "page.title.hostEditMode", new Object[] {match.getTitle()}, locale),
-                messageSource.getMessage("host.edit.eyebrow", null, locale),
-                messageSource.getMessage("host.edit.title", null, locale),
-                messageSource.getMessage("host.edit.description", null, locale),
+                "page.title.hostEditMode",
+                match.getTitle(),
+                "host.edit.eyebrow",
+                "host.edit.title",
+                "host.edit.description",
                 "/host/matches/" + match.getId() + "/edit",
-                messageSource.getMessage("host.edit.form.submit", null, locale),
-                messageSource.getMessage("host.edit.form.submitting", null, locale),
+                "host.edit.form.submit",
+                "host.edit.form.submitting",
                 "update-match-button",
                 bannerUrlFor(match),
                 true,
@@ -327,14 +329,14 @@ public class HostController {
 
     private HostFormConfig seriesEditFormConfig(final Match match, final Locale locale) {
         return new HostFormConfig(
-                messageSource.getMessage(
-                        "page.title.hostEditMode", new Object[] {match.getTitle()}, locale),
-                messageSource.getMessage("host.seriesEdit.eyebrow", null, locale),
-                messageSource.getMessage("host.seriesEdit.title", null, locale),
-                messageSource.getMessage("host.seriesEdit.description", null, locale),
+                "page.title.hostEditMode",
+                match.getTitle(),
+                "host.seriesEdit.eyebrow",
+                "host.seriesEdit.title",
+                "host.seriesEdit.description",
                 "/host/matches/" + match.getId() + "/series/edit",
-                messageSource.getMessage("host.seriesEdit.form.submit", null, locale),
-                messageSource.getMessage("host.seriesEdit.form.submitting", null, locale),
+                "host.seriesEdit.form.submit",
+                "host.seriesEdit.form.submitting",
                 "update-series-button",
                 bannerUrlFor(match),
                 true,
@@ -466,13 +468,14 @@ public class HostController {
     }
 
     private record HostFormConfig(
-            String pageTitle,
-            String eyebrow,
-            String title,
-            String description,
+            String pageTitleCode,
+            String pageTitleArgument,
+            String eyebrowCode,
+            String titleCode,
+            String descriptionCode,
             String action,
-            String submitLabel,
-            String submitLoadingLabel,
+            String submitLabelCode,
+            String submitLoadingLabelCode,
             String submitButtonId,
             String bannerImageUrl,
             boolean editMode,

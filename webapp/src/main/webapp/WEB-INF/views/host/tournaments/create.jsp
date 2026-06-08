@@ -5,6 +5,11 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
+<spring:message var="pageTitle" code="${pageTitleCode}" arguments="${pageTitleArgument}" />
+<spring:message var="formTitle" code="${formTitleCode}" />
+<spring:message var="formDescription" code="${formDescriptionCode}" />
+<spring:message var="submitLabel" code="${submitLabelCode}" />
+<spring:message var="submitLoadingLabel" code="${submitLoadingLabelCode}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>

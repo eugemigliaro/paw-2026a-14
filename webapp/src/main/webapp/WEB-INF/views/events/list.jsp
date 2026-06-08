@@ -103,11 +103,11 @@
 
 								<c:forEach var="group" items="${listControls.filterGroups}">
 									<c:choose>
-										<c:when test="${group.title eq eventTypeFilterTitle}">
+										<c:when test="${group.titleCode eq 'filter.eventType'}">
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 												<c:choose>
 													<c:when test="${optionStatus.first}">
-														<c:set var="eventTypeMatchLabel" value="${option.label}" />
+														<spring:message var="eventTypeMatchLabel" code="${option.labelCode}" />
 														<c:choose>
 															<c:when test="${not empty option.params}">
 																<c:url var="eventTypeMatchHref" value="${listControls.searchAction}">
@@ -122,7 +122,7 @@
 														</c:choose>
 													</c:when>
 													<c:otherwise>
-														<c:set var="eventTypeTournamentLabel" value="${option.label}" />
+														<spring:message var="eventTypeTournamentLabel" code="${option.labelCode}" />
 														<c:choose>
 															<c:when test="${not empty option.params}">
 																<c:url var="eventTypeTournamentHref" value="${listControls.searchAction}">
@@ -140,7 +140,7 @@
 											</c:forEach>
 											<ui:eventsFilterToggle
 												className="feed-event-type-toggle"
-												ariaLabel="${group.title}"
+												ariaLabel="${eventTypeFilterTitle}"
 												currentValue="${selectedType}"
 												leftValue="match"
 												rightValue="tournament"
@@ -154,17 +154,18 @@
 												forceLeftOnEmpty="${true}" />
 										</c:when>
 										<c:otherwise>
-									<div class="filter-dropdown" data-filter-name="${group.title}">
+									<spring:message var="groupTitleLabel" code="${group.titleCode}" />
+									<div class="filter-dropdown" data-filter-name="${group.titleCode}">
 										<button type="button" class="filter-dropdown__toggle">
 											<span class="filter-dropdown__icon">
 												<c:choose>
-													<c:when test="${fn:contains(fn:toLowerCase(group.title), 'category') || fn:contains(fn:toLowerCase(group.title), 'categoría') || fn:contains(fn:toLowerCase(group.title), 'categoria')}">
+													<c:when test="${group.titleCode eq 'filter.category'}">
 														<icon:category />
 													</c:when>
-													<c:when test="${fn:contains(fn:toLowerCase(group.title), 'sport') || fn:contains(fn:toLowerCase(group.title), 'deporte')}">
+													<c:when test="${group.titleCode eq 'filter.categories'}">
 														<icon:football />
 													</c:when>
-													<c:when test="${fn:contains(fn:toLowerCase(group.title), 'status') || fn:contains(fn:toLowerCase(group.title), 'estado')}">
+													<c:when test="${group.titleCode eq 'host.filters.status'}">
 														<icon:status />
 													</c:when>
 													<c:otherwise>
@@ -172,7 +173,7 @@
 													</c:otherwise>
 												</c:choose>
 											</span>
-											<c:out value="${group.title}" />
+											<c:out value="${groupTitleLabel}" />
 										</button>
 											<div class="filter-dropdown__panel">
 												<c:set var="clearFilterHref" value="" />
@@ -207,7 +208,7 @@
 															</c:choose>
 															<a href="${optionHref}"
 																class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
-																<c:out value="${option.label}" />
+																<spring:message code="${option.labelCode}" />
 															</a>
 														</c:otherwise>
 													</c:choose>
@@ -233,7 +234,7 @@
 													<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 														<c:if test="${not optionStatus.first and option.active}">
 															<span class="filter-dropdown__selected-item">
-																<c:out value="${option.label}" />
+																<spring:message code="${option.labelCode}" />
 															</span>
 														</c:if>
 													</c:forEach>
@@ -552,14 +553,14 @@
 												<c:when test="${eventType.dbValue == 'tournament'}">
 													<ui:eventCard
 														tournament="${event}"
-														badgeLabel="${eventBadgeLabels[event.id]}"
+														badgeCode="${eventBadgeCodes[event.id]}"
 														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
 														headingLevel="h2" />
 												</c:when>
 												<c:otherwise>
 													<ui:eventCard
 														match="${event}"
-														badgeLabel="${eventBadgeLabels[event.id]}"
+														badgeCode="${eventBadgeCodes[event.id]}"
 														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
 														headingLevel="h2" />
 												</c:otherwise>

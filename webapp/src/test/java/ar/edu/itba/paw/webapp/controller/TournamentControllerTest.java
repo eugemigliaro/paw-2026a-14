@@ -44,8 +44,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -74,7 +72,6 @@ class TournamentControllerTest {
                                         tournamentService,
                                         tournamentRegistrationService,
                                         tournamentBracketService,
-                                        messageSource(),
                                         false,
                                         "",
                                         "",
@@ -121,12 +118,8 @@ class TournamentControllerTest {
                                                 "title", Matchers.is("City Padel Cup"))))
                 .andExpect(
                         model().attribute(
-                                        "tournamentRegistrationWindowStartLabel",
-                                        Matchers.not(Matchers.is(Matchers.emptyOrNullString()))))
-                .andExpect(
-                        model().attribute(
-                                        "tournamentRegistrationWindowEndLabel",
-                                        Matchers.not(Matchers.is(Matchers.emptyOrNullString()))))
+                                        "tournamentJoinModeCode",
+                                        "tournament.detail.joinMode.solo"))
                 .andExpect(
                         model().attribute(
                                         "tournamentCapabilities",
@@ -263,7 +256,7 @@ class TournamentControllerTest {
                         model().attribute(
                                         "tournamentCloseRegistrationDisabledMessage",
                                         Matchers.is(
-                                                "Not enough players to close registration. Wait for more players or cancel the tournament.")));
+                                                "tournament.host.closeRegistration.unavailable")));
     }
 
     @Test
@@ -555,14 +548,5 @@ class TournamentControllerTest {
                 canViewBracket,
                 closeRegistrationDisabled,
                 closeRegistrationBlockedByCapacity);
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 }

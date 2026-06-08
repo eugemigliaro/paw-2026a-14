@@ -10,10 +10,8 @@ import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
-import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -31,28 +29,24 @@ public class MatchDashboardController {
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
     private final TournamentService tournamentService;
-    private final MessageSource messageSource;
 
     @Autowired
     public MatchDashboardController(
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
-            final TournamentService tournamentService,
-            final MessageSource messageSource) {
+            final TournamentService tournamentService) {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
         this.tournamentService = tournamentService;
-        this.messageSource = messageSource;
     }
 
     @GetMapping("/events")
     public ModelAndView showEventsPage(
             @AuthenticatedUser final User user,
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
-            final BindingResult bindingResult,
-            final Locale locale) {
+            final BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
@@ -102,11 +96,9 @@ public class MatchDashboardController {
                 "events/list",
                 "/events",
                 "page.title.events",
-                locale,
                 selection,
                 result,
                 tournamentResult,
-                messageSource,
                 matchParticipationService,
                 matchReservationService);
     }

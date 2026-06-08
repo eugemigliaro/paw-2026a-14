@@ -4,6 +4,7 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.hostTournamentBracketSetup" arguments="${bracketTournament.title}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -140,8 +141,19 @@
 										<c:forEach var="schedule" items="${bracketPublishForm.schedules}" varStatus="scheduleStatus">
 											<article class="tournament-schedule-match">
 												<div class="tournament-bracket-match__header">
-													<p class="tournament-bracket-match__label"><c:out value="${schedule.matchLabel}" /></p>
-													<span class="tournament-bracket-match__round"><c:out value="${schedule.roundLabel}" /></span>
+													<p class="tournament-bracket-match__label">
+														<spring:message code="tournament.bracket.match.label" arguments="${schedule.matchNumber}" />
+													</p>
+													<span class="tournament-bracket-match__round">
+														<c:choose>
+															<c:when test="${schedule.roundNumber == bracketRoundCount}">
+																<spring:message code="tournament.bracket.round.final" />
+															</c:when>
+															<c:otherwise>
+																<spring:message code="tournament.bracket.round.number" arguments="${schedule.roundNumber}" />
+															</c:otherwise>
+														</c:choose>
+													</span>
 												</div>
 												<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
 													<label class="field" for="match-start-date-${scheduleStatus.index}">
@@ -163,8 +175,7 @@
 												</div>
 												<input type="hidden" name="schedules[${scheduleStatus.index}].matchId" value="${schedule.matchId}" />
 												<input type="hidden" name="schedules[${scheduleStatus.index}].roundNumber" value="${schedule.roundNumber}" />
-												<input type="hidden" name="schedules[${scheduleStatus.index}].roundLabel" value="${schedule.roundLabel}" />
-												<input type="hidden" name="schedules[${scheduleStatus.index}].matchLabel" value="${schedule.matchLabel}" />
+												<input type="hidden" name="schedules[${scheduleStatus.index}].matchNumber" value="${schedule.matchNumber}" />
 												<input type="hidden" name="schedules[${scheduleStatus.index}].address" value="${schedule.address}" />
 												<input type="hidden" name="schedules[${scheduleStatus.index}].latitude" value="${schedule.latitude}" />
 												<input type="hidden" name="schedules[${scheduleStatus.index}].longitude" value="${schedule.longitude}" />
