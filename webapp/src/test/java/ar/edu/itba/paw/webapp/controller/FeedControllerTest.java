@@ -317,13 +317,11 @@ class FeedControllerTest {
     }
 
     @Test
-    void getFeedRouteWithSpanishLocaleLocalizesShellAndCards() throws Exception {
+    void getFeedRouteRendersFeedPageUnderSpanishLocale() throws Exception {
         mockMvc.perform(get("/").locale(java.util.Locale.forLanguageTag("es")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(
-                        model().attribute(
-                                        "feedTitle", Matchers.is("Encontrá tu próximo partido.")));
+                .andExpect(model().attributeExists("featuredEvents"));
     }
 
     @Test

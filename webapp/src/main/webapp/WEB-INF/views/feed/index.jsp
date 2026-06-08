@@ -22,6 +22,9 @@
 			<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 			<spring:message var="priceRangeError" code="filter.price.rangeError" />
 			<spring:message var="eventTypeFilterTitle" code="filter.eventType" />
+			<spring:message var="feedSearchPlaceholder" code="feed.search.placeholder" />
+			<spring:message var="feedSearchButtonLabel" code="feed.search.button" />
+			<spring:message var="sortLabel" code="feed.sortBy" />
 			<c:set var="feedPath" value="/" />
 			<c:url var="feedFormAction" value="${feedPath}" />
 			<main class="page-shell page-shell--feed">
@@ -33,8 +36,8 @@
 							<c:if test="${not empty feedEyebrow}">
 								<p class="eyebrow"><c:out value="${feedEyebrow}" /></p>
 							</c:if>
-							<h1 class="hero-panel__title"><c:out value="${feedTitle}" /></h1>
-							<p class="hero-panel__description"><c:out value="${feedDescription}" /></p>
+							<h1 class="hero-panel__title"><spring:message code="feed.hero.title" /></h1>
+							<p class="hero-panel__description"><spring:message code="feed.hero.description" /></p>
 						</section>
 
 						<section class="search-panel" aria-label="${searchAriaLabel}">

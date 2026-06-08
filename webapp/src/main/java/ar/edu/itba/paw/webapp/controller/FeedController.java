@@ -157,7 +157,6 @@ public class FeedController {
         mav.addObject("selectedDateMinValue", LocalDate.now(PlatformTime.ZONE).toString());
         mav.addObject("selectedStartDateValue", selectedStartDateValue);
         mav.addObject("selectedEndDateValue", selectedEndDateValue);
-        mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
         mav.addObject(
                 "sortOptions",
                 buildSortOptions(
@@ -341,8 +340,7 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null,
-                locale);
+                        : null);
     }
 
     private void addTournamentFeedAttributes(
@@ -421,8 +419,7 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null,
-                locale);
+                        : null);
     }
 
     private void addFeedPageAttributes(
@@ -437,18 +434,9 @@ public class FeedController {
             final int totalPages,
             final List<?> paginationItems,
             final String previousPageHref,
-            final String nextPageHref,
-            final Locale locale) {
+            final String nextPageHref) {
+        // Hero/search/sort-by labels are resolved in feed/index.jsp via <spring:message>.
         mav.addObject("feedEyebrow", "");
-        mav.addObject("feedTitle", messageSource.getMessage("feed.hero.title", null, locale));
-        mav.addObject(
-                "feedDescription", messageSource.getMessage("feed.hero.description", null, locale));
-        mav.addObject(
-                "feedSearchPlaceholder",
-                messageSource.getMessage("feed.search.placeholder", null, locale));
-        mav.addObject(
-                "feedSearchButtonLabel",
-                messageSource.getMessage("feed.search.button", null, locale));
         mav.addObject("feedFilterGroups", filterGroups);
         mav.addObject("featuredEvents", featuredEvents);
         mav.addObject("featuredEventType", featuredEventType);
