@@ -19,7 +19,6 @@
 			<c:url var="saveManualPairingsAction" value="${saveManualPairingsPath}" />
 
 			<main class="page-shell tournament-bracket-page">
-				<ui:returnButton href="${detailHref}" />
 				<header class="page-heading tournament-bracket-page__heading">
 					<div>
 						<h1 class="page-heading__title"><c:out value="${bracketTournament.title}" /></h1>

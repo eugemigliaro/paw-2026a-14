@@ -13,7 +13,6 @@
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
 
 			<main class="page-shell page-shell--detail">
-				<ui:returnButton />
 				<header class="page-heading">
 					<h1 class="page-heading__title"><c:out value="${pageTitleLabel}" /></h1>
 					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>

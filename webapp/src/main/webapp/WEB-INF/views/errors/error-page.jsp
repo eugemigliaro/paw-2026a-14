@@ -16,7 +16,6 @@
 			<main class="page-shell error-shell">
 				<section class="error-hero">
 					<div class="error-hero__copy">
-						<ui:returnButton />
 						<p class="eyebrow"><c:out value="${eyebrow}" /></p>
 						<header class="page-heading">
 							<h1 class="page-heading__title"><c:out value="${title}" /></h1>

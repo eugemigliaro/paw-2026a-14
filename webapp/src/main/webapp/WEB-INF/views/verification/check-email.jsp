@@ -24,11 +24,10 @@
 				</p>
 			</c:if>
 			<div class="verification-actions">
-				<spring:message var="defaultBack" code="common.back" />
 				<c:url var="backUrl" value="${backHref}" />
-				<ui:button
-					href="${backUrl}"
-					label="${empty actionLabel ? defaultBack : actionLabel}" />
+				<c:if test="${not empty actionLabel}">
+					<ui:button href="${backUrl}" label="${actionLabel}" />
+				</c:if>
 			</div>
 		</section>
 	</main>
