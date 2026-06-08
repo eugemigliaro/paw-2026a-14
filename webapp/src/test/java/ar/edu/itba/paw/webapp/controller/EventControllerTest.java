@@ -954,7 +954,7 @@ class EventControllerTest {
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(
-                        model().attribute("eventStateNotice", "This event has already occurred."));
+                        model().attribute("eventStateNoticeCode", "event.state.completedNotice"));
     }
 
     @Test
@@ -1023,31 +1023,21 @@ class EventControllerTest {
     }
 
     @Test
-    void getRealMatchDetailsRouteWithSpanishHostActionLocalizesNotice() throws Exception {
+    void getRealMatchDetailsRouteUnderSpanishLocaleExposesHostActionCode() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(get("/matches/42").flashAttr("hostAction", "updated").param("lang", "es"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        model().attribute(
-                                        "hostActionNotice",
-                                        "Tu evento fue actualizado correctamente."));
+                .andExpect(model().attribute("hostActionCode", "updated"));
     }
 
     @Test
-    void getRealMatchDetailsRouteWithSpanishSeriesHostActionLocalizesNotice() throws Exception {
+    void getRecurringMatchDetailsRouteExposesSeriesHostActionCode() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(
-                        get("/matches/46")
-                                .flashAttr("hostAction", "seriesUpdated")
-                                .param("lang", "es"))
+        mockMvc.perform(get("/matches/46").flashAttr("hostAction", "seriesUpdated"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        model().attribute(
-                                        "hostActionNotice",
-                                        "Las próximas fechas recurrentes "
-                                                + "fueron actualizadas correctamente."));
+                .andExpect(model().attribute("hostActionCode", "seriesUpdated"));
     }
 
     @Test
@@ -1056,7 +1046,7 @@ class EventControllerTest {
 
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("hostActionNotice", Matchers.nullValue()));
+                .andExpect(model().attribute("hostActionCode", Matchers.nullValue()));
     }
 
     @Test

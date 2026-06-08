@@ -204,7 +204,7 @@ final class EventPageSupport {
         mav.addObject("isInviteOnly", isInviteOnly);
         mav.addObject("reservationRequiresLogin", CurrentAuthenticatedUser.get().isEmpty());
         addRealEventPageAttributes(
-                mav, match, confirmedParticipants, seriesOccurrences, currentUser, locale);
+                mav, match, confirmedParticipants, seriesOccurrences, currentUser);
         mav.addObject(
                 "userProfileImageUrls",
                 userProfileImageUrls(
@@ -265,7 +265,7 @@ final class EventPageSupport {
         mav.addObject(
                 "seriesReservationError",
                 suppressReservationErrors ? null : seriesReservationError);
-        mav.addObject("eventStateNotice", eventStateNotice(match, locale));
+        mav.addObject("eventStateNoticeCode", eventStateNoticeCode(match));
 
         mav.addObject("joinRequestPath", "/matches/" + eventId + "/join-requests");
         mav.addObject("seriesJoinRequestPath", "/matches/" + eventId + "/recurring-join-requests");
@@ -296,7 +296,7 @@ final class EventPageSupport {
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
         mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
-        mav.addObject("hostActionNotice", hostActionNotice(hostAction, locale));
+        mav.addObject("hostActionCode", hostAction);
         mav.addObject("hostActionErrorNotice", hostActionError);
         mav.addObject("hostActionTarget", hostActionTarget);
         mav.addObject("hostPendingRequests", pendingHostRequests);
@@ -326,37 +326,24 @@ final class EventPageSupport {
             final Match match,
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
-            final User currentUser,
-            final Locale locale) {
+            final User currentUser) {
+        // Host name, participant count, empty-state hint, default description and the
+        // per-occurrence
+        // spots label are resolved in matches/detail.jsp via <spring:message> / <ui:pluralMessage>.
         final User host = match.getHost();
         mav.addObject("event", match);
         mav.addObject("eventMediaClass", mediaClassFor(match.getSport()));
         mav.addObject("eventBannerImageUrl", bannerUrlFor(match));
-        mav.addObject(
-                "hostLabel",
-                host.getUsername() != null
-                        ? host.getUsername()
-                        : messageSource.getMessage(
-                                "event.detail.unknownHost",
-                                new Object[] {match.getHost().getId()},
-                                locale));
         mav.addObject("hostProfileHref", profileHrefFor(host));
         mav.addObject("hostProfileImageUrl", profileUrlFor(host));
         mav.addObject("participants", confirmedParticipants);
-        mav.addObject(
-                "participantCountLabel",
-                buildParticipantCountLabel(confirmedParticipants.size(), locale));
-        mav.addObject(
-                "participantsEmptyState",
-                messageSource.getMessage("event.detail.noPlayersHint", null, locale));
-        mav.addObject("aboutParagraphs", buildAboutParagraphs(match, locale));
+        mav.addObject("aboutParagraphs", buildAboutParagraphs(match));
         mav.addObject("nearbyEvents", List.of());
         mav.addObject("occurrences", seriesOccurrences);
         mav.addObject(
                 "occurrenceVisibleHrefs", occurrenceVisibleHrefs(seriesOccurrences, currentUser));
         mav.addObject("occurrenceDisplayStateKeys", occurrenceDisplayStateKeys(seriesOccurrences));
         mav.addObject("occurrenceStatusTones", occurrenceStatusTones(seriesOccurrences));
-        mav.addObject("occurrenceSpotsLabels", occurrenceSpotsLabels(seriesOccurrences, locale));
         mav.addObject("occurrenceSpotsTones", occurrenceSpotsTones(seriesOccurrences));
         mav.addObject(
                 "mapAvailable",
@@ -377,12 +364,12 @@ final class EventPageSupport {
                 .toUriString();
     }
 
-    private List<String> buildAboutParagraphs(final Match match, final Locale locale) {
-        final String description =
-                match.getDescription() == null || match.getDescription().isBlank()
-                        ? messageSource.getMessage("event.detail.defaultDescription", null, locale)
-                        : match.getDescription();
-        return List.of(normalizeDescriptionLineBreaks(description));
+    private static List<String> buildAboutParagraphs(final Match match) {
+        // A blank description renders the default copy in matches/detail.jsp via <spring:message>.
+        if (match.getDescription() == null || match.getDescription().isBlank()) {
+            return List.of();
+        }
+        return List.of(normalizeDescriptionLineBreaks(match.getDescription()));
     }
 
     private static String normalizeDescriptionLineBreaks(final String description) {
@@ -479,18 +466,6 @@ final class EventPageSupport {
             tones.put(occurrence.getId(), eventDisplayState(occurrence).tone());
         }
         return tones;
-    }
-
-    private Map<Long, String> occurrenceSpotsLabels(
-            final List<Match> occurrences, final Locale locale) {
-        final Map<Long, String> labels = new LinkedHashMap<>();
-        for (final Match occurrence : occurrences) {
-            final String label = buildSpotsLabel(occurrence, eventDisplayState(occurrence), locale);
-            if (label != null) {
-                labels.put(occurrence.getId(), label);
-            }
-        }
-        return labels;
     }
 
     private Map<Long, String> occurrenceSpotsTones(final List<Match> occurrences) {
@@ -677,22 +652,6 @@ final class EventPageSupport {
         return new EventDisplayState("open", "open");
     }
 
-    private String buildSpotsLabel(
-            final Match occurrence, final EventDisplayState state, final Locale locale) {
-        if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
-            return null;
-        }
-        final int spots = occurrence.getAvailableSpots();
-        if (spots <= 0) {
-            return null;
-        }
-        if (spots == 1) {
-            return messageSource.getMessage("event.occurrence.spots.one", null, locale);
-        }
-        return messageSource.getMessage(
-                "event.occurrence.spots.many", new Object[] {spots}, locale);
-    }
-
     private String buildSpotsTone(final Match occurrence, final EventDisplayState state) {
         if (!"open".equals(state.key()) && !"inProgress".equals(state.key())) {
             return null;
@@ -708,13 +667,13 @@ final class EventPageSupport {
         return (double) spots / max <= 0.33 ? "scarce" : "plenty";
     }
 
-    private String eventStateNotice(final Match match, final Locale locale) {
+    private String eventStateNoticeCode(final Match match) {
         final EventDisplayState state = eventDisplayState(match);
         if ("completed".equals(state.key()) || "inProgress".equals(state.key())) {
-            return messageSource.getMessage("event.state.completedNotice", null, locale);
+            return "event.state.completedNotice";
         }
         if ("cancelled".equals(state.key())) {
-            return messageSource.getMessage("event.state.cancelledNotice", null, locale);
+            return "event.state.cancelledNotice";
         }
         return null;
     }
@@ -729,13 +688,6 @@ final class EventPageSupport {
         return match.getEndsAt() != null
                 && !match.getStartsAt().isAfter(now)
                 && match.getEndsAt().isAfter(now);
-    }
-
-    private String buildParticipantCountLabel(final int participantCount, final Locale locale) {
-        return participantCount == 1
-                ? messageSource.getMessage("event.participants.one", null, locale)
-                : messageSource.getMessage(
-                        "event.participants.many", new Object[] {participantCount}, locale);
     }
 
     private String reservationErrorMessage(final String code, final Locale locale) {
@@ -758,13 +710,6 @@ final class EventPageSupport {
             return null;
         }
         return messageSource.getMessage("invite.error." + code, null, locale);
-    }
-
-    private String hostActionNotice(final String hostAction, final Locale locale) {
-        if (hostAction == null) {
-            return null;
-        }
-        return messageSource.getMessage("host.action." + hostAction, null, locale);
     }
 
     private static boolean isRequestHostAction(
