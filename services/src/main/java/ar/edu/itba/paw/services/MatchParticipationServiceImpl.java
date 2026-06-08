@@ -592,8 +592,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         if (match.getVisibility() != EventVisibility.PUBLIC
                 || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED) {
             throw new MatchParticipationException(
-                    "forbidden", "Join requests are only supported for approval-required events.");
+                    "forbidden",
+                    "Join requests are only supported for public, approval-required events.");
         }
+    }
     }
 
     private void dispatchMatchInvitation(final User target, final Match match) {
