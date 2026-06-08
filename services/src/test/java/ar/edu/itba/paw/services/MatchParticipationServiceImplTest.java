@@ -1017,6 +1017,25 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testFindInvitedUsersReturnsInvitesForCancelledInviteOnlyMatch() {
+        final Match match =
+                createMatch(
+                        10L,
+                        EventVisibility.PRIVATE,
+                        EventJoinPolicy.INVITE_ONLY,
+                        EventStatus.CANCELLED,
+                        NOW.plusSeconds(3600));
+        final List<User> invitedUsers = List.of(UserUtils.getUser(20L));
+        Mockito.when(matchDao.findMatchById(10L)).thenReturn(Optional.of(match));
+        Mockito.when(matchParticipantDao.findInvitedUsers(10L)).thenReturn(invitedUsers);
+
+        final List<User> result =
+                matchParticipationService.findInvitedUsers(10L, UserUtils.getUser(1L));
+
+        Assertions.assertEquals(invitedUsers, result);
+    }
+
+    @Test
     public void testInviteUserWithResultReturnsSeriesForRecurringSeriesInvite() {
         final Match selectedOccurrence =
                 createRecurringMatch(

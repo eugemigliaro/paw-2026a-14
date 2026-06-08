@@ -529,7 +529,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         requireHost(match, host.getId());
-        requireInvitableMatch(match);
+        requireInviteOnlyMatch(match);
         return matchParticipantDao.findInvitedUsers(matchId);
     }
 
@@ -580,6 +580,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             throw new MatchParticipationException("closed", "The event is not open.");
         }
 
+        requireInviteOnlyMatch(match);
+    }
+
+    private static void requireInviteOnlyMatch(final Match match) {
         if (match.getVisibility() != EventVisibility.PRIVATE
                 || match.getJoinPolicy() != EventJoinPolicy.INVITE_ONLY) {
             throw new MatchParticipationException(
