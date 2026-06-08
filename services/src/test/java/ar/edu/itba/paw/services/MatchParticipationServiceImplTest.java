@@ -38,6 +38,7 @@ public class MatchParticipationServiceImplTest {
     @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private UserService userService;
+    @Mock private SecurityService securityService;
 
     private RecordingMailDispatchService mailDispatchService;
     private MatchParticipationServiceImpl matchParticipationService;
@@ -54,6 +55,7 @@ public class MatchParticipationServiceImplTest {
                         matchDataService,
                         matchParticipantDataService,
                         userService,
+                        securityService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC),
                         mailDispatchService,
                         matchNotificationService);
@@ -307,6 +309,31 @@ public class MatchParticipationServiceImplTest {
         // Exercise and Assert
         Assertions.assertDoesNotThrow(
                 () -> matchParticipationService.removeParticipant(10L, UserUtils.getUser(1L), u));
+    }
+
+    @Test
+    public void testRemoveParticipantAllowsAdminModToRemoveAnotherUser() {
+        // Arrange
+        Mockito.when(matchDataService.findById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.APPROVAL_REQUIRED,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600))));
+        final User admin = UserUtils.getUser(99L);
+        final User player = UserUtils.getUser(30L);
+        Mockito.when(securityService.canActAsAdminMod(admin)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, player)).thenReturn(true);
+
+        // Exercise
+        matchParticipationService.removeParticipant(10L, admin, player);
+
+        // Assert
+        Assertions.assertEquals(List.of(player.getEmail()), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of("player-removed"), mailDispatchService.actions);
     }
 
     @Test

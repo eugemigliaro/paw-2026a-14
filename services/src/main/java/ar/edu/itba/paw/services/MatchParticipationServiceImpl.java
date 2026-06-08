@@ -49,6 +49,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     private final MatchDataService matchDataService;
     private final MatchParticipantDataService matchParticipantDataService;
     private final UserService userService;
+    private final SecurityService securityService;
     private final Clock clock;
     private final MailDispatchService mailDispatchService;
     private final MatchNotificationService matchNotificationService;
@@ -62,6 +63,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
                 matchDataService,
                 matchParticipantDataService,
                 userService,
+                null,
                 clock,
                 new MailDispatchService() {},
                 null);
@@ -72,12 +74,14 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             final MatchDataService matchDataService,
             final MatchParticipantDataService matchParticipantDataService,
             final UserService userService,
+            final SecurityService securityService,
             final Clock clock,
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService) {
         this.matchDataService = matchDataService;
         this.matchParticipantDataService = matchParticipantDataService;
         this.userService = userService;
+        this.securityService = securityService;
         this.clock = clock;
         this.mailDispatchService = mailDispatchService;
         this.matchNotificationService = matchNotificationService;
@@ -299,7 +303,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
             return;
         }
 
-        requireHost(match, host.getId());
+        requireCanManageMatch(match, host);
 
         if (!matchParticipantDataService.removeParticipant(matchId, targetUser)) {
             throw new MatchParticipationNotParticipantException();
@@ -548,6 +552,19 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         if (!isHost(match, userId)) {
             throw new MatchForbiddenActionException();
         }
+    }
+
+    private void requireCanManageMatch(final Match match, final User actingUser) {
+        if (actingUser == null || actingUser.getId() == null) {
+            throw new MatchForbiddenActionException();
+        }
+        if (!isHost(match, actingUser.getId()) && !canActAsAdminMod(actingUser)) {
+            throw new MatchForbiddenActionException();
+        }
+    }
+
+    private boolean canActAsAdminMod(final User actingUser) {
+        return securityService != null && securityService.canActAsAdminMod(actingUser);
     }
 
     private static boolean isHost(final Match match, final Long userId) {
