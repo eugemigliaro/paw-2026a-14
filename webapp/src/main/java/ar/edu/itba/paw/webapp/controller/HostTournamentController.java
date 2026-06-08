@@ -318,7 +318,7 @@ public class HostTournamentController {
                         ? List.of()
                         : tournamentBracketService.listTeamsForSetup(tournamentId, user);
         final BracketPublishForm publishForm =
-                bracketGenerated ? createBracketPublishForm(bracketView, locale) : null;
+                bracketGenerated ? createBracketPublishForm(bracketView) : null;
         final BracketManualPairingsForm manualPairingsForm =
                 bracketGenerated ? null : createManualPairingsForm(manualPairingTeams);
         final List<TournamentTeamMember> teamMembers =
@@ -437,14 +437,15 @@ public class HostTournamentController {
             final Locale locale,
             final TournamentFormConfig formConfig) {
         final ModelAndView mav = new ModelAndView("host/tournaments/create");
-        mav.addObject("pageTitle", formConfig.pageTitle());
+        mav.addObject("pageTitleCode", formConfig.pageTitleCode());
+        mav.addObject("pageTitleArgument", formConfig.pageTitleArgument());
         mav.addObject("createTournamentForm", form);
         mav.addObject("formError", formError);
-        mav.addObject("formTitle", formConfig.title());
-        mav.addObject("formDescription", formConfig.description());
+        mav.addObject("formTitleCode", formConfig.titleCode());
+        mav.addObject("formDescriptionCode", formConfig.descriptionCode());
         mav.addObject("formAction", formConfig.action());
-        mav.addObject("submitLabel", formConfig.submitLabel());
-        mav.addObject("submitLoadingLabel", formConfig.submitLoadingLabel());
+        mav.addObject("submitLabelCode", formConfig.submitLabelCode());
+        mav.addObject("submitLoadingLabelCode", formConfig.submitLoadingLabelCode());
         mav.addObject("isEditMode", formConfig.editMode());
         mav.addObject("currentBannerImageUrl", formConfig.bannerImageUrl());
         mav.addObject("mapPickerEnabled", mapPickerEnabled && !mapTileUrlTemplate.isBlank());
@@ -474,12 +475,6 @@ public class HostTournamentController {
             final String tournamentNoticeCode,
             final String tournamentErrorCode) {
         final ModelAndView mav = new ModelAndView("host/tournaments/bracket-setup");
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage(
-                        "page.title.hostTournamentBracketSetup",
-                        new Object[] {tournament.getTitle()},
-                        locale));
         final List<TournamentTeam> bracketTeams =
                 bracketGenerated && bracketView != null
                         ? bracketView.getTeams()
@@ -526,20 +521,17 @@ public class HostTournamentController {
         return mav;
     }
 
-    private BracketPublishForm createBracketPublishForm(
-            final TournamentBracketView bracketView, final Locale locale) {
+    private BracketPublishForm createBracketPublishForm(final TournamentBracketView bracketView) {
         final BracketPublishForm form = new BracketPublishForm();
         final List<BracketPublishScheduleForm> schedules = new ArrayList<>();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 matchesByRound(bracketView.getMatches());
-        final int roundCount = matchesByRound.size();
         for (final Map.Entry<Integer, List<TournamentMatch>> round : matchesByRound.entrySet()) {
             for (final TournamentMatch match : round.getValue()) {
                 final BracketPublishScheduleForm schedule = new BracketPublishScheduleForm();
                 schedule.setMatchId(match.getId());
                 schedule.setRoundNumber(round.getKey());
-                schedule.setRoundLabel(roundLabel(round.getKey(), roundCount, locale));
-                schedule.setMatchLabel(matchLabel(match, locale));
+                schedule.setMatchNumber(match.getMatchIndex() + 1);
                 schedule.setStartDate(
                         match.getScheduledStartsAt() == null
                                 ? defaultScheduleDate()
@@ -600,27 +592,26 @@ public class HostTournamentController {
 
     private TournamentFormConfig createFormConfig(final Locale locale) {
         return new TournamentFormConfig(
-                messageSource.getMessage("page.title.hostTournamentCreate", null, locale),
-                messageSource.getMessage("tournament.create.title", null, locale),
-                messageSource.getMessage("tournament.create.description", null, locale),
+                "page.title.hostTournamentCreate",
+                null,
+                "tournament.create.title",
+                "tournament.create.description",
                 "/host/tournaments",
-                messageSource.getMessage("tournament.form.submit.create", null, locale),
-                messageSource.getMessage("tournament.form.submit.creating", null, locale),
+                "tournament.form.submit.create",
+                "tournament.form.submit.creating",
                 false,
                 null);
     }
 
     private TournamentFormConfig editFormConfig(final Tournament tournament, final Locale locale) {
         return new TournamentFormConfig(
-                messageSource.getMessage(
-                        "page.title.hostTournamentEdit",
-                        new Object[] {tournament.getTitle()},
-                        locale),
-                messageSource.getMessage("tournament.edit.title", null, locale),
-                messageSource.getMessage("tournament.edit.description", null, locale),
+                "page.title.hostTournamentEdit",
+                tournament.getTitle(),
+                "tournament.edit.title",
+                "tournament.edit.description",
                 "/host/tournaments/" + tournament.getId() + "/edit",
-                messageSource.getMessage("tournament.form.submit.edit", null, locale),
-                messageSource.getMessage("tournament.form.submit.saving", null, locale),
+                "tournament.form.submit.edit",
+                "tournament.form.submit.saving",
                 true,
                 ImageUrlHelper.bannerUrlFor(tournament));
     }
@@ -710,19 +701,6 @@ public class HostTournamentController {
         return usernamesByTeamId;
     }
 
-    private String roundLabel(final int roundNumber, final int roundCount, final Locale locale) {
-        if (roundNumber == roundCount) {
-            return messageSource.getMessage("tournament.bracket.round.final", null, locale);
-        }
-        return messageSource.getMessage(
-                "tournament.bracket.round.number", new Object[] {roundNumber}, locale);
-    }
-
-    private String matchLabel(final TournamentMatch match, final Locale locale) {
-        return messageSource.getMessage(
-                "tournament.bracket.match.label", new Object[] {match.getMatchIndex() + 1}, locale);
-    }
-
     private static Map<Long, Integer> teamDisplayNumbers(final List<TournamentTeam> teams) {
         if (teams == null || teams.isEmpty()) {
             return Map.of();
@@ -794,12 +772,13 @@ public class HostTournamentController {
     }
 
     private record TournamentFormConfig(
-            String pageTitle,
-            String title,
-            String description,
+            String pageTitleCode,
+            String pageTitleArgument,
+            String titleCode,
+            String descriptionCode,
             String action,
-            String submitLabel,
-            String submitLoadingLabel,
+            String submitLabelCode,
+            String submitLoadingLabelCode,
             boolean editMode,
             String bannerImageUrl) {}
 }

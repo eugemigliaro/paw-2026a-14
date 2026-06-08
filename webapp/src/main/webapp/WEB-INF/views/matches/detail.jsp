@@ -57,9 +57,16 @@
 								</div>
 							</div>
 							<div class="detail-stack">
-								<c:forEach var="paragraph" items="${aboutParagraphs}">
-									<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
-								</c:forEach>
+								<c:choose>
+									<c:when test="${empty aboutParagraphs}">
+										<p class="body-copy detail-stack__paragraph"><spring:message code="event.detail.defaultDescription" /></p>
+									</c:when>
+									<c:otherwise>
+										<c:forEach var="paragraph" items="${aboutParagraphs}">
+											<p class="body-copy detail-stack__paragraph"><c:out value="${paragraph}" /></p>
+										</c:forEach>
+									</c:otherwise>
+								</c:choose>
 							</div>
 						</section>
 
@@ -266,7 +273,7 @@
 										<spring:message code="event.detail.whosJoining" />
 									</h2>
 								</div>
-								<span class="detail-section__meta"><c:out value="${participantCountLabel}" /></span>
+								<span class="detail-section__meta"><ui:pluralMessage count="${fn:length(participants)}" oneCode="event.participants.one" manyCode="event.participants.many" /></span>
 							</div>
 							<c:if test="${hostActionTarget eq 'participants' && not empty hostActionErrorNotice}">
 								<p class="booking-panel__notice booking-panel__notice--error">
@@ -284,7 +291,7 @@
 											<spring:message code="event.detail.noPlayers" />
 										</p>
 										<p class="participant-empty-state__copy">
-											<c:out value="${participantsEmptyState}" />
+											<spring:message code="event.detail.noPlayersHint" />
 										</p>
 									</div>
 								</c:when>
@@ -336,9 +343,9 @@
 						<c:choose>
 							<c:when test="${hostCanManage}">
 								<article class="panel host-panel">
-									<c:if test="${not empty hostActionNotice}">
+									<c:if test="${not empty hostActionCode}">
 										<p class="booking-panel__notice booking-panel__notice--success">
-											<c:out value="${hostActionNotice}" />
+											<spring:message code="host.action.${hostActionCode}" />
 										</p>
 									</c:if>
 
@@ -554,15 +561,15 @@
 												<c:url var="hostProfileImageSrc" value="${hostProfileImageUrl}" />
 												<span class="event-info-panel__host">
 													<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
-													<c:choose>
-														<c:when test="${not empty hostProfileHref}">
-															<c:url var="hostProfileHref" value="${hostProfileHref}" />
-															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${hostLabel}" /></a>
-														</c:when>
-														<c:otherwise>
-															<span class="event-info-panel__host-name"><c:out value="${hostLabel}" /></span>
-														</c:otherwise>
-													</c:choose>
+														<c:choose>
+															<c:when test="${not empty hostProfileHref}">
+																<c:url var="hostProfileHref" value="${hostProfileHref}" />
+																<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${hostUsername}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="event-info-panel__host-name"><spring:message code="event.detail.unknownHost" arguments="${unknownHostArgument}" /></span>
+															</c:otherwise>
+														</c:choose>
 												</span>
 											</dd>
 										</div>
@@ -580,7 +587,7 @@
 											</dt>
 											<dd>
 												<c:out value="${availabilityLabel}" /><br />
-												<c:out value="${participantCountLabel}" />
+												<ui:pluralMessage count="${fn:length(participants)}" oneCode="event.participants.one" manyCode="event.participants.many" />
 											</dd>
 										</div>
 									</dl>
@@ -604,9 +611,9 @@
 											<c:out value="${reservationError}" />
 										</p>
 									</c:if>
-									<c:if test="${not empty eventStateNotice}">
+									<c:if test="${not empty eventStateNoticeCode}">
 										<p class="booking-panel__notice booking-panel__notice--info">
-											<c:out value="${eventStateNotice}" />
+											<spring:message code="${eventStateNoticeCode}" />
 										</p>
 									</c:if>
 									<c:if test="${joinRequested}">
@@ -921,15 +928,15 @@
 												<c:url var="hostProfileImageSrc" value="${hostProfileImageUrl}" />
 												<span class="event-info-panel__host">
 													<img class="event-info-panel__host-avatar" src="${hostProfileImageSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
-													<c:choose>
-														<c:when test="${not empty hostProfileHref}">
-															<c:url var="hostProfileHref" value="${hostProfileHref}" />
-															<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${hostLabel}" /></a>
-														</c:when>
-														<c:otherwise>
-															<span class="event-info-panel__host-name"><c:out value="${hostLabel}" /></span>
-														</c:otherwise>
-													</c:choose>
+														<c:choose>
+															<c:when test="${not empty hostProfileHref}">
+																<c:url var="hostProfileHref" value="${hostProfileHref}" />
+																<a class="event-info-panel__host-name" href="${hostProfileHref}"><c:out value="${hostUsername}" /></a>
+															</c:when>
+															<c:otherwise>
+																<span class="event-info-panel__host-name"><spring:message code="event.detail.unknownHost" arguments="${unknownHostArgument}" /></span>
+															</c:otherwise>
+														</c:choose>
 												</span>
 											</dd>
 										</div>
@@ -947,7 +954,7 @@
 											</dt>
 											<dd>
 												<c:out value="${availabilityLabel}" /><br />
-												<c:out value="${participantCountLabel}" />
+												<ui:pluralMessage count="${fn:length(participants)}" oneCode="event.participants.one" manyCode="event.participants.many" />
 											</dd>
 										</div>
 									</dl>
@@ -971,9 +978,9 @@
 											<c:out value="${reservationError}" />
 										</p>
 									</c:if>
-									<c:if test="${not empty eventStateNotice}">
+									<c:if test="${not empty eventStateNoticeCode}">
 										<p class="booking-panel__notice booking-panel__notice--info">
-											<c:out value="${eventStateNotice}" />
+											<spring:message code="${eventStateNoticeCode}" />
 										</p>
 									</c:if>
 
@@ -1237,9 +1244,9 @@
 												</c:choose>
 											</div>
 											<div class="recurrence-schedule__badges">
-												<c:if test="${not empty occurrenceSpotsLabels[occurrence.id]}">
+												<c:if test="${not empty occurrenceSpotsTones[occurrence.id]}">
 													<span class="recurrence-schedule__spots recurrence-schedule__spots--${occurrenceSpotsTones[occurrence.id]}">
-														<c:out value="${occurrenceSpotsLabels[occurrence.id]}" />
+														<ui:pluralMessage count="${occurrence.availableSpots}" oneCode="event.occurrence.spots.one" manyCode="event.occurrence.spots.many" />
 													</span>
 												</c:if>
 												<c:if test="${not empty occurrenceDisplayStateKeys[occurrence.id]}">

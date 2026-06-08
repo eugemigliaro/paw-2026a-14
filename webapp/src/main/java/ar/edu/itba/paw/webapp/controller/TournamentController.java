@@ -2,12 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.dateFormatter;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.formatInstant;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.priceLabel;
-import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.timeFormatter;
 
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
@@ -27,19 +22,15 @@ import ar.edu.itba.paw.services.TournamentViewerCapabilities;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -58,7 +49,6 @@ public class TournamentController {
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
-    private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -69,7 +59,6 @@ public class TournamentController {
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
-            final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -77,7 +66,6 @@ public class TournamentController {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
-        this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate;
         this.mapAttribution = mapAttribution;
@@ -88,8 +76,7 @@ public class TournamentController {
     public ModelAndView showTournament(
             @CurrentUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
-            final Model model,
-            final Locale locale) {
+            final Model model) {
         final Tournament tournament =
                 tournamentService
                         .findPublicTournament(tournamentId)
@@ -101,13 +88,7 @@ public class TournamentController {
                 tournamentRegistrationService.findUserTeam(tournamentId, user);
 
         final ModelAndView mav = new ModelAndView("tournaments/detail");
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage(
-                        "page.title.tournamentDetail",
-                        new Object[] {tournament.getTitle()},
-                        locale));
-        addTournamentDetailModel(mav, tournament, user, soloEntry, userTeam, locale);
+        addTournamentDetailModel(mav, tournament, user, soloEntry, userTeam);
         mav.addObject("soloJoinPath", "/tournaments/" + tournamentId + "/solo-entry");
         mav.addObject("soloLeavePath", "/tournaments/" + tournamentId + "/solo-entry/leave");
         mav.addObject(
@@ -148,8 +129,7 @@ public class TournamentController {
     public ModelAndView showBracket(
             @CurrentUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
-            final Model model,
-            final Locale locale) {
+            final Model model) {
         TournamentBracketView bracketView;
         try {
             bracketView = tournamentBracketService.getBracket(tournamentId, user);
@@ -158,13 +138,7 @@ public class TournamentController {
         }
 
         final ModelAndView mav = new ModelAndView("tournaments/bracket");
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage(
-                        "page.title.tournamentBracket",
-                        new Object[] {bracketView.getTournament().getTitle()},
-                        locale));
-        addBracketModel(mav, user, bracketView, locale);
+        addBracketModel(mav, user, bracketView);
         mav.addObject("tournamentDetailPath", "/tournaments/" + tournamentId);
         mav.addObject(
                 "matchDatesSetupPath",
@@ -223,8 +197,7 @@ public class TournamentController {
             final Tournament tournament,
             final User currentUser,
             final Optional<TournamentSoloEntry> soloEntry,
-            final Optional<TournamentTeam> userTeam,
-            final Locale locale) {
+            final Optional<TournamentTeam> userTeam) {
         final TournamentViewerCapabilities capabilities =
                 tournamentService.viewerCapabilities(tournament, currentUser);
         final List<TournamentTeamMember> teamMembers =
@@ -233,26 +206,15 @@ public class TournamentController {
 
         mav.addObject("tournament", tournament);
         mav.addObject("tournamentCapabilities", capabilities);
-        mav.addObject("tournamentScheduleLabel", scheduleLabel(tournament, locale));
-        mav.addObject(
-                "tournamentRegistrationWindowStartLabel",
-                registrationWindowStartLabel(tournament, locale));
-        mav.addObject(
-                "tournamentRegistrationWindowEndLabel",
-                registrationWindowEndLabel(tournament, locale));
-        mav.addObject("tournamentJoinModeLabel", joinModeLabel(tournament, locale));
-        mav.addObject(
-                "tournamentPriceLabel",
-                priceLabel(tournament.getPricePerPlayer(), locale, messageSource));
-        mav.addObject("tournamentHostLabel", hostLabel(tournament.getHost(), locale));
+        mav.addObject("tournamentJoinModeCode", joinModeCode(tournament));
         mav.addObject("tournamentHostProfileHref", hostProfileHref(tournament.getHost()));
+        mav.addObject("tournamentHostUsername", hostUsername(tournament.getHost()));
+        mav.addObject("tournamentUnknownHostArgument", unknownHostArgument(tournament.getHost()));
         mav.addObject("tournamentHostProfileImageUrl", profileUrlFor(tournament.getHost()));
         mav.addObject("tournamentBannerImageUrl", bannerUrlFor(tournament));
-        mav.addObject(
-                "tournamentParticipationLabel",
-                participationLabel(soloEntry, userTeam, locale, teamDisplayNumbers));
-        mav.addObject("tournamentNextStepLabel", nextStepLabel(tournament, locale));
-        mav.addObject("tournamentAboutParagraphs", aboutParagraphs(tournament, locale));
+        addParticipationModel(mav, soloEntry, userTeam);
+        mav.addObject("tournamentNextStepCode", nextStepCode(tournament));
+        mav.addObject("tournamentAboutParagraphs", aboutParagraphs(tournament));
         mav.addObject("tournamentTeamMembers", teamMembers);
         mav.addObject(
                 "tournamentActiveSoloEntries",
@@ -260,140 +222,91 @@ public class TournamentController {
         mav.addObject("tournamentTeamDisplayNumbers", teamDisplayNumbers);
         mav.addObject(
                 "tournamentCloseRegistrationDisabledMessage",
-                closeRegistrationDisabledMessage(capabilities, locale));
+                closeRegistrationDisabledMessageCode(capabilities));
     }
 
-    private String closeRegistrationDisabledMessage(
-            final TournamentViewerCapabilities capabilities, final Locale locale) {
+    private static String closeRegistrationDisabledMessageCode(
+            final TournamentViewerCapabilities capabilities) {
         if (!capabilities.isCloseRegistrationBlockedByCapacity()) {
             return null;
         }
-        return messageSource.getMessage(
-                "tournament.host.closeRegistration.unavailable", null, locale);
+        return "tournament.host.closeRegistration.unavailable";
     }
 
-    private String scheduleLabel(final Tournament tournament, final Locale locale) {
-        if (tournament.getStartsAt() == null) {
-            return messageSource.getMessage("tournament.detail.schedule.tbd", null, locale);
-        }
-        if (tournament.getEndsAt() == null) {
-            return formatInstant(tournament.getStartsAt(), locale, PlatformTime.ZONE);
-        }
-
-        final OffsetDateTime startsAt = tournament.getStartsAtDateTime();
-        final OffsetDateTime endsAt = tournament.getEndsAtDateTime();
-        if (startsAt.toLocalDate().equals(endsAt.toLocalDate())) {
-            return messageSource.getMessage(
-                    "tournament.detail.schedule.sameDay",
-                    new Object[] {
-                        dateFormatter(locale).format(startsAt.toLocalDate()),
-                        timeFormatter(locale).format(startsAt.toLocalTime()),
-                        timeFormatter(locale).format(endsAt.toLocalTime())
-                    },
-                    locale);
-        }
-        return messageSource.getMessage(
-                "tournament.detail.schedule.range",
-                new Object[] {
-                    formatInstant(tournament.getStartsAt(), locale, PlatformTime.ZONE),
-                    formatInstant(tournament.getEndsAt(), locale, PlatformTime.ZONE)
-                },
-                locale);
-    }
-
-    private String registrationWindowStartLabel(final Tournament tournament, final Locale locale) {
-        return formatInstant(tournament.getRegistrationOpensAt(), locale, PlatformTime.ZONE);
-    }
-
-    private String registrationWindowEndLabel(final Tournament tournament, final Locale locale) {
-        return formatInstant(tournament.getRegistrationClosesAt(), locale, PlatformTime.ZONE);
-    }
-
-    private String joinModeLabel(final Tournament tournament, final Locale locale) {
+    private static String joinModeCode(final Tournament tournament) {
         if (tournament.isAllowSoloSignup() && tournament.isAllowTeamDraft()) {
-            return messageSource.getMessage("tournament.detail.joinMode.both", null, locale);
+            return "tournament.detail.joinMode.both";
         }
         if (tournament.isAllowSoloSignup()) {
-            return messageSource.getMessage("tournament.detail.joinMode.solo", null, locale);
+            return "tournament.detail.joinMode.solo";
         }
         if (tournament.isAllowTeamDraft()) {
-            return messageSource.getMessage("tournament.detail.joinMode.teamDraft", null, locale);
+            return "tournament.detail.joinMode.teamDraft";
         }
-        return messageSource.getMessage("tournament.detail.joinMode.closed", null, locale);
+        return "tournament.detail.joinMode.closed";
     }
 
-    private String participationLabel(
+    private static void addParticipationModel(
+            final ModelAndView mav,
             final Optional<TournamentSoloEntry> soloEntry,
-            final Optional<TournamentTeam> userTeam,
-            final Locale locale,
-            final Map<Long, Integer> teamDisplayNumbers) {
+            final Optional<TournamentTeam> userTeam) {
         if (userTeam.isPresent()) {
-            return messageSource.getMessage(
-                    "tournament.participation.team",
-                    new Object[] {teamName(userTeam.get(), locale, teamDisplayNumbers)},
-                    locale);
+            mav.addObject("tournamentParticipationCode", "tournament.participation.team");
+            mav.addObject("tournamentParticipationTeam", userTeam.get());
+            return;
         }
         if (soloEntry.isEmpty()) {
-            return null;
+            return;
         }
         final TournamentSoloEntry entry = soloEntry.get();
         if (TournamentSoloEntryStatus.IN_POOL == entry.getStatus()) {
-            return messageSource.getMessage("tournament.participation.soloPool", null, locale);
+            mav.addObject("tournamentParticipationCode", "tournament.participation.soloPool");
+            return;
         }
         if (TournamentSoloEntryStatus.ASSIGNED == entry.getStatus()) {
             final TournamentTeam assignedTeam = entry.getAssignedTeam();
-            return assignedTeam == null
-                    ? messageSource.getMessage("tournament.participation.assigned", null, locale)
-                    : messageSource.getMessage(
-                            "tournament.participation.assignedTeam",
-                            new Object[] {teamName(assignedTeam, locale, teamDisplayNumbers)},
-                            locale);
+            mav.addObject(
+                    "tournamentParticipationCode",
+                    assignedTeam == null
+                            ? "tournament.participation.assigned"
+                            : "tournament.participation.assignedTeam");
+            mav.addObject("tournamentParticipationTeam", assignedTeam);
+            return;
         }
         if (TournamentSoloEntryStatus.UNASSIGNED == entry.getStatus()) {
-            return messageSource.getMessage("tournament.participation.unassigned", null, locale);
+            mav.addObject("tournamentParticipationCode", "tournament.participation.unassigned");
+            return;
         }
         if (TournamentSoloEntryStatus.LEFT == entry.getStatus()) {
-            return messageSource.getMessage("tournament.participation.left", null, locale);
+            mav.addObject("tournamentParticipationCode", "tournament.participation.left");
         }
-        return null;
     }
 
-    private String nextStepLabel(final Tournament tournament, final Locale locale) {
+    private static String nextStepCode(final Tournament tournament) {
         if (TournamentStatus.BRACKET_SETUP == tournament.getStatus()) {
-            return messageSource.getMessage("tournament.nextStep.bracketSetup", null, locale);
+            return "tournament.nextStep.bracketSetup";
         }
         if (TournamentStatus.CANCELLED == tournament.getStatus()) {
-            return messageSource.getMessage("tournament.nextStep.cancelled", null, locale);
+            return "tournament.nextStep.cancelled";
         }
         if (TournamentStatus.IN_PROGRESS == tournament.getStatus()) {
-            return messageSource.getMessage("tournament.nextStep.inProgress", null, locale);
+            return "tournament.nextStep.inProgress";
         }
         if (TournamentStatus.COMPLETED == tournament.getStatus()) {
-            return messageSource.getMessage("tournament.nextStep.completed", null, locale);
+            return "tournament.nextStep.completed";
         }
         return null;
     }
 
-    private List<String> aboutParagraphs(final Tournament tournament, final Locale locale) {
+    private static List<String> aboutParagraphs(final Tournament tournament) {
         final String description = tournament.getDescription();
         if (description == null || description.isBlank()) {
-            return List.of(
-                    messageSource.getMessage("tournament.detail.defaultDescription", null, locale));
+            return List.of();
         }
-        return Arrays.stream(description.split("\\R+"))
+        return List.of(description.split("\\R+")).stream()
                 .map(String::trim)
                 .filter(paragraph -> !paragraph.isEmpty())
                 .collect(Collectors.toList());
-    }
-
-    private String hostLabel(final User host, final Locale locale) {
-        if (host == null || host.getUsername() == null || host.getUsername().isBlank()) {
-            return messageSource.getMessage(
-                    "event.detail.unknownHost",
-                    new Object[] {host == null ? "?" : host.getId()},
-                    locale);
-        }
-        return host.getUsername();
     }
 
     private String hostProfileHref(final User host) {
@@ -403,11 +316,21 @@ public class TournamentController {
         return "/users/" + host.getUsername();
     }
 
+    private static String hostUsername(final User host) {
+        if (host == null || host.getUsername() == null || host.getUsername().isBlank()) {
+            return null;
+        }
+        return host.getUsername();
+    }
+
+    private static String unknownHostArgument(final User host) {
+        return host == null || host.getId() == null ? "?" : String.valueOf(host.getId());
+    }
+
     private void addBracketModel(
             final ModelAndView mav,
             final User currentUser,
-            final TournamentBracketView bracketView,
-            final Locale locale) {
+            final TournamentBracketView bracketView) {
         final Tournament tournament = bracketView.getTournament();
         final Long viewerTeamId =
                 bracketView.getViewerTeam() == null ? null : bracketView.getViewerTeam().getId();
@@ -442,26 +365,6 @@ public class TournamentController {
         mav.addObject("bracketMembersByTeamId", usernamesByTeamId);
         mav.addObject("bracketViewerTeamId", viewerTeamId);
         mav.addObject("bracketCanManageResults", canManageResults);
-    }
-
-    private String teamName(
-            final TournamentTeam team,
-            final Locale locale,
-            final Map<Long, Integer> teamDisplayNumbers) {
-        if (team == null) {
-            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
-        }
-        if (team.getName() != null && !team.getName().isBlank()) {
-            return team.getName();
-        }
-        if (team.getId() == null) {
-            return messageSource.getMessage("tournament.bracket.team.tbd", null, locale);
-        }
-        final Integer displayNumber = teamDisplayNumbers.get(team.getId());
-        return messageSource.getMessage(
-                "tournament.team.solo.name",
-                new Object[] {displayNumber == null ? team.getId() : displayNumber},
-                locale);
     }
 
     private static Map<Long, Integer> teamDisplayNumbers(final List<TournamentTeam> teams) {

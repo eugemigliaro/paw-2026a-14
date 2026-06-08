@@ -80,8 +80,8 @@ class AuthFlowControllerTest {
                         .setValidator(validator)
                         .setControllerAdvice(
                                 new AccessExceptionHandler(),
-                                new PasswordResetExceptionHandler(messageSource),
-                                new VerificationExceptionHandler(messageSource))
+                                new PasswordResetExceptionHandler(),
+                                new VerificationExceptionHandler())
                         .build();
     }
 
@@ -327,6 +327,7 @@ class AuthFlowControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/error"))
                 .andExpect(model().attribute("backHref", "/forgot-password"))
+                .andExpect(model().attribute("messageCode", "verification.message.expired"))
                 .andReturn();
     }
 

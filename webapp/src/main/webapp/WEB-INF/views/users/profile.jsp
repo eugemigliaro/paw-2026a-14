@@ -4,6 +4,8 @@
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
+<spring:message var="pageTitle" code="page.title.publicProfile" arguments="${targetUser.username}" />
+<spring:message var="profileImageAlt" code="profile.public.avatarAlt" arguments="${targetUser.username}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -49,8 +51,8 @@
 							<c:if test="${profileBanned}">
 								<div class="notice notice--error">
 									<strong><spring:message code="profile.public.banned" /></strong>
-									<c:if test="${not empty profileBannedUntil}">
-										<span> · <c:out value="${profileBannedUntil}" /></span>
+									<c:if test="${not empty profileBannedUntilDateTime}">
+										<span> · <c:out value="${tf:dateTime(profileBannedUntilDateTime)}" /></span>
 									</c:if>
 									<c:if test="${not empty profileBannedReason}">
 										<div><c:out value="${profileBannedReason}" /></div>
@@ -200,12 +202,21 @@
 											</span>
 											<c:out value="${reviewSummary.likeCount}" />
 										</span>
-										<span class="public-profile-review-stat__label"><c:out value="${reviewLikeLabel}" /></span>
+										<span class="public-profile-review-stat__label">
+											<c:choose>
+												<c:when test="${reviewSummary.likeCount == 1}">
+													<spring:message code="profile.reviews.like" />
+												</c:when>
+												<c:otherwise>
+													<spring:message code="profile.reviews.likes" />
+												</c:otherwise>
+											</c:choose>
+										</span>
 									</button>
 								</form>
 							</c:when>
 							<c:otherwise>
-								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedMessage}"> aria-describedby="reviewLockedNote"</c:if>
+								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedCode}"> aria-describedby="reviewLockedNote"</c:if>
 									class="public-profile-review-stat public-profile-review-stat--like public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--like" aria-hidden="true">
@@ -213,7 +224,16 @@
 										</span>
 										<c:out value="${reviewSummary.likeCount}" />
 									</span>
-									<span class="public-profile-review-stat__label"><c:out value="${reviewLikeLabel}" /></span>
+									<span class="public-profile-review-stat__label">
+										<c:choose>
+											<c:when test="${reviewSummary.likeCount == 1}">
+												<spring:message code="profile.reviews.like" />
+											</c:when>
+											<c:otherwise>
+												<spring:message code="profile.reviews.likes" />
+											</c:otherwise>
+										</c:choose>
+									</span>
 								</button>
 							</c:otherwise>
 						</c:choose>
@@ -235,12 +255,21 @@
 											</span>
 											<c:out value="${reviewSummary.dislikeCount}" />
 										</span>
-										<span class="public-profile-review-stat__label"><c:out value="${reviewDislikeLabel}" /></span>
+										<span class="public-profile-review-stat__label">
+											<c:choose>
+												<c:when test="${reviewSummary.dislikeCount == 1}">
+													<spring:message code="profile.reviews.dislike" />
+												</c:when>
+												<c:otherwise>
+													<spring:message code="profile.reviews.dislikes" />
+												</c:otherwise>
+											</c:choose>
+										</span>
 									</button>
 								</form>
 							</c:when>
 							<c:otherwise>
-								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedMessage}"> aria-describedby="reviewLockedNote"</c:if>
+								<button type="button" disabled="disabled" aria-disabled="true"<c:if test="${not empty reviewLockedCode}"> aria-describedby="reviewLockedNote"</c:if>
 									class="public-profile-review-stat public-profile-review-stat--dislike public-profile-review-stat--locked">
 									<span class="public-profile-review-stat__value">
 										<span class="public-profile-review-icon public-profile-review-icon--dislike" aria-hidden="true">
@@ -248,18 +277,29 @@
 										</span>
 										<c:out value="${reviewSummary.dislikeCount}" />
 									</span>
-									<span class="public-profile-review-stat__label"><c:out value="${reviewDislikeLabel}" /></span>
+									<span class="public-profile-review-stat__label">
+										<c:choose>
+											<c:when test="${reviewSummary.dislikeCount == 1}">
+												<spring:message code="profile.reviews.dislike" />
+											</c:when>
+											<c:otherwise>
+												<spring:message code="profile.reviews.dislikes" />
+											</c:otherwise>
+										</c:choose>
+									</span>
 								</button>
 							</c:otherwise>
 						</c:choose>
 					</div>
 
-					<c:if test="${not empty reviewLockedMessage}">
+					<c:if test="${not empty reviewLockedCode}">
 						<p id="reviewLockedNote" class="public-profile-review-locked">
 							<span class="public-profile-review-locked__icon" aria-hidden="true">
 								<icon:padlock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false" />
 							</span>
-							<span class="public-profile-review-locked__text"><c:out value="${reviewLockedMessage}" /></span>
+							<span class="public-profile-review-locked__text">
+								<spring:message code="${reviewLockedCode}" arguments="${targetUser.username}" />
+							</span>
 						</p>
 					</c:if>
 
@@ -267,7 +307,9 @@
 						<div class="public-profile-review-mine">
 							<c:choose>
 								<c:when test="${empty viewerReview.comment}">
-									<p class="public-profile-review-mine__prompt"><c:out value="${reviewCommentPromptLabel}" /></p>
+									<p class="public-profile-review-mine__prompt">
+										<spring:message code="${reviewCommentPromptCode}" arguments="${targetUser.username}" />
+									</p>
 								</c:when>
 								<c:otherwise>
 									<p class="public-profile-review-mine__comment"><c:out value="${viewerReview.comment}" /></p>
@@ -340,9 +382,9 @@
 							<span class="public-profile-review-filter__label"><spring:message code="profile.reviews.filter.label" /></span>
 							<c:set var="reviewFilterCurrentValue" value="both" />
 							<c:forEach var="option" items="${reviewFilterOptions}" varStatus="optionStatus">
-								<c:choose>
-									<c:when test="${optionStatus.index eq 0}">
-										<c:set var="reviewFilterLeftLabel" value="${option.label}" />
+									<c:choose>
+										<c:when test="${optionStatus.index eq 0}">
+										<spring:message var="reviewFilterLeftLabel" code="${option.labelCode}" />
 										<c:choose>
 											<c:when test="${not empty option.params}">
 												<c:url var="reviewFilterLeftHref" value="${pageContext.request.servletPath}">
@@ -360,7 +402,7 @@
 										</c:if>
 									</c:when>
 									<c:when test="${optionStatus.index eq 1}">
-										<c:set var="reviewFilterRightLabel" value="${option.label}" />
+										<spring:message var="reviewFilterRightLabel" code="${option.labelCode}" />
 										<c:choose>
 											<c:when test="${not empty option.params}">
 												<c:url var="reviewFilterRightHref" value="${pageContext.request.servletPath}">
@@ -378,7 +420,7 @@
 										</c:if>
 									</c:when>
 									<c:when test="${optionStatus.index eq 2}">
-										<c:set var="reviewFilterThirdLabel" value="${option.label}" />
+										<spring:message var="reviewFilterThirdLabel" code="${option.labelCode}" />
 										<c:choose>
 											<c:when test="${not empty option.params}">
 												<c:url var="reviewFilterThirdHref" value="${pageContext.request.servletPath}">

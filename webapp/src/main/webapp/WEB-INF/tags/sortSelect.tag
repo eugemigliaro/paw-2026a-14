@@ -1,6 +1,7 @@
 <%@ tag body-content="empty" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <%@ attribute name="id" required="false" rtexprvalue="true" %>
 <%@ attribute name="label" required="true" rtexprvalue="true" %>
@@ -27,7 +28,7 @@
 	<c:set var="selectedLabel" value="" />
 	<c:forEach var="option" items="${options}" varStatus="status">
 		<c:if test="${option.selected or (empty selectedLabel and status.first)}">
-			<c:set var="selectedLabel" value="${option.label}" />
+			<spring:message var="selectedLabel" code="${option.labelCode}" />
 		</c:if>
 	</c:forEach>
 		<div class="sort-panel" aria-label="<c:out value='${ariaLabel}' />" data-sort-select="true">
@@ -66,7 +67,7 @@
 							href="${optionHref}"
 							class="filter-dropdown__item sort-panel__item ${option.selected ? 'filter-dropdown__item--active sort-panel__item--active' : ''}"
 							aria-current="${option.selected ? 'true' : 'false'}">
-							<c:out value="${option.label}" />
+							<spring:message code="${option.labelCode}" />
 						</a>
 					</c:forEach>
 				</div>

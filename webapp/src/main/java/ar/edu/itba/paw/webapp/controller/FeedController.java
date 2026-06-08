@@ -33,7 +33,6 @@ import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -59,7 +58,6 @@ public class FeedController {
     private final MatchParticipationService matchParticipationService;
     private final MatchReservationService matchReservationService;
     private final TournamentService tournamentService;
-    private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -73,7 +71,6 @@ public class FeedController {
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService,
             final TournamentService tournamentService,
-            final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -86,7 +83,6 @@ public class FeedController {
         this.matchParticipationService = matchParticipationService;
         this.matchReservationService = matchReservationService;
         this.tournamentService = tournamentService;
-        this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -157,7 +153,6 @@ public class FeedController {
         mav.addObject("selectedDateMinValue", LocalDate.now(PlatformTime.ZONE).toString());
         mav.addObject("selectedStartDateValue", selectedStartDateValue);
         mav.addObject("selectedEndDateValue", selectedEndDateValue);
-        mav.addObject("sortLabel", messageSource.getMessage("feed.sortBy", null, locale));
         mav.addObject(
                 "sortOptions",
                 buildSortOptions(
@@ -167,7 +162,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        locale,
                         email));
         mav.addObject("nearMeUnavailable", nearMeUnavailable);
         if (EventType.TOURNAMENT == searchForm.getType()) {
@@ -289,12 +283,10 @@ public class FeedController {
                         selectedStartDateValue,
                         selectedEndDateValue,
                         selectedPriceRange,
-                        locale,
                         email),
                 result.getItems(),
                 EventType.MATCH,
-                EventCardAttributeUtils.matchSpotsBadgeLabels(
-                        result.getItems(), locale, messageSource),
+                EventCardAttributeUtils.matchSpotsBadgeCodes(result.getItems()),
                 EventCardAttributeUtils.matchDistanceLabels(
                         result.getItems(),
                         exploreLocation == null ? null : exploreLocation.latitude(),
@@ -341,8 +333,7 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null,
-                locale);
+                        : null);
     }
 
     private void addTournamentFeedAttributes(
@@ -372,12 +363,10 @@ public class FeedController {
                         selectedStartDateValue,
                         selectedEndDateValue,
                         selectedPriceRange,
-                        locale,
                         email),
                 result.getItems(),
                 EventType.TOURNAMENT,
-                EventCardAttributeUtils.tournamentBadgeLabels(
-                        result.getItems(), locale, messageSource),
+                EventCardAttributeUtils.tournamentBadgeCodes(result.getItems()),
                 EventCardAttributeUtils.tournamentDistanceLabels(
                         result.getItems(),
                         exploreLocation == null ? null : exploreLocation.latitude(),
@@ -421,8 +410,7 @@ public class FeedController {
                                 selectedPriceRange,
                                 result.getPage() + 1,
                                 email)
-                        : null,
-                locale);
+                        : null);
     }
 
     private void addFeedPageAttributes(
@@ -430,29 +418,20 @@ public class FeedController {
             final List<FilterGroupViewModel> filterGroups,
             final List<?> featuredEvents,
             final EventType featuredEventType,
-            final Map<Long, String> eventBadgeLabels,
+            final Map<Long, String> eventBadgeCodes,
             final Map<Long, String> eventDistanceLabels,
             final Map<Long, List<String>> eventRelationshipBadgeCodes,
             final int page,
             final int totalPages,
             final List<?> paginationItems,
             final String previousPageHref,
-            final String nextPageHref,
-            final Locale locale) {
+            final String nextPageHref) {
+        // Hero/search/sort-by labels are resolved in feed/index.jsp via <spring:message>.
         mav.addObject("feedEyebrow", "");
-        mav.addObject("feedTitle", messageSource.getMessage("feed.hero.title", null, locale));
-        mav.addObject(
-                "feedDescription", messageSource.getMessage("feed.hero.description", null, locale));
-        mav.addObject(
-                "feedSearchPlaceholder",
-                messageSource.getMessage("feed.search.placeholder", null, locale));
-        mav.addObject(
-                "feedSearchButtonLabel",
-                messageSource.getMessage("feed.search.button", null, locale));
         mav.addObject("feedFilterGroups", filterGroups);
         mav.addObject("featuredEvents", featuredEvents);
         mav.addObject("featuredEventType", featuredEventType);
-        mav.addObject("eventBadgeLabels", eventBadgeLabels);
+        mav.addObject("eventBadgeCodes", eventBadgeCodes);
         mav.addObject("eventDistanceLabels", eventDistanceLabels);
         mav.addObject("eventRelationshipBadgeCodes", eventRelationshipBadgeCodes);
         mav.addObject("feedCurrentPage", page);
@@ -469,7 +448,6 @@ public class FeedController {
             final List<String> selectedSports,
             final DateRange selectedDateRange,
             final PriceRange selectedPriceRange,
-            final Locale locale,
             final String email) {
         final List<SelectOptionViewModel> sortOptions = new ArrayList<>();
         sortOptions.add(
@@ -480,7 +458,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        locale,
                         email,
                         EventSort.SOONEST,
                         "feed.sort.soonest"));
@@ -492,7 +469,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        locale,
                         email,
                         EventSort.PRICE_LOW,
                         "feed.sort.price"));
@@ -505,7 +481,6 @@ public class FeedController {
                             selectedSports,
                             selectedDateRange,
                             selectedPriceRange,
-                            locale,
                             email,
                             EventSort.SPOTS_DESC,
                             "feed.sort.spots"));
@@ -518,7 +493,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        locale,
                         email,
                         EventSort.DISTANCE,
                         "feed.sort.distance"));
@@ -532,12 +506,11 @@ public class FeedController {
             final List<String> selectedSports,
             final DateRange selectedDateRange,
             final PriceRange selectedPriceRange,
-            final Locale locale,
             final String email,
             final EventSort sort,
             final String labelCode) {
         return new SelectOptionViewModel(
-                messageSource.getMessage(labelCode, null, locale),
+                labelCode,
                 null,
                 buildParamsMap(
                         query,
@@ -560,16 +533,14 @@ public class FeedController {
             final String selectedStartDateValue,
             final String selectedEndDateValue,
             final PriceRange selectedPriceRange,
-            final Locale locale,
             final String email) {
         final List<FilterGroupViewModel> groups = new ArrayList<>();
         groups.add(
                 new FilterGroupViewModel(
-                        messageSource.getMessage("filter.eventType", null, locale),
+                        "filter.eventType",
                         List.of(
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage(
-                                                "filter.eventType.matches", null, locale),
+                                        "filter.eventType.matches",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -583,8 +554,7 @@ public class FeedController {
                                         null,
                                         selectedType == EventType.MATCH),
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage(
-                                                "filter.eventType.tournaments", null, locale),
+                                        "filter.eventType.tournaments",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -599,10 +569,10 @@ public class FeedController {
                                         selectedType == EventType.TOURNAMENT))));
         groups.add(
                 new FilterGroupViewModel(
-                        messageSource.getMessage("filter.categories", null, locale),
+                        "filter.categories",
                         List.of(
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage("filter.anySport", null, locale),
+                                        "filter.anySport",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -616,7 +586,7 @@ public class FeedController {
                                         null,
                                         selectedSports.isEmpty()),
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage("sport.football", null, locale),
+                                        "sport.football",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -630,7 +600,7 @@ public class FeedController {
                                         null,
                                         isSportSelected(selectedSports, Sport.FOOTBALL)),
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage("sport.tennis", null, locale),
+                                        "sport.tennis",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -644,7 +614,7 @@ public class FeedController {
                                         null,
                                         isSportSelected(selectedSports, Sport.TENNIS)),
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage("sport.basketball", null, locale),
+                                        "sport.basketball",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -658,7 +628,7 @@ public class FeedController {
                                         null,
                                         isSportSelected(selectedSports, Sport.BASKETBALL)),
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage("sport.padel", null, locale),
+                                        "sport.padel",
                                         null,
                                         buildParamsMap(
                                                 query,
@@ -672,7 +642,7 @@ public class FeedController {
                                         null,
                                         isSportSelected(selectedSports, Sport.PADEL)),
                                 new FilterOptionViewModel(
-                                        messageSource.getMessage("sport.other", null, locale),
+                                        "sport.other",
                                         null,
                                         buildParamsMap(
                                                 query,

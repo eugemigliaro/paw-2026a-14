@@ -76,14 +76,13 @@ class PublicProfileControllerTest {
                                         userService,
                                         playerReviewService,
                                         moderationService,
-                                        userSportRatingService,
-                                        messageSource))
+                                        userSportRatingService))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setControllerAdvice(
                                 new AccessExceptionHandler(),
-                                new PasswordResetExceptionHandler(messageSource),
-                                new VerificationExceptionHandler(messageSource))
+                                new PasswordResetExceptionHandler(),
+                                new VerificationExceptionHandler())
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
@@ -188,8 +187,6 @@ class PublicProfileControllerTest {
                 .andExpect(model().attributeExists("targetUser"))
                 .andExpect(model().attributeExists("reviewSummary"))
                 .andExpect(model().attributeExists("profileReviews"))
-                .andExpect(model().attribute("reviewLikeLabel", "Likes"))
-                .andExpect(model().attribute("reviewDislikeLabel", "Dislikes"))
                 .andExpect(model().attribute("reviewFormVisible", false))
                 .andExpect(
                         model().attribute(
@@ -231,8 +228,6 @@ class PublicProfileControllerTest {
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attribute("reviewCanSubmit", true))
                 .andExpect(model().attribute("reviewFormVisible", false))
-                .andExpect(model().attribute("reviewLikeLabel", "Like"))
-                .andExpect(model().attribute("reviewDislikeLabel", "Dislikes"))
                 .andExpect(
                         model().attribute(
                                         "reviewFormPath",
@@ -268,7 +263,9 @@ class PublicProfileControllerTest {
                                         Matchers.hasItem(
                                                 Matchers.allOf(
                                                         Matchers.hasProperty(
-                                                                "label", Matchers.is("Positive")),
+                                                                "labelCode",
+                                                                Matchers.is(
+                                                                        "profile.reviews.filter.positive")),
                                                         Matchers.hasProperty(
                                                                 "href",
                                                                 Matchers.is(

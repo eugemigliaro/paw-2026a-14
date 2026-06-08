@@ -6,7 +6,7 @@
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <%@ attribute name="match" required="false" rtexprvalue="true" type="ar.edu.itba.paw.models.Match" %>
 <%@ attribute name="tournament" required="false" rtexprvalue="true" type="ar.edu.itba.paw.models.Tournament" %>
-<%@ attribute name="badgeLabel" required="false" rtexprvalue="true" %>
+<%@ attribute name="badgeCode" required="false" rtexprvalue="true" %>
 <%@ attribute name="distanceLabel" required="false" rtexprvalue="true" %>
 <%@ attribute name="relationshipBadgeCodes" required="false" rtexprvalue="true" type="java.util.List" %>
 <%@ attribute name="headingLevel" required="false" rtexprvalue="true" %>
@@ -25,8 +25,17 @@
 			<img class="event-card__image" src="${eventBannerSrc}" alt="" loading="lazy" decoding="async" />
 		</c:if>
 		<div class="event-card__media-badges">
-			<c:if test="${not empty badgeLabel}">
-				<span class="event-card__badge"><c:out value="${badgeLabel}" /></span>
+			<c:if test="${not empty badgeCode}">
+				<span class="event-card__badge">
+					<c:choose>
+						<c:when test="${badgeCode eq 'event.spotsLeft'}">
+							<spring:message code="${badgeCode}" arguments="${event.availableSpots}" />
+						</c:when>
+						<c:otherwise>
+							<spring:message code="${badgeCode}" />
+						</c:otherwise>
+					</c:choose>
+				</span>
 			</c:if>
 			<c:forEach var="relationshipBadgeCode" items="${relationshipBadgeCodes}">
 				<span class="event-badge event-badge--${relationshipBadgeCode}">

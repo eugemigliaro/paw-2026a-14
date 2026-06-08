@@ -44,8 +44,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
@@ -67,7 +65,6 @@ class FeedControllerTest {
                 Mockito.mock(MatchParticipationService.class);
         final MatchReservationService matchReservationService =
                 Mockito.mock(MatchReservationService.class);
-        final MessageSource messageSource = messageSource();
 
         Mockito.when(
                         matchService.searchPublicMatches(
@@ -126,7 +123,6 @@ class FeedControllerTest {
                                         matchParticipationService,
                                         matchReservationService,
                                         tournamentService,
-                                        messageSource,
                                         false,
                                         "",
                                         "",
@@ -203,7 +199,7 @@ class FeedControllerTest {
         final Tournament card = (Tournament) featuredEvents(result).get(0);
 
         Assertions.assertEquals(77L, card.getId());
-        Assertions.assertEquals("Tournament", eventBadgeLabels(result).get(77L));
+        Assertions.assertEquals("tournament.card.badge", eventBadgeCodes(result).get(77L));
         Assertions.assertTrue(
                 paginationItems(result).stream()
                         .filter(item -> item.getHref() != null)
@@ -222,17 +218,15 @@ class FeedControllerTest {
         final List<SelectOptionViewModel> sortOptions = sortOptions(result);
         final FilterGroupViewModel eventTypeGroup =
                 filterGroups(result).stream()
-                        .filter(group -> "Tipo de evento".equals(group.getTitle()))
+                        .filter(group -> "filter.eventType".equals(group.getTitleCode()))
                         .findFirst()
                         .orElseThrow();
 
         Assertions.assertEquals(2, eventTypeGroup.getOptions().size());
-        Assertions.assertTrue(hasActiveOption(eventTypeGroup, "Torneos"));
+        Assertions.assertTrue(hasActiveOption(eventTypeGroup, "filter.eventType.tournaments"));
         Assertions.assertTrue(
                 sortOptions.stream()
-                        .noneMatch(
-                                option ->
-                                        "M\u00e1s lugares disponibles".equals(option.getLabel())));
+                        .noneMatch(option -> "feed.sort.spots".equals(option.getLabelCode())));
     }
 
     @Test
@@ -244,7 +238,7 @@ class FeedControllerTest {
 
         final FilterGroupViewModel sportGroup =
                 filterGroups(result).stream()
-                        .filter(group -> "Sports".equals(group.getTitle()))
+                        .filter(group -> "filter.categories".equals(group.getTitleCode()))
                         .findFirst()
                         .orElseThrow();
 
@@ -317,13 +311,11 @@ class FeedControllerTest {
     }
 
     @Test
-    void getFeedRouteWithSpanishLocaleLocalizesShellAndCards() throws Exception {
+    void getFeedRouteRendersFeedPageUnderSpanishLocale() throws Exception {
         mockMvc.perform(get("/").locale(java.util.Locale.forLanguageTag("es")))
                 .andExpect(status().isOk())
                 .andExpect(view().name("feed/index"))
-                .andExpect(
-                        model().attribute(
-                                        "feedTitle", Matchers.is("Encontrá tu próximo partido.")));
+                .andExpect(model().attributeExists("featuredEvents"));
     }
 
     @Test
@@ -454,7 +446,7 @@ class FeedControllerTest {
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {
         return group.getOptions().stream()
-                .anyMatch(option -> label.equals(option.getLabel()) && option.isActive());
+                .anyMatch(option -> label.equals(option.getLabelCode()) && option.isActive());
     }
 
     @SuppressWarnings("unchecked")
@@ -463,8 +455,8 @@ class FeedControllerTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<Long, String> eventBadgeLabels(final MvcResult result) {
-        return (Map<Long, String>) result.getModelAndView().getModel().get("eventBadgeLabels");
+    private static Map<Long, String> eventBadgeCodes(final MvcResult result) {
+        return (Map<Long, String>) result.getModelAndView().getModel().get("eventBadgeCodes");
     }
 
     @SuppressWarnings("unchecked")
@@ -487,15 +479,6 @@ class FeedControllerTest {
     @SuppressWarnings("unchecked")
     private static List<SelectOptionViewModel> sortOptions(final MvcResult result) {
         return (List<SelectOptionViewModel>) result.getModelAndView().getModel().get("sortOptions");
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 
     private static DefaultFormattingConversionService conversionService() {

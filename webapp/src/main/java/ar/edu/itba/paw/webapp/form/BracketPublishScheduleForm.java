@@ -10,9 +10,7 @@ public class BracketPublishScheduleForm {
 
     private Integer roundNumber;
 
-    private String roundLabel = "";
-
-    private String matchLabel = "";
+    private Integer matchNumber;
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
@@ -48,20 +46,12 @@ public class BracketPublishScheduleForm {
         this.roundNumber = roundNumber;
     }
 
-    public String getRoundLabel() {
-        return roundLabel;
+    public Integer getMatchNumber() {
+        return matchNumber;
     }
 
-    public void setRoundLabel(final String roundLabel) {
-        this.roundLabel = roundLabel;
-    }
-
-    public String getMatchLabel() {
-        return matchLabel;
-    }
-
-    public void setMatchLabel(final String matchLabel) {
-        this.matchLabel = matchLabel;
+    public void setMatchNumber(final Integer matchNumber) {
+        this.matchNumber = matchNumber;
     }
 
     public LocalDate getStartDate() {

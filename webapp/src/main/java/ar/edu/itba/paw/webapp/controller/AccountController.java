@@ -9,9 +9,7 @@ import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.io.IOException;
-import java.util.Locale;
 import javax.validation.Valid;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -26,11 +24,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AccountController {
 
     private final UserService userService;
-    private final MessageSource messageSource;
 
-    public AccountController(final UserService userService, final MessageSource messageSource) {
+    public AccountController(final UserService userService) {
         this.userService = userService;
-        this.messageSource = messageSource;
     }
 
     @ModelAttribute("accountProfileForm")
@@ -39,11 +35,9 @@ public class AccountController {
     }
 
     @GetMapping("/account")
-    public ModelAndView showAccount(
-            @AuthenticatedUser final User user, final Model model, final Locale locale) {
+    public ModelAndView showAccount(@AuthenticatedUser final User user, final Model model) {
         return accountView(
                 user,
-                locale,
                 Boolean.TRUE.equals(model.asMap().get("accountUpdated")),
                 accountProfileFormFrom(user),
                 null);
@@ -55,8 +49,7 @@ public class AccountController {
             @Valid @ModelAttribute("accountProfileForm")
                     final AccountProfileForm accountProfileForm,
             final BindingResult bindingResult,
-            final RedirectAttributes redirectAttributes,
-            final Locale locale) {
+            final RedirectAttributes redirectAttributes) {
 
         final User existingUsername =
                 userService.findByUsername(accountProfileForm.getUsername()).orElse(null);
@@ -65,7 +58,7 @@ public class AccountController {
         }
 
         if (bindingResult.hasErrors()) {
-            return accountView(user, locale, false, accountProfileForm, null);
+            return accountView(user, false, accountProfileForm, null);
         }
 
         try {
@@ -87,68 +80,18 @@ public class AccountController {
 
     private ModelAndView accountView(
             final User user,
-            final Locale locale,
             final boolean updated,
             final AccountProfileForm accountProfileForm,
-            final String
-                    profileImageError) { // TODO: remove messageSource and instead send msg keys to
-        // the view. Resolve them there with <spring:message>.
+            final String profileImageError) {
+        // View labels are resolved in account/index.jsp via <spring:message>.
         final ModelAndView mav = new ModelAndView("account/index");
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage(
-                        "page.title.account", null, "Match Point | Account", locale));
-        mav.addObject(
-                "accountTitle", messageSource.getMessage("account.title", null, "Account", locale));
-        mav.addObject(
-                "accountDescription",
-                messageSource.getMessage(
-                        "account.description",
-                        null,
-                        "Review your Match Point profile details and current session.",
-                        locale));
-        mav.addObject(
-                "accountSaveLabel",
-                messageSource.getMessage("account.save", null, "Save changes", locale));
-        mav.addObject(
-                "accountCancelLabel",
-                messageSource.getMessage("common.cancel", null, "Cancel", locale));
-        mav.addObject(
-                "accountProfileImageTitle",
-                messageSource.getMessage(
-                        "account.profileImage.title", null, "Profile picture", locale));
-        mav.addObject(
-                "accountProfileImageHint",
-                messageSource.getMessage(
-                        "account.profileImage.hint",
-                        null,
-                        "Accepted formats: JPG, PNG, WEBP, GIF. Max size 5 MB.",
-                        locale));
+        mav.addObject("accountUpdated", updated);
         mav.addObject("accountProfileImageError", profileImageError);
-        mav.addObject(
-                "logoutLabel", messageSource.getMessage("nav.logout", null, "Logout", locale));
-        mav.addObject(
-                "accountUpdated",
-                updated
-                        ? messageSource.getMessage(
-                                "account.updated", null, "Your profile was updated.", locale)
-                        : null);
         mav.addObject("accountProfileImageUrl", ImageUrlHelper.profileUrlFor(user));
-        mav.addObject(
-                "accountProfileImageAlt",
-                messageSource.getMessage(
-                        "account.profileImage.alt",
-                        new Object[] {user.getUsername()},
-                        user.getUsername() + " profile picture",
-                        locale));
         mav.addObject("accountProfile", user);
         mav.addObject("accountProfileForm", accountProfileForm);
         mav.addObject("accountEmail", user.getEmail());
         mav.addObject("accountPublicProfileHref", "/users/" + user.getUsername());
-        mav.addObject(
-                "accountPublicProfileLabel",
-                messageSource.getMessage(
-                        "account.viewPublicProfile", null, "View public profile", locale));
         return mav;
     }
 

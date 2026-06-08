@@ -22,6 +22,9 @@
 			<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 			<spring:message var="priceRangeError" code="filter.price.rangeError" />
 			<spring:message var="eventTypeFilterTitle" code="filter.eventType" />
+			<spring:message var="feedSearchPlaceholder" code="feed.search.placeholder" />
+			<spring:message var="feedSearchButtonLabel" code="feed.search.button" />
+			<spring:message var="sortLabel" code="feed.sortBy" />
 			<c:set var="feedPath" value="/" />
 			<c:url var="feedFormAction" value="${feedPath}" />
 			<main class="page-shell page-shell--feed">
@@ -33,8 +36,8 @@
 							<c:if test="${not empty feedEyebrow}">
 								<p class="eyebrow"><c:out value="${feedEyebrow}" /></p>
 							</c:if>
-							<h1 class="hero-panel__title"><c:out value="${feedTitle}" /></h1>
-							<p class="hero-panel__description"><c:out value="${feedDescription}" /></p>
+							<h1 class="hero-panel__title"><spring:message code="feed.hero.title" /></h1>
+							<p class="hero-panel__description"><spring:message code="feed.hero.description" /></p>
 						</section>
 
 						<section class="search-panel" aria-label="${searchAriaLabel}">
@@ -72,11 +75,11 @@
 						<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
 							<c:forEach var="group" items="${feedFilterGroups}">
 									<c:choose>
-										<c:when test="${group.title eq eventTypeFilterTitle}">
+										<c:when test="${group.titleCode eq 'filter.eventType'}">
 											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 												<c:choose>
 													<c:when test="${optionStatus.first}">
-														<c:set var="eventTypeMatchLabel" value="${option.label}" />
+														<spring:message var="eventTypeMatchLabel" code="${option.labelCode}" />
 														<c:choose>
 															<c:when test="${not empty option.params}">
 																<c:url var="eventTypeMatchHref" value="${feedPath}">
@@ -91,7 +94,7 @@
 														</c:choose>
 													</c:when>
 													<c:otherwise>
-														<c:set var="eventTypeTournamentLabel" value="${option.label}" />
+														<spring:message var="eventTypeTournamentLabel" code="${option.labelCode}" />
 														<c:choose>
 															<c:when test="${not empty option.params}">
 																<c:url var="eventTypeTournamentHref" value="${feedPath}">
@@ -109,7 +112,7 @@
 											</c:forEach>
 											<ui:eventsFilterToggle
 												className="feed-event-type-toggle"
-												ariaLabel="${group.title}"
+												ariaLabel="${eventTypeFilterTitle}"
 												currentValue="${selectedType}"
 												leftValue="match"
 												rightValue="tournament"
@@ -123,11 +126,12 @@
 												forceLeftOnEmpty="${true}" />
 										</c:when>
 										<c:otherwise>
-										<div class="filter-dropdown" data-filter-name="${group.title}">
+										<spring:message var="groupTitleLabel" code="${group.titleCode}" />
+										<div class="filter-dropdown" data-filter-name="${group.titleCode}">
 										<button type="button" class="filter-dropdown__toggle">
 											<span class="filter-dropdown__icon">
 												<c:choose>
-													<c:when test="${fn:contains(fn:toLowerCase(group.title), 'sport') || fn:contains(fn:toLowerCase(group.title), 'deporte')}">
+													<c:when test="${group.titleCode eq 'filter.categories'}">
 														<icon:football />
 													</c:when>
 													<c:otherwise>
@@ -135,7 +139,7 @@
 													</c:otherwise>
 												</c:choose>
 											</span>
-											<c:out value="${group.title}" />
+											<c:out value="${groupTitleLabel}" />
 										</button>
 										<div class="filter-dropdown__panel">
 											<c:set var="clearFilterHref" value="" />
@@ -169,7 +173,7 @@
 															</c:otherwise>
 														</c:choose>
 														<a href="${optionHref}" class="filter-dropdown__item ${option.active ? 'filter-dropdown__item--active' : ''}">
-															<c:out value="${option.label}" />
+															<spring:message code="${option.labelCode}" />
 														</a>
 													</c:otherwise>
 												</c:choose>
@@ -194,7 +198,7 @@
 												<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
 													<c:if test="${not optionStatus.first and option.active}">
 														<span class="filter-dropdown__selected-item">
-															<c:out value="${option.label}" />
+															<spring:message code="${option.labelCode}" />
 														</span>
 													</c:if>
 												</c:forEach>
@@ -475,7 +479,7 @@
 											<c:when test="${featuredEventType.dbValue == 'tournament'}">
 												<ui:eventCard
 													tournament="${event}"
-													badgeLabel="${eventBadgeLabels[event.id]}"
+													badgeCode="${eventBadgeCodes[event.id]}"
 													distanceLabel="${eventDistanceLabels[event.id]}"
 													relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
 													headingLevel="h3" />
@@ -483,7 +487,7 @@
 											<c:otherwise>
 												<ui:eventCard
 													match="${event}"
-													badgeLabel="${eventBadgeLabels[event.id]}"
+													badgeCode="${eventBadgeCodes[event.id]}"
 													distanceLabel="${eventDistanceLabels[event.id]}"
 													relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
 													headingLevel="h3" />

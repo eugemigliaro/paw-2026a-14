@@ -25,59 +25,17 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.StaticMessageSource;
 import org.springframework.web.servlet.ModelAndView;
 
 class MatchDashboardPageSupportTest {
 
-    private MessageSource messageSource;
     private MatchParticipationService matchParticipationService;
     private MatchReservationService matchReservationService;
 
     @BeforeEach
     void setUp() {
-        final StaticMessageSource staticMessageSource = new StaticMessageSource();
-        staticMessageSource.addMessage("events.title", Locale.ENGLISH, "Events");
-        staticMessageSource.addMessage("events.description", Locale.ENGLISH, "Description");
-        staticMessageSource.addMessage("events.empty", Locale.ENGLISH, "Empty");
-        staticMessageSource.addMessage("page.title.events", Locale.ENGLISH, "Events page");
-        staticMessageSource.addMessage("filter.eventType", Locale.ENGLISH, "Type");
-        staticMessageSource.addMessage("filter.eventType.matches", Locale.ENGLISH, "Matches");
-        staticMessageSource.addMessage(
-                "filter.eventType.tournaments", Locale.ENGLISH, "Tournaments");
-        staticMessageSource.addMessage("filter.categories", Locale.ENGLISH, "Sports");
-        staticMessageSource.addMessage("filter.category", Locale.ENGLISH, "Category");
-        staticMessageSource.addMessage("host.filters.status", Locale.ENGLISH, "Status");
-        staticMessageSource.addMessage("feed.sort.soonest", Locale.ENGLISH, "Soonest");
-        staticMessageSource.addMessage("feed.sort.price", Locale.ENGLISH, "Price");
-        staticMessageSource.addMessage("feed.sort.spots", Locale.ENGLISH, "Spots");
-        staticMessageSource.addMessage("feed.sortBy", Locale.ENGLISH, "Sort by");
-        staticMessageSource.addMessage("feed.aria.search", Locale.ENGLISH, "Search");
-        staticMessageSource.addMessage("feed.search.placeholder", Locale.ENGLISH, "Search...");
-        staticMessageSource.addMessage("feed.search.button", Locale.ENGLISH, "Go");
-        staticMessageSource.addMessage("filter.title", Locale.ENGLISH, "Filters");
-        staticMessageSource.addMessage("filter.anySport", Locale.ENGLISH, "Any sport");
-        staticMessageSource.addMessage("sport.football", Locale.ENGLISH, "Football");
-        staticMessageSource.addMessage("sport.tennis", Locale.ENGLISH, "Tennis");
-        staticMessageSource.addMessage("sport.basketball", Locale.ENGLISH, "Basketball");
-        staticMessageSource.addMessage("sport.padel", Locale.ENGLISH, "Padel");
-        staticMessageSource.addMessage("sport.other", Locale.ENGLISH, "Other");
-        staticMessageSource.addMessage("filter.anyStatus", Locale.ENGLISH, "Any status");
-        staticMessageSource.addMessage("match.status.open", Locale.ENGLISH, "Open");
-        staticMessageSource.addMessage("match.status.completed", Locale.ENGLISH, "Completed");
-        staticMessageSource.addMessage("match.status.cancelled", Locale.ENGLISH, "Cancelled");
-        staticMessageSource.addMessage("filter.anyCategory", Locale.ENGLISH, "Any category");
-        staticMessageSource.addMessage("category.joined", Locale.ENGLISH, "Joined");
-        staticMessageSource.addMessage("category.invited", Locale.ENGLISH, "Invited");
-        staticMessageSource.addMessage("category.pending", Locale.ENGLISH, "Pending");
-        staticMessageSource.addMessage("category.hosted", Locale.ENGLISH, "Hosted");
-        staticMessageSource.addMessage("tournament.card.badge", Locale.ENGLISH, "Tournament");
-        staticMessageSource.addMessage("tournament.status.open", Locale.ENGLISH, "Open");
-        messageSource = staticMessageSource;
         matchParticipationService = mock(MatchParticipationService.class);
         matchReservationService = mock(MatchReservationService.class);
     }
@@ -109,14 +67,9 @@ class MatchDashboardPageSupportTest {
                         "events/list",
                         "/events",
                         "page.title.events",
-                        Locale.ENGLISH,
                         selection,
                         null,
                         tournamentResult,
-                        "Events",
-                        "Description",
-                        "Empty",
-                        messageSource,
                         matchParticipationService,
                         matchReservationService);
 
@@ -166,14 +119,9 @@ class MatchDashboardPageSupportTest {
                         "events/list",
                         "/events",
                         "page.title.events",
-                        Locale.ENGLISH,
                         selection,
                         matchResult,
                         tournamentResult,
-                        "Events",
-                        "Description",
-                        "Empty",
-                        messageSource,
                         matchParticipationService,
                         matchReservationService);
 

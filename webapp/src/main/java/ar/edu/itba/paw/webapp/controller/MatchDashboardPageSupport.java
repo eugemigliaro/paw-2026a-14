@@ -29,9 +29,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import org.springframework.context.MessageSource;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -47,14 +45,9 @@ final class MatchDashboardPageSupport {
             final String view,
             final String path,
             final String pageTitleCode,
-            final Locale locale,
             final MatchDashboardQueryState.DashboardSelection selection,
             final PaginatedResult<Match> result,
             final PaginatedResult<Tournament> tournamentResult,
-            final String title,
-            final String description,
-            final String emptyMessage,
-            final MessageSource messageSource,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
         final ModelAndView mav = new ModelAndView(view);
@@ -79,10 +72,9 @@ final class MatchDashboardPageSupport {
                 searchForm.getCategory().stream().map(EventCategory::getQueryValue).toList();
         final DateRangeBounds dateBounds = dateRangeBounds(selectedFilter);
 
+        // listTitle (events.title) is resolved in events/list.jsp via <spring:message>;
+        // description/empty copy is not rendered on this view.
         mav.addObject("pageTitleCode", pageTitleCode);
-        mav.addObject("listTitle", title);
-        mav.addObject("listDescription", description);
-        mav.addObject("emptyMessage", emptyMessage);
         mav.addObject("selectedType", selectedTypeStr);
         mav.addObject("selectedSort", sort);
         mav.addObject("selectedStartDateValue", startDate);
@@ -100,7 +92,6 @@ final class MatchDashboardPageSupport {
                 "listControls",
                 buildListControls(
                         path,
-                        locale,
                         selectedType,
                         selectedFilterValue,
                         searchQuery,
@@ -112,8 +103,7 @@ final class MatchDashboardPageSupport {
                         selectedStatusesStr,
                         selectedSportsStr,
                         selectedVisibilityStr,
-                        selectedCategories,
-                        messageSource));
+                        selectedCategories));
         mav.addObject(
                 "events",
                 selectedType == EventType.TOURNAMENT
@@ -121,12 +111,10 @@ final class MatchDashboardPageSupport {
                         : result.getItems());
         mav.addObject("eventType", selectedType);
         mav.addObject(
-                "eventBadgeLabels",
+                "eventBadgeCodes",
                 selectedType == EventType.TOURNAMENT
-                        ? EventCardAttributeUtils.tournamentBadgeLabels(
-                                tournamentResult.getItems(), locale, messageSource)
-                        : EventCardAttributeUtils.matchStatusBadgeLabels(
-                                result.getItems(), locale, messageSource));
+                        ? EventCardAttributeUtils.tournamentBadgeCodes(tournamentResult.getItems())
+                        : EventCardAttributeUtils.matchStatusBadgeCodes(result.getItems()));
         mav.addObject(
                 "eventRelationshipBadgeCodes",
                 selectedType == EventType.TOURNAMENT
@@ -165,7 +153,6 @@ final class MatchDashboardPageSupport {
 
     private static MatchListControlsViewModel buildListControls(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -177,16 +164,14 @@ final class MatchDashboardPageSupport {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
-            final List<String> selectedCategories,
-            final MessageSource messageSource) {
+            final List<String> selectedCategories) {
         final List<FilterGroupViewModel> filterGroups = new ArrayList<>();
         if ("/events".equals(path)) {
             filterGroups.add(
                     new FilterGroupViewModel(
-                            messageSource.getMessage("filter.eventType", null, locale),
+                            "filter.eventType",
                             buildEventTypeFilterOptions(
                                     path,
-                                    locale,
                                     selectedType,
                                     selectedFilter,
                                     searchQuery,
@@ -198,15 +183,13 @@ final class MatchDashboardPageSupport {
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
-                                    selectedCategories,
-                                    messageSource)));
+                                    selectedCategories)));
         }
         filterGroups.add(
                 new FilterGroupViewModel(
-                        messageSource.getMessage("filter.categories", null, locale),
+                        "filter.categories",
                         buildSportFilterOptions(
                                 path,
-                                locale,
                                 selectedType,
                                 selectedFilter,
                                 searchQuery,
@@ -218,16 +201,14 @@ final class MatchDashboardPageSupport {
                                 selectedStatuses,
                                 selectedSports,
                                 selectedVisibility,
-                                selectedCategories,
-                                messageSource)));
+                                selectedCategories)));
 
         if ("/events".equals(path) && selectedType != EventType.TOURNAMENT) {
             filterGroups.add(
                     new FilterGroupViewModel(
-                            messageSource.getMessage("filter.category", null, locale),
+                            "filter.category",
                             buildCategoryFilterOptions(
                                     path,
-                                    locale,
                                     selectedType,
                                     selectedFilter,
                                     searchQuery,
@@ -239,17 +220,15 @@ final class MatchDashboardPageSupport {
                                     selectedStatuses,
                                     selectedSports,
                                     selectedVisibility,
-                                    selectedCategories,
-                                    messageSource)));
+                                    selectedCategories)));
         }
 
         if (selectedType != EventType.TOURNAMENT) {
             filterGroups.add(
                     new FilterGroupViewModel(
-                            messageSource.getMessage("host.filters.status", null, locale),
+                            "host.filters.status",
                             buildStatusFilterOptions(
                                     path,
-                                    locale,
                                     selectedType,
                                     selectedFilter,
                                     searchQuery,
@@ -264,15 +243,13 @@ final class MatchDashboardPageSupport {
                                     selectedCategories,
                                     PLAYER_STATUS_OPTIONS.stream()
                                             .map(EventStatus::getDbValue)
-                                            .toList(),
-                                    messageSource)));
+                                            .toList())));
         }
 
         final List<SelectOptionViewModel> sortOptions =
                 List.of(
                         sortOption(
                                 path,
-                                locale,
                                 selectedType,
                                 selectedFilter,
                                 searchQuery,
@@ -286,10 +263,9 @@ final class MatchDashboardPageSupport {
                                 selectedCategories,
                                 EventSort.SOONEST.getQueryValue(),
                                 sort,
-                                messageSource.getMessage("feed.sort.soonest", null, locale)),
+                                "feed.sort.soonest"),
                         sortOption(
                                 path,
-                                locale,
                                 selectedType,
                                 selectedFilter,
                                 searchQuery,
@@ -303,10 +279,9 @@ final class MatchDashboardPageSupport {
                                 selectedCategories,
                                 EventSort.PRICE_LOW.getQueryValue(),
                                 sort,
-                                messageSource.getMessage("feed.sort.price", null, locale)),
+                                "feed.sort.price"),
                         sortOption(
                                 path,
-                                locale,
                                 selectedType,
                                 selectedFilter,
                                 searchQuery,
@@ -320,7 +295,7 @@ final class MatchDashboardPageSupport {
                                 selectedCategories,
                                 EventSort.SPOTS_DESC.getQueryValue(),
                                 sort,
-                                messageSource.getMessage("feed.sort.spots", null, locale)));
+                                "feed.sort.spots"));
 
         return new MatchListControlsViewModel(path, path, searchQuery, sortOptions, filterGroups);
     }
@@ -497,7 +472,6 @@ final class MatchDashboardPageSupport {
 
     private static SelectOptionViewModel sortOption(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -511,7 +485,7 @@ final class MatchDashboardPageSupport {
             final List<String> selectedCategories,
             final String value,
             final String currentSort,
-            final String label) {
+            final String labelCode) {
         final Map<String, String> params =
                 buildParamsMap(
                         path,
@@ -528,12 +502,12 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         1);
-        return new SelectOptionViewModel(label, null, params, value.equalsIgnoreCase(currentSort));
+        return new SelectOptionViewModel(
+                labelCode, null, params, value.equalsIgnoreCase(currentSort));
     }
 
     private static FilterOptionViewModel filterOption(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -547,7 +521,7 @@ final class MatchDashboardPageSupport {
             final List<String> visibility,
             final List<String> categories,
             final boolean active,
-            final String label) {
+            final String labelCode) {
         final Map<String, String> params =
                 buildParamsMap(
                         path,
@@ -564,12 +538,11 @@ final class MatchDashboardPageSupport {
                         visibility,
                         categories,
                         1);
-        return new FilterOptionViewModel(label, null, params, null, active);
+        return new FilterOptionViewModel(labelCode, null, params, null, active);
     }
 
     private static List<FilterOptionViewModel> buildEventTypeFilterOptions(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -581,11 +554,10 @@ final class MatchDashboardPageSupport {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
-            final List<String> selectedCategories,
-            final MessageSource messageSource) {
+            final List<String> selectedCategories) {
         return List.of(
                 new FilterOptionViewModel(
-                        messageSource.getMessage("filter.eventType.matches", null, locale),
+                        "filter.eventType.matches",
                         null,
                         buildParamsMap(
                                 path,
@@ -605,7 +577,7 @@ final class MatchDashboardPageSupport {
                         null,
                         selectedType == EventType.MATCH),
                 new FilterOptionViewModel(
-                        messageSource.getMessage("filter.eventType.tournaments", null, locale),
+                        "filter.eventType.tournaments",
                         null,
                         buildParamsMap(
                                 path,
@@ -628,7 +600,6 @@ final class MatchDashboardPageSupport {
 
     private static List<FilterOptionViewModel> buildSportFilterOptions(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -640,12 +611,10 @@ final class MatchDashboardPageSupport {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
-            final List<String> selectedCategories,
-            final MessageSource messageSource) {
+            final List<String> selectedCategories) {
         return List.of(
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -659,10 +628,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.isEmpty(),
-                        messageSource.getMessage("filter.anySport", null, locale)),
+                        "filter.anySport"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -676,10 +644,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.contains("football"),
-                        messageSource.getMessage("sport.football", null, locale)),
+                        "sport.football"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -693,10 +660,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.contains("tennis"),
-                        messageSource.getMessage("sport.tennis", null, locale)),
+                        "sport.tennis"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -710,10 +676,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.contains("basketball"),
-                        messageSource.getMessage("sport.basketball", null, locale)),
+                        "sport.basketball"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -727,10 +692,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.contains("padel"),
-                        messageSource.getMessage("sport.padel", null, locale)),
+                        "sport.padel"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -744,12 +708,11 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.contains("other"),
-                        messageSource.getMessage("sport.other", null, locale)));
+                        "sport.other"));
     }
 
     private static List<FilterOptionViewModel> buildStatusFilterOptions(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -762,13 +725,11 @@ final class MatchDashboardPageSupport {
             final List<String> selectedSports,
             final List<String> selectedVisibility,
             final List<String> selectedCategories,
-            final List<String> allowedStatuses,
-            final MessageSource messageSource) {
+            final List<String> allowedStatuses) {
         final List<FilterOptionViewModel> options = new ArrayList<>();
         options.add(
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -782,13 +743,12 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedStatuses.isEmpty(),
-                        messageSource.getMessage("filter.anyStatus", null, locale)));
+                        "filter.anyStatus"));
 
         for (final String status : allowedStatuses) {
             options.add(
                     filterOption(
                             path,
-                            locale,
                             selectedType,
                             selectedFilter,
                             searchQuery,
@@ -802,7 +762,7 @@ final class MatchDashboardPageSupport {
                             selectedVisibility,
                             selectedCategories,
                             selectedStatuses.contains(status),
-                            messageSource.getMessage("match.status." + status, null, locale)));
+                            "match.status." + status));
         }
 
         return List.copyOf(options);
@@ -810,7 +770,6 @@ final class MatchDashboardPageSupport {
 
     private static List<FilterOptionViewModel> buildCategoryFilterOptions(
             final String path,
-            final Locale locale,
             final EventType selectedType,
             final String selectedFilter,
             final String searchQuery,
@@ -822,12 +781,10 @@ final class MatchDashboardPageSupport {
             final List<String> selectedStatuses,
             final List<String> selectedSports,
             final List<String> selectedVisibility,
-            final List<String> selectedCategories,
-            final MessageSource messageSource) {
+            final List<String> selectedCategories) {
         return List.of(
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -841,10 +798,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         List.of(),
                         selectedCategories.isEmpty(),
-                        messageSource.getMessage("filter.anyCategory", null, locale)),
+                        "filter.anyCategory"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -858,10 +814,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         toggleValue(selectedCategories, "joined"),
                         selectedCategories.contains("joined"),
-                        messageSource.getMessage("category.joined", null, locale)),
+                        "category.joined"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -875,10 +830,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         toggleValue(selectedCategories, "invited"),
                         selectedCategories.contains("invited"),
-                        messageSource.getMessage("category.invited", null, locale)),
+                        "category.invited"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -892,10 +846,9 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         toggleValue(selectedCategories, "pending"),
                         selectedCategories.contains("pending"),
-                        messageSource.getMessage("category.pending", null, locale)),
+                        "category.pending"),
                 filterOption(
                         path,
-                        locale,
                         selectedType,
                         selectedFilter,
                         searchQuery,
@@ -909,7 +862,7 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         toggleValue(selectedCategories, "hosted"),
                         selectedCategories.contains("hosted"),
-                        messageSource.getMessage("category.hosted", null, locale)));
+                        "category.hosted"));
     }
 
     private static DateRangeBounds dateRangeBounds(final EventFilter selectedFilter) {

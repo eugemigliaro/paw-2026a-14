@@ -51,8 +51,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -327,15 +325,12 @@ class MatchDashboardControllerTest {
                                 ArgumentMatchers.nullable(Double.class)))
                 .thenReturn(new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12));
 
-        final MessageSource messageSource = messageSource();
-
         controller =
                 new MatchDashboardController(
                         matchService,
                         matchParticipationService,
                         matchReservationService,
-                        tournamentService,
-                        messageSource);
+                        tournamentService);
 
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
@@ -371,8 +366,7 @@ class MatchDashboardControllerTest {
         bindingResult.rejectValue("q", "Pattern");
 
         try {
-            controller.showEventsPage(
-                    UserUtils.getUser(1L), searchForm, bindingResult, Locale.ENGLISH);
+            controller.showEventsPage(UserUtils.getUser(1L), searchForm, bindingResult);
             fail("Expected a bad request response");
         } catch (final ResponseStatusException exception) {
             assertEquals(400, exception.getStatus().value());
@@ -562,15 +556,6 @@ class MatchDashboardControllerTest {
     private Map<Long, List<String>> eventRelationshipBadgeCodes(final MvcResult result) {
         return (Map<Long, List<String>>)
                 result.getModelAndView().getModel().get("eventRelationshipBadgeCodes");
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 
     private static DefaultFormattingConversionService conversionService() {

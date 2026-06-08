@@ -57,8 +57,8 @@ class HostParticipationControllerTest {
                         .setValidator(validator(userEmailValidator))
                         .setControllerAdvice(
                                 new AccessExceptionHandler(),
-                                new PasswordResetExceptionHandler(messageSource),
-                                new VerificationExceptionHandler(messageSource))
+                                new PasswordResetExceptionHandler(),
+                                new VerificationExceptionHandler())
                         .build();
     }
 

@@ -10,16 +10,17 @@ public final class UiViewModels {
     }
 
     public static final class FilterGroupViewModel {
-        private final String title;
+        private final String titleCode;
         private final List<FilterOptionViewModel> options;
 
-        public FilterGroupViewModel(final String title, final List<FilterOptionViewModel> options) {
-            this.title = title;
+        public FilterGroupViewModel(
+                final String titleCode, final List<FilterOptionViewModel> options) {
+            this.titleCode = titleCode;
             this.options = options;
         }
 
-        public String getTitle() {
-            return title;
+        public String getTitleCode() {
+            return titleCode;
         }
 
         public List<FilterOptionViewModel> getOptions() {
@@ -28,27 +29,27 @@ public final class UiViewModels {
     }
 
     public static final class FilterOptionViewModel {
-        private final String label;
+        private final String labelCode;
         private final String href;
         private final Map<String, String> params;
         private final String meta;
         private final boolean active;
 
         public FilterOptionViewModel(
-                final String label,
+                final String labelCode,
                 final String href,
                 final Map<String, String> params,
                 final String meta,
                 final boolean active) {
-            this.label = label;
+            this.labelCode = labelCode;
             this.href = href;
             this.params = params;
             this.meta = meta;
             this.active = active;
         }
 
-        public String getLabel() {
-            return label;
+        public String getLabelCode() {
+            return labelCode;
         }
 
         public String getHref() {
@@ -69,24 +70,24 @@ public final class UiViewModels {
     }
 
     public static final class SelectOptionViewModel {
-        private final String label;
+        private final String labelCode;
         private final String href;
         private final Map<String, String> params;
         private final boolean selected;
 
         public SelectOptionViewModel(
-                final String label,
+                final String labelCode,
                 final String href,
                 final Map<String, String> params,
                 final boolean selected) {
-            this.label = label;
+            this.labelCode = labelCode;
             this.href = href;
             this.params = params;
             this.selected = selected;
         }
 
-        public String getLabel() {
-            return label;
+        public String getLabelCode() {
+            return labelCode;
         }
 
         public String getHref() {

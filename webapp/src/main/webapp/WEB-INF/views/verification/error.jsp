@@ -15,8 +15,8 @@
 	<main class="page-shell verification-shell">
 		<section class="panel verification-panel">
 			<p class="eyebrow"><spring:message code="verification.unavailable" /></p>
-			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
-			<p class="page-heading__description"><c:out value="${message}" /></p>
+			<h1 class="page-heading__title"><spring:message code="${messageCode}" /></h1>
+			<p class="page-heading__description"><spring:message code="${messageCode}" /></p>
 			<div class="verification-actions">
 				<spring:message var="browseEventsLabel" code="common.browseEvents" />
 				<c:url var="backUrl" value="${backHref}" />

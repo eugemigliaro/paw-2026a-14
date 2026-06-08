@@ -807,7 +807,7 @@ class HostControllerTest {
                 .andExpect(model().attribute("isEditMode", true))
                 .andExpect(model().attribute("isSeriesEditMode", true))
                 .andExpect(model().attribute("formAction", "/host/matches/47/series/edit"))
-                .andExpect(model().attribute("formTitle", "Edit recurring dates"))
+                .andExpect(model().attribute("formTitleCode", "host.seriesEdit.title"))
                 .andExpect(
                         model().attribute(
                                         "createEventForm",
