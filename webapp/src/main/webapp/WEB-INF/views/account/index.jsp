@@ -15,13 +15,12 @@
 
 		<main class="page-shell account-shell">
 			<section class="panel account-panel">
-				<div class="public-profile-topbar">
-					<ui:returnButton />
-					<c:if test="${not empty accountPublicProfileHref}">
+				<c:if test="${not empty accountPublicProfileHref}">
+					<div class="public-profile-topbar">
 						<c:url var="accountPublicProfileAction" value="${accountPublicProfileHref}" />
 						<ui:button label="${accountPublicProfileLabel}" href="${accountPublicProfileAction}" variant="secondary" />
-					</c:if>
-				</div>
+					</div>
+				</c:if>
 
 				<c:if test="${not empty accountUpdated}">
 					<p class="auth-notice auth-notice--success">

@@ -45,7 +45,6 @@
 			<c:url var="resolvedFormAction" value="${formAction}" />
 
 			<main class="page-shell">
-				<ui:returnButton />
 				<section class="create-layout__main">
 					<header class="page-heading">
 						<h1 class="page-heading__title">
