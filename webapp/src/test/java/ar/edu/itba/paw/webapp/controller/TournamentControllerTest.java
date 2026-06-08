@@ -74,7 +74,11 @@ class TournamentControllerTest {
                                         tournamentService,
                                         tournamentRegistrationService,
                                         tournamentBracketService,
-                                        messageSource()))
+                                        messageSource(),
+                                        false,
+                                        "",
+                                        "",
+                                        0))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setControllerAdvice(new AccessExceptionHandler())
                         .build();

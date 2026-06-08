@@ -273,6 +273,26 @@
 								</div>
 							</dl>
 						</article>
+						<c:if test="${mapAvailable}">
+							<spring:message var="eventMapAria" code="event.detail.locationMap.aria" />
+							<c:url var="appRootUrl" value="/" />
+							<c:set var="contextAwareMapTileUrlTemplate"
+								value="${appRootUrl}${fn:substring(mapTileUrlTemplate, 1, fn:length(mapTileUrlTemplate))}" />
+							<div
+								class="event-detail-map"
+								data-event-map="true"
+								data-tile-url-template="${contextAwareMapTileUrlTemplate}"
+								data-attribution="${mapAttribution}"
+								data-latitude="${mapLatitude}"
+								data-longitude="${mapLongitude}"
+								data-zoom="${mapZoom}"
+								role="img"
+								aria-label="${eventMapAria}">
+								<c:if test="${not empty mapAttribution}">
+									<p class="event-detail-map__attribution"><c:out value="${mapAttribution}" /></p>
+								</c:if>
+							</div>
+						</c:if>
 
 						<article class="panel event-info-panel event-info-panel--hosted-by">
 							<dl class="event-info-panel__list">

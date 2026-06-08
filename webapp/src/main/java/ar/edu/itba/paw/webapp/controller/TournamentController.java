@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -52,22 +53,35 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class TournamentController {
+    private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
     private final MessageSource messageSource;
+    private final boolean mapPickerEnabled;
+    private final String mapTileUrlTemplate;
+    private final String mapAttribution;
+    private final int mapDefaultZoom;
 
     @Autowired
     public TournamentController(
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
-            final MessageSource messageSource) {
+            final MessageSource messageSource,
+            @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
+            @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
+            @Value("${map.tiles.attribution:}") final String mapAttribution,
+            @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
         this.messageSource = messageSource;
+        this.mapPickerEnabled = mapPickerEnabled;
+        this.mapTileUrlTemplate = mapTileUrlTemplate;
+        this.mapAttribution = mapAttribution;
+        this.mapDefaultZoom = mapDefaultZoom;
     }
 
     @GetMapping("/tournaments/{tournamentId:\\d+}")
@@ -105,6 +119,14 @@ public class TournamentController {
                 "tournamentNoticeCode", flashString(model, "tournamentNoticeCode").orElse(null));
         mav.addObject(
                 "tournamentErrorCode", flashString(model, "tournamentErrorCode").orElse(null));
+        mav.addObject(
+                "mapAvailable",
+                mapPickerEnabled && !mapTileUrlTemplate.isBlank() && tournament.hasCoordinates());
+        mav.addObject("mapLatitude", tournament.getLatitude());
+        mav.addObject("mapLongitude", tournament.getLongitude());
+        mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
+        mav.addObject("mapAttribution", mapAttribution);
+        mav.addObject("mapZoom", mapDefaultZoom);
         return mav;
     }
 
