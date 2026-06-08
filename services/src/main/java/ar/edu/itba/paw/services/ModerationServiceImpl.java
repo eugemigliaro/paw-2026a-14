@@ -222,7 +222,7 @@ public class ModerationServiceImpl implements ModerationService {
     public boolean canAppealReport(final ModerationReport report, final User reporter) {
         return report != null
                 && reporter != null
-                && isReporter(report, reporter)
+                && isReportTargetUser(report, reporter)
                 && report.getStatus() == ReportStatus.RESOLVED
                 && report.getAppealCount() < 1;
     }
@@ -288,9 +288,7 @@ public class ModerationServiceImpl implements ModerationService {
                                 () ->
                                         new ModerationException(
                                                 "report_not_found", "Report not found."));
-        if (report.getReporter() == null
-                || report.getReporter().getId() == null
-                || !report.getReporter().getId().equals(reporter.getId())) {
+        if (!isReportTargetUser(report, reporter)) {
             throw new ModerationException("report_not_found", "Report not found.");
         }
         if (report.getAppealCount() >= 1) {
@@ -552,6 +550,13 @@ public class ModerationServiceImpl implements ModerationService {
                 && report.getReporter().getId() != null
                 && reporter.getId() != null
                 && report.getReporter().getId().equals(reporter.getId());
+    }
+
+    private static boolean isReportTargetUser(final ModerationReport report, final User user) {
+        return report.getTargetType() == ReportTargetType.USER
+                && report.getTargetId() != null
+                && user.getId() != null
+                && report.getTargetId().equals(user.getId());
     }
 
     private void applyContentDelete(

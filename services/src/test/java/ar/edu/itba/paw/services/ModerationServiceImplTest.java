@@ -411,19 +411,19 @@ public class ModerationServiceImplTest {
     }
 
     @Test
-    public void canAppealReport_returnsTrueForOwnedResolvedReportWithoutAppeal() {
+    public void canAppealReport_returnsTrueForBannedTargetResolvedReportWithoutAppeal() {
         final boolean result =
                 moderationService.canAppealReport(
-                        sampleResolvedUserReport((short) 0), UserUtils.getUser(50L));
+                        sampleResolvedUserReport((short) 0), UserUtils.getUser(88L));
 
         Assertions.assertTrue(result);
     }
 
     @Test
-    public void canAppealReport_returnsFalseForOtherUsersReport() {
+    public void canAppealReport_returnsFalseForReporterWhoIsNotTarget() {
         final boolean result =
                 moderationService.canAppealReport(
-                        sampleResolvedUserReport((short) 0), UserUtils.getUser(51L));
+                        sampleResolvedUserReport((short) 0), UserUtils.getUser(50L));
 
         Assertions.assertFalse(result);
     }
@@ -432,7 +432,7 @@ public class ModerationServiceImplTest {
     public void canAppealReport_returnsFalseWhenAlreadyAppealed() {
         final boolean result =
                 moderationService.canAppealReport(
-                        sampleResolvedUserReport((short) 1), UserUtils.getUser(50L));
+                        sampleResolvedUserReport((short) 1), UserUtils.getUser(88L));
 
         Assertions.assertFalse(result);
     }
@@ -477,14 +477,14 @@ public class ModerationServiceImplTest {
                 .thenReturn(true);
 
         final ModerationReport appealed =
-                moderationService.appealReport(77L, UserUtils.getUser(50L), "Please reconsider");
+                moderationService.appealReport(77L, UserUtils.getUser(88L), "Please reconsider");
 
         Assertions.assertEquals(
                 77L, appealed.getId(), "The appealed report must be returned after storage");
     }
 
     @Test
-    public void appealReport_throwsModerationException_whenUserDoesNotOwnReport() {
+    public void appealReport_throwsModerationException_whenUserIsNotReportTarget() {
         final ModerationReport report = sampleUserReport();
 
         Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
@@ -494,8 +494,8 @@ public class ModerationServiceImplTest {
                         ModerationException.class,
                         () ->
                                 moderationService.appealReport(
-                                        77L, UserUtils.getUser(51L), "Please reconsider"),
-                        "A user must not be able to appeal another user's report");
+                                        77L, UserUtils.getUser(50L), "Please reconsider"),
+                        "The original reporter must not be able to appeal the target user's ban");
 
         Assertions.assertEquals(
                 "report_not_found",
@@ -534,7 +534,7 @@ public class ModerationServiceImplTest {
                 ModerationException.class,
                 () ->
                         moderationService.appealReport(
-                                77L, UserUtils.getUser(50L), "Second appeal attempt"),
+                                77L, UserUtils.getUser(88L), "Second appeal attempt"),
                 "A second appeal must be rejected regardless of its content");
     }
 
