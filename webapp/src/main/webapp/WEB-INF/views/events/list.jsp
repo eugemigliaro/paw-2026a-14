@@ -7,6 +7,7 @@
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <c:set var="resolvedPageTitleCode" value="${empty pageTitleCode ? 'app.brand' : pageTitleCode}" />
 <spring:message var="pageTitle" code="${resolvedPageTitleCode}" />
+<spring:message var="listTitle" code="events.title" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>

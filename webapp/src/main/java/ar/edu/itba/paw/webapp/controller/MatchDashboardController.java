@@ -106,9 +106,6 @@ public class MatchDashboardController {
                 selection,
                 result,
                 tournamentResult,
-                messageSource.getMessage("events.title", null, locale),
-                messageSource.getMessage("events.description", null, locale),
-                messageSource.getMessage("events.empty", null, locale),
                 messageSource,
                 matchParticipationService,
                 matchReservationService);

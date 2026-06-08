@@ -41,9 +41,6 @@ class MatchDashboardPageSupportTest {
     @BeforeEach
     void setUp() {
         final StaticMessageSource staticMessageSource = new StaticMessageSource();
-        staticMessageSource.addMessage("events.title", Locale.ENGLISH, "Events");
-        staticMessageSource.addMessage("events.description", Locale.ENGLISH, "Description");
-        staticMessageSource.addMessage("events.empty", Locale.ENGLISH, "Empty");
         staticMessageSource.addMessage("page.title.events", Locale.ENGLISH, "Events page");
         staticMessageSource.addMessage("filter.eventType", Locale.ENGLISH, "Type");
         staticMessageSource.addMessage("filter.eventType.matches", Locale.ENGLISH, "Matches");
@@ -113,9 +110,6 @@ class MatchDashboardPageSupportTest {
                         selection,
                         null,
                         tournamentResult,
-                        "Events",
-                        "Description",
-                        "Empty",
                         messageSource,
                         matchParticipationService,
                         matchReservationService);
@@ -170,9 +164,6 @@ class MatchDashboardPageSupportTest {
                         selection,
                         matchResult,
                         tournamentResult,
-                        "Events",
-                        "Description",
-                        "Empty",
                         messageSource,
                         matchParticipationService,
                         matchReservationService);

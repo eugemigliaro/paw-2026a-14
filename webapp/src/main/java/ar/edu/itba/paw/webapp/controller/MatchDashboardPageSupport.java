@@ -51,9 +51,6 @@ final class MatchDashboardPageSupport {
             final MatchDashboardQueryState.DashboardSelection selection,
             final PaginatedResult<Match> result,
             final PaginatedResult<Tournament> tournamentResult,
-            final String title,
-            final String description,
-            final String emptyMessage,
             final MessageSource messageSource,
             final MatchParticipationService matchParticipationService,
             final MatchReservationService matchReservationService) {
@@ -79,10 +76,9 @@ final class MatchDashboardPageSupport {
                 searchForm.getCategory().stream().map(EventCategory::getQueryValue).toList();
         final DateRangeBounds dateBounds = dateRangeBounds(selectedFilter);
 
+        // listTitle (events.title) is resolved in events/list.jsp via <spring:message>;
+        // description/empty copy is not rendered on this view.
         mav.addObject("pageTitleCode", pageTitleCode);
-        mav.addObject("listTitle", title);
-        mav.addObject("listDescription", description);
-        mav.addObject("emptyMessage", emptyMessage);
         mav.addObject("selectedType", selectedTypeStr);
         mav.addObject("selectedSort", sort);
         mav.addObject("selectedStartDateValue", startDate);
