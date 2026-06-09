@@ -8,13 +8,19 @@ import org.springframework.context.support.StaticMessageSource;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
+// the idea is to test the emails like a black box
+// assert that the user gets the data we are using when we call it
+// assert that we are using the preferred language for a given user
+// assert we are not leaking things like {0}
+
 public class ThymeleafMailTemplateRendererTest {
 
     private static final String EVENT_URL = "https://matchpoint.test/matches/40";
     private static final String LOGIN_URL = "http://localhost:8080/login";
+    private static final Locale SPANISH = Locale.of("es");
 
     @Test
-    public void testMatchNotificationInterpolatesRecipientFacingData() {
+    public void testMatchNotificationCarriesCallerDataToRecipient() {
         final ThymeleafMailTemplateRenderer renderer = renderer();
 
         final MailContent content =
@@ -30,14 +36,12 @@ public class ThymeleafMailTemplateRendererTest {
                                 EVENT_URL,
                                 Locale.ENGLISH));
 
-        // The values the caller passed reach the recipient: title, venue, and the action link.
+        // The data the caller passed reaches the recipient: title, venue, and the action link.
         Assertions.assertTrue(content.getHtmlBody().contains("Padel Night"));
         Assertions.assertTrue(content.getHtmlBody().contains("Downtown Club"));
         Assertions.assertTrue(content.getHtmlBody().contains(EVENT_URL));
         Assertions.assertTrue(content.getSubject().contains("Padel Night"));
-        // No message argument was left uninterpolated.
-        Assertions.assertFalse(content.getHtmlBody().contains("{0}"));
-        Assertions.assertFalse(content.getTextBody().contains("{0}"));
+        assertNothingLeaked(content);
     }
 
     @Test
@@ -58,13 +62,12 @@ public class ThymeleafMailTemplateRendererTest {
         final MailContent seven = renderer.renderRecurringMatchesUpdatedNotification(data, 7);
         final MailContent nine = renderer.renderRecurringMatchesUpdatedNotification(data, 9);
 
-        // Changing the count changes the output and the value itself appears (neither date in
-        // this fixture contains a 7 or a 9).
+        // The affected count drives the output: different counts render differently and the value
+        // itself appears (neither date in this fixture contains a 7 or a 9).
         Assertions.assertNotEquals(seven.getTextBody(), nine.getTextBody());
         Assertions.assertTrue(seven.getTextBody().contains("7"));
         Assertions.assertTrue(nine.getTextBody().contains("9"));
-        Assertions.assertFalse(seven.getTextBody().contains("{0}"));
-        Assertions.assertFalse(seven.getHtmlBody().contains("{0}"));
+        assertNothingLeaked(seven);
     }
 
     @Test
@@ -74,19 +77,20 @@ public class ThymeleafMailTemplateRendererTest {
         final MailContent english =
                 renderer.renderMatchCancelledNotification(cancelledData(Locale.ENGLISH));
         final MailContent spanish =
-                renderer.renderMatchCancelledNotification(cancelledData(Locale.of("es")));
+                renderer.renderMatchCancelledNotification(cancelledData(SPANISH));
 
-        // The document is tagged with the recipient's language and the localized renders differ.
+        // The recipient's locale drives the document language and the localized copy differs.
         Assertions.assertTrue(english.getHtmlBody().contains("lang=\"en\""));
         Assertions.assertTrue(spanish.getHtmlBody().contains("lang=\"es\""));
         Assertions.assertNotEquals(english.getHtmlBody(), spanish.getHtmlBody());
         // Localizing must not drop the recipient-facing essentials (caller data, action link).
         Assertions.assertTrue(spanish.getHtmlBody().contains("Padel Night"));
         Assertions.assertTrue(spanish.getHtmlBody().contains(EVENT_URL));
+        assertNothingLeaked(english);
     }
 
     @Test
-    public void testBanNotificationInterpolatesModerationDetails() {
+    public void testBanNotificationCarriesModerationDetails() {
         final ThymeleafMailTemplateRenderer renderer = renderer();
 
         final MailContent content =
@@ -102,6 +106,18 @@ public class ThymeleafMailTemplateRendererTest {
         Assertions.assertTrue(content.getHtmlBody().contains("player"));
         Assertions.assertTrue(content.getHtmlBody().contains("Repeated abuse"));
         Assertions.assertTrue(content.getHtmlBody().contains(LOGIN_URL));
+        assertNothingLeaked(content);
+    }
+
+    /**
+     * No raw message code and no un-interpolated argument reaches the recipient. This catches a
+     * renderer that asks for a key the bundle does not define (the code would leak through) or a
+     * message whose {@code {0}} argument was never supplied, without coupling the test to which
+     * specific keys the renderer uses.
+     */
+    private static void assertNothingLeaked(final MailContent content) {
+        Assertions.assertFalse(content.getHtmlBody().contains("mail."));
+        Assertions.assertFalse(content.getTextBody().contains("mail."));
         Assertions.assertFalse(content.getHtmlBody().contains("{0}"));
         Assertions.assertFalse(content.getTextBody().contains("{0}"));
     }
@@ -121,14 +137,14 @@ public class ThymeleafMailTemplateRendererTest {
 
     private static ThymeleafMailTemplateRenderer renderer() {
         return new ThymeleafMailTemplateRenderer(
-                htmlTemplateEngine(), textTemplateEngine(), messageSource());
+                templateEngine("HTML", ".html"), templateEngine("TEXT", ".txt"), messageSource());
     }
 
-    private static TemplateEngine htmlTemplateEngine() {
+    private static TemplateEngine templateEngine(final String mode, final String suffix) {
         final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("mail/");
-        resolver.setSuffix(".html");
-        resolver.setTemplateMode("HTML");
+        resolver.setSuffix(suffix);
+        resolver.setTemplateMode(mode);
         resolver.setCharacterEncoding("UTF-8");
         resolver.setCacheable(false);
 
@@ -137,108 +153,92 @@ public class ThymeleafMailTemplateRendererTest {
         return templateEngine;
     }
 
-    private static TemplateEngine textTemplateEngine() {
-        final ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
-        resolver.setPrefix("mail/");
-        resolver.setSuffix(".txt");
-        resolver.setTemplateMode("TEXT");
-        resolver.setCharacterEncoding("UTF-8");
-        resolver.setCacheable(false);
-
-        final TemplateEngine templateEngine = new TemplateEngine();
-        templateEngine.setTemplateResolver(resolver);
-        return templateEngine;
-    }
-
-    /**
-     * Rendering fixture: provides just enough copy for the templates exercised here to render. The
-     * tests never assert on these values, so the exact wording is irrelevant; only the en/es
-     * cancellation copy is duplicated, so the locale test has localized content to differ on.
-     */
+    // mock the message source necessary for this tests
+    // never checking these as contents of the template
     private static StaticMessageSource messageSource() {
         final StaticMessageSource messages = new StaticMessageSource();
-        final Locale es = Locale.of("es");
 
-        messages.addMessage("mail.cta.viewEvent", Locale.ENGLISH, "View event");
-        messages.addMessage("mail.matchLifecycle.requestedFor", Locale.ENGLISH, "Requested for");
-        messages.addMessage("mail.matchLifecycle.details", Locale.ENGLISH, "Details");
-        messages.addMessage("mail.matchLifecycle.field.matchTitle", Locale.ENGLISH, "Match");
-        messages.addMessage("mail.matchLifecycle.field.sport", Locale.ENGLISH, "Sport");
-        messages.addMessage("mail.matchLifecycle.field.address", Locale.ENGLISH, "Venue");
-        messages.addMessage("mail.matchLifecycle.field.startsAt", Locale.ENGLISH, "Starts at");
-        messages.addMessage("mail.matchLifecycle.field.endsAt", Locale.ENGLISH, "Ends at");
-        messages.addMessage("mail.matchLifecycle.field.status", Locale.ENGLISH, "Status");
-        messages.addMessage(
-                "mail.matchLifecycle.field.affectedDates", Locale.ENGLISH, "Affected dates");
-        messages.addMessage(
-                "mail.matchLifecycle.affectedDates", Locale.ENGLISH, "{0} recurring dates");
+        en(messages, "mail.cta.viewEvent", "View event");
+        en(messages, "mail.matchLifecycle.requestedFor", "Requested for");
+        en(messages, "mail.matchLifecycle.details", "Details");
+        en(messages, "mail.matchLifecycle.field.matchTitle", "Match");
+        en(messages, "mail.matchLifecycle.field.sport", "Sport");
+        en(messages, "mail.matchLifecycle.field.address", "Venue");
+        en(messages, "mail.matchLifecycle.field.startsAt", "Starts at");
+        en(messages, "mail.matchLifecycle.field.endsAt", "Ends at");
+        en(messages, "mail.matchLifecycle.field.status", "Status");
+        en(messages, "mail.matchLifecycle.field.affectedDates", "Affected dates");
+        en(messages, "mail.matchLifecycle.affectedDates", "{0} recurring dates");
 
-        messages.addMessage("mail.matchLifecycle.updated.eyebrow", Locale.ENGLISH, "Event updated");
-        messages.addMessage("mail.matchLifecycle.updated.title", Locale.ENGLISH, "{0} was updated");
-        messages.addMessage(
+        en(messages, "mail.matchLifecycle.updated.eyebrow", "Event updated");
+        en(messages, "mail.matchLifecycle.updated.title", "{0} was updated");
+        en(
+                messages,
                 "mail.matchLifecycle.updated.summary",
-                Locale.ENGLISH,
                 "The host updated an event you joined.");
-        messages.addMessage(
-                "mail.matchLifecycle.updated.subject", Locale.ENGLISH, "Event updated: {0}");
+        en(messages, "mail.matchLifecycle.updated.subject", "Event updated: {0}");
 
-        messages.addMessage(
-                "mail.matchLifecycle.recurringUpdated.eyebrow",
-                Locale.ENGLISH,
-                "Recurring event updated");
-        messages.addMessage(
+        en(messages, "mail.matchLifecycle.recurringUpdated.eyebrow", "Recurring event updated");
+        en(
+                messages,
                 "mail.matchLifecycle.recurringUpdated.title",
-                Locale.ENGLISH,
-                "Recurring dates for {0} were updated");
-        messages.addMessage(
-                "mail.matchLifecycle.recurringUpdated.summary",
-                Locale.ENGLISH,
-                "The host updated {0} recurring dates you joined.");
-        messages.addMessage(
+                "Recurring dates for {0} updated");
+        en(messages, "mail.matchLifecycle.recurringUpdated.summary", "The host updated {0} dates.");
+        en(
+                messages,
                 "mail.matchLifecycle.recurringUpdated.subject",
-                Locale.ENGLISH,
                 "Recurring event updated: {0}");
 
-        messages.addMessage(
-                "mail.matchLifecycle.cancelled.eyebrow", Locale.ENGLISH, "Event cancelled");
-        messages.addMessage("mail.matchLifecycle.cancelled.eyebrow", es, "Evento cancelado");
-        messages.addMessage(
-                "mail.matchLifecycle.cancelled.title", Locale.ENGLISH, "{0} was cancelled");
-        messages.addMessage("mail.matchLifecycle.cancelled.title", es, "{0} fue cancelado");
-        messages.addMessage(
+        // Cancellation copy in both locales so the locale render genuinely differs.
+        both(
+                messages,
+                "mail.matchLifecycle.cancelled.eyebrow",
+                "Event cancelled",
+                "Evento cancelado");
+        both(
+                messages,
+                "mail.matchLifecycle.cancelled.title",
+                "{0} was cancelled",
+                "{0} fue cancelado");
+        both(
+                messages,
                 "mail.matchLifecycle.cancelled.summary",
-                Locale.ENGLISH,
-                "The host cancelled an event you joined.");
-        messages.addMessage(
-                "mail.matchLifecycle.cancelled.summary",
-                es,
+                "The host cancelled an event you joined.",
                 "El organizador canceló un evento al que te sumaste.");
-        messages.addMessage(
+        both(
+                messages,
                 "mail.matchLifecycle.cancelled.notice",
-                Locale.ENGLISH,
-                "Your reservation is no longer active for this event.");
-        messages.addMessage(
-                "mail.matchLifecycle.cancelled.notice",
-                es,
+                "Your reservation is no longer active for this event.",
                 "Tu reserva ya no sigue activa para este evento.");
-        messages.addMessage(
-                "mail.matchLifecycle.cancelled.subject", Locale.ENGLISH, "Event cancelled: {0}");
-        messages.addMessage("mail.matchLifecycle.cancelled.subject", es, "Evento cancelado: {0}");
+        both(
+                messages,
+                "mail.matchLifecycle.cancelled.subject",
+                "Event cancelled: {0}",
+                "Evento cancelado: {0}");
 
-        messages.addMessage("mail.moderation.ban.eyebrow", Locale.ENGLISH, "Moderation notice");
-        messages.addMessage(
-                "mail.moderation.ban.title", Locale.ENGLISH, "Your account is temporarily banned");
-        messages.addMessage(
-                "mail.moderation.ban.summary", Locale.ENGLISH, "Review the details below.");
-        messages.addMessage("mail.moderation.ban.username", Locale.ENGLISH, "User");
-        messages.addMessage("mail.moderation.ban.until", Locale.ENGLISH, "Banned until");
-        messages.addMessage("mail.moderation.ban.reason", Locale.ENGLISH, "Reason");
-        messages.addMessage("mail.moderation.ban.login", Locale.ENGLISH, "Sign in");
-        messages.addMessage(
-                "mail.moderation.ban.subject",
-                Locale.ENGLISH,
-                "Your Match Point account has been temporarily banned");
+        en(messages, "mail.moderation.ban.eyebrow", "Moderation notice");
+        en(messages, "mail.moderation.ban.title", "Your account is temporarily banned");
+        en(messages, "mail.moderation.ban.summary", "Review the details below.");
+        en(messages, "mail.moderation.ban.username", "User");
+        en(messages, "mail.moderation.ban.until", "Banned until");
+        en(messages, "mail.moderation.ban.reason", "Reason");
+        en(messages, "mail.moderation.ban.login", "Sign in");
+        en(messages, "mail.moderation.ban.subject", "Your account has been temporarily banned");
 
         return messages;
+    }
+
+    private static void en(
+            final StaticMessageSource messages, final String code, final String text) {
+        messages.addMessage(code, Locale.ENGLISH, text);
+    }
+
+    private static void both(
+            final StaticMessageSource messages,
+            final String code,
+            final String english,
+            final String spanish) {
+        messages.addMessage(code, Locale.ENGLISH, english);
+        messages.addMessage(code, SPANISH, spanish);
     }
 }
