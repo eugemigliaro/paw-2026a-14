@@ -20,10 +20,19 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final MvcRequestMatcher.Builder mvc;
+
+    public SecurityConfig(final HandlerMappingIntrospector introspector) {
+        this.mvc = new MvcRequestMatcher.Builder(introspector);
+    }
 
     private static Long longVar(RequestAuthorizationContext ctx, String name) {
         return Long.parseLong(ctx.getVariables().get(name));
@@ -53,71 +62,101 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         authorize ->
                                 authorize
-                                        .requestMatchers("/", "/errors/**")
+                                        .requestMatchers(
+                                                mvc.pattern("/"), mvc.pattern("/errors/**"))
                                         .permitAll()
                                         .requestMatchers(
-                                                HttpMethod.GET,
-                                                "/login",
-                                                "/register",
-                                                "/forgot-password",
-                                                "/password-reset/**")
+                                                mvc.pattern(HttpMethod.GET, "/login"),
+                                                mvc.pattern(HttpMethod.GET, "/register"),
+                                                mvc.pattern(HttpMethod.GET, "/forgot-password"),
+                                                mvc.pattern(HttpMethod.GET, "/password-reset/**"))
                                         .anonymous()
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/register",
-                                                "/register/resend-verification",
-                                                "/forgot-password",
-                                                "/password-reset/**")
+                                                mvc.pattern(HttpMethod.POST, "/register"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/register/resend-verification"),
+                                                mvc.pattern(HttpMethod.POST, "/forgot-password"),
+                                                mvc.pattern(HttpMethod.POST, "/password-reset/**"))
                                         .anonymous()
-                                        .requestMatchers("/verifications/**")
+                                        .requestMatchers(mvc.pattern("/verifications/**"))
                                         .anonymous()
                                         .requestMatchers(
-                                                HttpMethod.GET,
-                                                "/matches/**",
-                                                "/tournaments/**",
-                                                "/images/**",
-                                                "/users/**")
-                                        .permitAll()
-                                        .requestMatchers(HttpMethod.POST, "/explore/location")
+                                                mvc.pattern(HttpMethod.GET, "/matches/**"),
+                                                mvc.pattern(HttpMethod.GET, "/tournaments/**"),
+                                                mvc.pattern(HttpMethod.GET, "/images/**"),
+                                                mvc.pattern(HttpMethod.GET, "/users/**"))
                                         .permitAll()
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/matches/*/reservations",
-                                                "/matches/*/reservations/cancel",
-                                                "/matches/*/recurring-reservations",
-                                                "/matches/*/series-reservations",
-                                                "/matches/*/recurring-reservations/cancel",
-                                                "/matches/*/series-reservations/cancel",
-                                                "/matches/*/join-requests",
-                                                "/matches/*/recurring-join-requests",
-                                                "/matches/*/series-join-requests",
-                                                "/matches/*/join-requests/cancel",
-                                                "/matches/*/invites/accept",
-                                                "/matches/*/invites/decline")
+                                                mvc.pattern(HttpMethod.POST, "/explore/location"))
+                                        .permitAll()
+                                        .requestMatchers(
+                                                mvc.pattern(
+                                                        HttpMethod.POST, "/matches/*/reservations"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/reservations/cancel"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/recurring-reservations"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/series-reservations"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/recurring-reservations/cancel"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/series-reservations/cancel"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/join-requests"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/recurring-join-requests"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/series-join-requests"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/join-requests/cancel"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/invites/accept"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/matches/*/invites/decline"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/tournaments/*/solo-entry",
-                                                "/tournaments/*/solo-entry/leave")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/tournaments/*/solo-entry"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/tournaments/*/solo-entry/leave"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
-                                                HttpMethod.POST, "/users/{username}/reviews")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/users/{username}/reviews"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canReviewUser(
                                                                         strVar(ctx, "username"))))
                                         .requestMatchers(
-                                                HttpMethod.POST, "/users/{username}/reviews/delete")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/users/{username}/reviews/delete"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canDeleteReview(
                                                                         strVar(ctx, "username"))))
                                         .requestMatchers(
-                                                "/reports/users/{username}",
-                                                "/reports/reviews/{reviewId}",
-                                                "/reports/matches/{matchId}")
+                                                mvc.pattern("/reports/users/{username}"),
+                                                mvc.pattern("/reports/reviews/{reviewId}"),
+                                                mvc.pattern("/reports/matches/{matchId}"))
                                         .access(
                                                 (auth, ctx) -> {
                                                     String uri = ctx.getRequest().getRequestURI();
@@ -133,32 +172,40 @@ public class SecurityConfig {
                                                             security.canReportMatch(
                                                                     longVar(ctx, "matchId")));
                                                 })
-                                        .requestMatchers(HttpMethod.GET, "/reports/mine/{reportId}")
+                                        .requestMatchers(
+                                                mvc.pattern(
+                                                        HttpMethod.GET, "/reports/mine/{reportId}"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canViewOwnReport(
                                                                         longVar(ctx, "reportId"))))
                                         .requestMatchers(
-                                                HttpMethod.POST, "/reports/mine/{reportId}/appeal")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/reports/mine/{reportId}/appeal"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canAppealReport(
                                                                         longVar(ctx, "reportId"))))
-                                        .requestMatchers("/reports/**")
-                                        .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(HttpMethod.GET, "/account/ban")
-                                        .access((auth, ctx) -> allow(security.canAppealBan()))
-                                        .requestMatchers(HttpMethod.POST, "/account/ban/appeal")
-                                        .access((auth, ctx) -> allow(security.canAppealBan()))
-                                        .requestMatchers("/admin/**", "/moderation/**")
-                                        .hasRole("ADMIN_MOD")
-                                        .requestMatchers("/host/matches/new")
+                                        .requestMatchers(mvc.pattern("/reports/**"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
-                                                "/host/matches/{matchId}/edit",
-                                                "/host/matches/{matchId}/series/edit")
+                                                mvc.pattern(HttpMethod.GET, "/account/ban"))
+                                        .access((auth, ctx) -> allow(security.canAppealBan()))
+                                        .requestMatchers(
+                                                mvc.pattern(HttpMethod.POST, "/account/ban/appeal"))
+                                        .access((auth, ctx) -> allow(security.canAppealBan()))
+                                        .requestMatchers(
+                                                mvc.pattern("/admin/**"),
+                                                mvc.pattern("/moderation/**"))
+                                        .hasRole("ADMIN_MOD")
+                                        .requestMatchers(mvc.pattern("/host/matches/new"))
+                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                        .requestMatchers(
+                                                mvc.pattern("/host/matches/{matchId}/edit"),
+                                                mvc.pattern("/host/matches/{matchId}/series/edit"))
                                         .access(
                                                 (auth, ctx) -> {
                                                     String uri = ctx.getRequest().getRequestURI();
@@ -171,9 +218,12 @@ public class SecurityConfig {
                                                                     longVar(ctx, "matchId")));
                                                 })
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/host/matches/{matchId}/cancel",
-                                                "/host/matches/{matchId}/series/cancel")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/matches/{matchId}/cancel"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/matches/{matchId}/series/cancel"))
                                         .access(
                                                 (auth, ctx) -> {
                                                     String uri = ctx.getRequest().getRequestURI();
@@ -186,48 +236,61 @@ public class SecurityConfig {
                                                                     longVar(ctx, "matchId")));
                                                 })
                                         .requestMatchers(
-                                                HttpMethod.GET,
-                                                "/host/matches/{matchId}/participants")
+                                                mvc.pattern(
+                                                        HttpMethod.GET,
+                                                        "/host/matches/{matchId}/participants"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canViewParticipants(
                                                                         longVar(ctx, "matchId"))))
                                         .requestMatchers(
-                                                HttpMethod.GET, "/host/matches/{matchId}/requests")
+                                                mvc.pattern(
+                                                        HttpMethod.GET,
+                                                        "/host/matches/{matchId}/requests"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canApproveJoinRequests(
                                                                         longVar(ctx, "matchId"))))
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/host/matches/{matchId}/requests/{userId}/approve",
-                                                "/host/matches/{matchId}/requests/{userId}/reject")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/matches/{matchId}/requests/{userId}/approve"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/matches/{matchId}/requests/{userId}/reject"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canApproveJoinRequests(
                                                                         longVar(ctx, "matchId"))))
-                                        .requestMatchers("/host/matches/{matchId}/invites")
+                                        .requestMatchers(
+                                                mvc.pattern("/host/matches/{matchId}/invites"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canInviteParticipants(
                                                                         longVar(ctx, "matchId"))))
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/host/matches/{matchId}/participants/{userId}/remove")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/matches/{matchId}/participants/{userId}/remove"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
                                                                 security.canManageParticipants(
                                                                         longVar(ctx, "matchId"))))
-                                        .requestMatchers(HttpMethod.GET, "/host/tournaments/new")
+                                        .requestMatchers(
+                                                mvc.pattern(
+                                                        HttpMethod.GET, "/host/tournaments/new"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(HttpMethod.POST, "/host/tournaments")
+                                        .requestMatchers(
+                                                mvc.pattern(HttpMethod.POST, "/host/tournaments"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers("/host/tournaments/{tournamentId}/edit")
+                                        .requestMatchers(
+                                                mvc.pattern(
+                                                        "/host/tournaments/{tournamentId}/edit"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
@@ -236,9 +299,12 @@ public class SecurityConfig {
                                                                                 ctx,
                                                                                 "tournamentId"))))
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/host/tournaments/{tournamentId}/close-registration",
-                                                "/host/tournaments/{tournamentId}/cancel")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/tournaments/{tournamentId}/close-registration"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/tournaments/{tournamentId}/cancel"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
@@ -247,11 +313,16 @@ public class SecurityConfig {
                                                                                 ctx,
                                                                                 "tournamentId"))))
                                         .requestMatchers(
-                                                "/host/tournaments/{tournamentId}/bracket/strategy",
-                                                "/host/tournaments/{tournamentId}/bracket/generate",
-                                                "/host/tournaments/{tournamentId}/bracket/manual-pairings",
-                                                "/host/tournaments/{tournamentId}/bracket/publish",
-                                                "/host/tournaments/{tournamentId}/bracket/setup")
+                                                mvc.pattern(
+                                                        "/host/tournaments/{tournamentId}/bracket/strategy"),
+                                                mvc.pattern(
+                                                        "/host/tournaments/{tournamentId}/bracket/generate"),
+                                                mvc.pattern(
+                                                        "/host/tournaments/{tournamentId}/bracket/manual-pairings"),
+                                                mvc.pattern(
+                                                        "/host/tournaments/{tournamentId}/bracket/publish"),
+                                                mvc.pattern(
+                                                        "/host/tournaments/{tournamentId}/bracket/setup"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
@@ -260,8 +331,9 @@ public class SecurityConfig {
                                                                                 ctx,
                                                                                 "tournamentId"))))
                                         .requestMatchers(
-                                                HttpMethod.POST,
-                                                "/host/tournaments/{tournamentId}/matches/{matchId}/winner")
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/host/tournaments/{tournamentId}/matches/{matchId}/winner"))
                                         .access(
                                                 (auth, ctx) ->
                                                         allow(
@@ -295,7 +367,12 @@ public class SecurityConfig {
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return web -> web.ignoring().requestMatchers("/css/**", "/js/**", "/assets/**");
+        return web ->
+                web.ignoring()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/css/**"),
+                                new AntPathRequestMatcher("/js/**"),
+                                new AntPathRequestMatcher("/assets/**"));
     }
 
     @Bean
