@@ -509,7 +509,7 @@ class SecurityConfigTest {
         assertNotNull(rememberMeCookie);
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/new").cookie(rememberMeCookie))
+        mockMvc.perform(get("/tournaments/new").cookie(rememberMeCookie))
                 .andExpect(status().isOk());
     }
 

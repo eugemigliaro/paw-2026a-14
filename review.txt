@@ -1,0 +1,44 @@
+1. Verification & password-reset routes broken for authenticated users (403)
+
+webapp/.../config/SecurityConfig.java:50 — High
+
+/login (GET), /register, /register/resend-verification, /forgot-password, /password-reset/**, and /verifications/** were changed from .permitAll() to .anonymous(). In Spring Security, .anonymous() grants access only to an AnonymousAuthenticationToken; an authenticated session is denied with 403. So a logged-in user who clicks a password-reset link, a resend-verification link, or any /verifications/** link gets a 403 before the controller (and its VerificationExceptionHandler/PasswordResetExceptionHandler) ever runs. AGENTS.md explicitly requires preserving access through verification links, and no test exercises the authenticated-hits-these-routes path. /login and /register GET being anonymous-only is defensible; the email-driven recovery routes are not.
+
+2. Tournament free-text searrds
+                                                                                 persistence/.../TournamentJp
+                                                                                 appendSearchFilter builds "%) + "%" against plain LIKE:query with no ESCAPE clause, while MatchJpaDao.java:828-838 correctly uses      escapeLikePattern(...) + LIKly reachable because thissame branch widened the SearchForm.q regex from ^[\p{L}\p{N} ]*$ to one that now allows %, _, \, etc. A tourninterprets those as SQLwildcards → over-broad/incorrect results, inconsistent with match search.        
+3. NotFound/Forbidden handler returns 302, not 404/403                           
+webapp/.../exception/AccessExceptionHandler.java:16 — Medium                     
+@ExceptionHandler methods are annotated @ResponseStatus(NOT_FOUND/FORBIDDEN) but return new ModelAndView("redView.sendRedirect() overrides the status the annotation set, so the requested URL actually responds 302, and only
+the follow-up GET /errors/40ere main returned animmediate 404/403 on the requested URL, callers/crawlers/tests now see a redirect
+chain and the @ResponseStatu render the error viewdirectly (no redirect:) or drop the misleading annotation.
+
+4. register() lost its exception catch — 500 on duplicate-registration race, and
+pending-verification mis-mes
+
+webapp/.../controller/AuthCo
+
+register() calls accountAuth try/catch, and the only@ControllerAdvice classes are AccessExceptionHandler, PasswordResetExceptionHandler,
+VerificationExceptionHandlerrationException. The formvalidators (@ValidUserEmail/@ValidUsername) normally pre-empt the taken-email/username
+cases, but on a TOCTOU race  of the same email passvalidation, second hits EmailTakenException) the exception is uncaught → 500.
+Separately, an unverified penow triggers @ValidUserEmailwith message auth.registration.error.emailTaken instead of the old
+EmailPendingVerificationExcek your inbox / resendverification" affordance.
+
+5. Ownership check lives in the controller; scoped ser
+webapp/.../controller/UserModerationReportController.j
+The detail handler calls the unscoped findReportById(rreport.getReporter().getId()controller — exactly theownership logic AGENTS.md says belongs in the service ModerationService.findReportorter) exists, isimplemented, and is even stubbed by UserModerationRepoproduction code never calls thod, ownership logic in thewrong layer, and a test wired to a method the controll
+6. SearchFormValidator uses default-zone LocalDate.now
+webapp/.../validation/SearchFormValidator.java:35 — Lo
+validateDateRange compares form dates against raw Locawhereas the rest of the codelatformTime (seeCreateEventFormValidator). On a UTC-deployed JVM with a same-day UPCOMING search sected withSearchForm.error.startDateInPast even though it's valiUse LocalDate.now(PlatformTi
+                                                      7. SecurityControllerUtils.arityAuthorities.forRole
+                                                      webapp/.../utils/SecurityConleanup)
+                                                      This branch created Securitycentralize role→authoritymapping (and refactored AccountAuthenticationProvider SecurityControllerUtils.autht re-hardcodes the"ROLE_ADMIN_MOD"/"ROLE_USER" literals. Verified-accounauthorities from a second cof roles change. CallSecurityAuthorities.forRole(...) and delete the privat
+8. Unused latitude/longitude parameters in distance he
+webapp/.../utils/EventCardAttributeUtils.java:44 — Low
+matchDistanceLabels/tournamentDistanceLabels take (latread only getDistanceKmFromVdead, and FeedControllerbuilds extra exploreLocation == null ? null : ... ternDrop the unused params so thand so nobody "fixes" it byre-computing distance, duplicating the DAO-side havers
+9. Same series-reservation query run twice per detail 
+services/.../MatchServiceImpl.java:855 — Low (efficien
+buildSeriesReservationState and buildSeriesJoinRequestmatchParticipantDataService.tchIdsForSeries(seriesId,viewer, now) for the same render — two identical DB rothe already-shared occurrenc
+                                                      10. Overlapping permission vender
+                                                      services/.../MatchServiceImpion)
+                                                      getMatchManagementPermissionseparate service methodsrecomputing the same host/manager/editable facts (and EventPageSupport.buildMatchDhInteractionState on onematch). They already disagree subtly — managementPermissions gates on isMatchManagementLifecycleOpses isEditableMatch — so thebutton-disabled state and the actual mutation guard can drift. Consider one capability object derived once.

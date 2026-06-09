@@ -58,6 +58,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
@@ -354,17 +355,16 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void showEventsPageWithInvalidBindingReturnsControlledResponse() {
+    void showEventsPageWithInvalidStructuralBindingReturnsControlledResponse() {
         AuthenticationUtils.authenticateUser(1L);
 
         final SearchForm searchForm = new SearchForm();
-        searchForm.setQ("bad!");
         searchForm.setType(EventType.MATCH);
         searchForm.setMinPrice(BigDecimal.ONE);
 
         final BeanPropertyBindingResult bindingResult =
                 new BeanPropertyBindingResult(searchForm, "searchForm");
-        bindingResult.rejectValue("q", "Pattern");
+        bindingResult.rejectValue("maxPrice", "maxPriceLessThanMin");
 
         try {
             controller.showMatchesPage(UserUtils.getUser(1L), searchForm, bindingResult);
@@ -410,6 +410,17 @@ class MatchDashboardControllerTest {
         Assertions.assertEquals("/matches", listControls.getSearchAction());
         Assertions.assertNull(firstSortOption.getHref());
         Assertions.assertTrue(firstSortOption.getParams().containsKey("sort"));
+    }
+
+    @Test
+    void getMatchesRouteWithWildcardQueryRendersPageWithInlineError() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        validatingMockMvc()
+                .perform(get("/matches").param("q", "%"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("events/list"))
+                .andExpect(model().attributeHasFieldErrors("searchForm", "q"));
     }
 
     @Test
@@ -592,6 +603,20 @@ class MatchDashboardControllerTest {
     private Map<Long, List<String>> eventRelationshipBadgeCodes(final MvcResult result) {
         return (Map<Long, List<String>>)
                 result.getModelAndView().getModel().get("eventRelationshipBadgeCodes");
+    }
+
+    private MockMvc validatingMockMvc() {
+        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".jsp"))
+                .setLocaleResolver(localeResolver())
+                .addInterceptors(localeChangeInterceptor())
+                .defaultRequest(get("/").locale(Locale.ENGLISH))
+                .setConversionService(conversionService())
+                .setValidator(validator)
+                .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
+                .build();
     }
 
     private static DefaultFormattingConversionService conversionService() {

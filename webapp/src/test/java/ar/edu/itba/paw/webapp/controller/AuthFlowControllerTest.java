@@ -80,7 +80,7 @@ class AuthFlowControllerTest {
                         .addInterceptors(localeChangeInterceptor())
                         .setValidator(validator)
                         .setControllerAdvice(
-                                new AccessExceptionHandler(),
+                                new AccessExceptionHandler(messageSource),
                                 new PasswordResetExceptionHandler(),
                                 new VerificationExceptionHandler())
                         .build();

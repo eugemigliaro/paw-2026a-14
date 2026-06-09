@@ -170,7 +170,7 @@ class HostControllerTest {
                         .setValidator(validator)
                         .setConversionService(formattingConversionServiceWithSportConverter())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
-                        .setControllerAdvice(new AccessExceptionHandler())
+                        .setControllerAdvice(new AccessExceptionHandler(messageSource))
                         .build();
     }
 

@@ -102,9 +102,14 @@ public class FeedController {
             // building apparently)
             final HttpSession session,
             final Locale locale) {
-        if (bindingResult.hasErrors()) {
+        // A malformed free-text query should not produce an error page: render the
+        // feed with the inline validation message and ignore the invalid query for
+        // the search itself. Structural binding problems (page, dates, prices) remain
+        // a controlled 400.
+        if (hasErrorsOutsideQuery(bindingResult)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
+        final String searchQuery = bindingResult.hasFieldErrors("q") ? "" : searchForm.getQ();
 
         final ExploreLocation exploreLocation = exploreLocation(session);
         final DateRange selectedDateRange =
@@ -156,7 +161,7 @@ public class FeedController {
         mav.addObject(
                 "sortOptions",
                 buildSortOptions(
-                        searchForm.getQ(),
+                        searchQuery,
                         searchForm.getType(),
                         selectedSort,
                         selectedSports,
@@ -167,7 +172,7 @@ public class FeedController {
         if (EventType.TOURNAMENT == searchForm.getType()) {
             final PaginatedResult<Tournament> result =
                     tournamentService.searchPublicTournaments(
-                            searchForm.getQ(),
+                            searchQuery,
                             searchForm.getSport(),
                             selectedDateRange.startDate(),
                             selectedDateRange.endDate(),
@@ -181,7 +186,7 @@ public class FeedController {
             addTournamentFeedAttributes(
                     mav,
                     user,
-                    searchForm.getQ(),
+                    searchQuery,
                     searchForm.getType(),
                     selectedSort,
                     selectedSports,
@@ -196,7 +201,7 @@ public class FeedController {
         } else {
             final PaginatedResult<Match> result =
                     matchService.searchPublicMatches(
-                            searchForm.getQ(),
+                            searchQuery,
                             searchForm.getSport(),
                             selectedDateRange.startDate(),
                             selectedDateRange.endDate(),
@@ -210,7 +215,7 @@ public class FeedController {
             addMatchFeedAttributes(
                     mav,
                     user,
-                    searchForm.getQ(),
+                    searchQuery,
                     searchForm.getType(),
                     selectedSort,
                     selectedSports,
@@ -231,6 +236,14 @@ public class FeedController {
         mav.addObject("mapDefaultLongitude", mapDefaultLongitude);
         mav.addObject("mapDefaultZoom", mapDefaultZoom);
         return mav;
+    }
+
+    private static boolean hasErrorsOutsideQuery(final BindingResult bindingResult) {
+        if (bindingResult.hasGlobalErrors()) {
+            return true;
+        }
+        return bindingResult.getFieldErrors().stream()
+                .anyMatch(error -> !"q".equals(error.getField()));
     }
 
     @PostMapping("/explore/location")

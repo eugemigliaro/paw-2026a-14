@@ -105,12 +105,17 @@ public class MatchDashboardController {
             final String pageTitleCode,
             final String listTitleCode) {
         searchForm.setType(routeType);
-        if (bindingResult.hasErrors()) {
+        // A malformed free-text query should not produce an error page: render the
+        // listing with the inline validation message and ignore the invalid query
+        // for the search itself. Structural binding problems (page, dates, prices)
+        // remain a controlled 400.
+        if (hasErrorsOutsideQuery(bindingResult)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final SearchForm viewSearchForm = selection.searchForm();
+        final String searchQuery = bindingResult.hasFieldErrors("q") ? "" : viewSearchForm.getQ();
 
         final PaginatedResult<Match> result =
                 selection.tournament()
@@ -119,7 +124,7 @@ public class MatchDashboardController {
                                 user,
                                 selection.upcoming(),
                                 selection.includeHosted(),
-                                viewSearchForm.getQ(),
+                                searchQuery,
                                 viewSearchForm.getSport(),
                                 viewSearchForm.getStatus(),
                                 viewSearchForm.getStartDate(),
@@ -136,7 +141,7 @@ public class MatchDashboardController {
                                 user,
                                 selection.upcoming(),
                                 selection.includeHosted(),
-                                viewSearchForm.getQ(),
+                                searchQuery,
                                 viewSearchForm.getSport(),
                                 viewSearchForm.getStartDate(),
                                 viewSearchForm.getEndDate(),
@@ -149,17 +154,33 @@ public class MatchDashboardController {
                                 viewSearchForm.getLongitude())
                         : null;
 
-        return MatchDashboardPageSupport.buildListPage(
-                user,
-                "events/list",
-                path,
-                pageTitleCode,
-                listTitleCode,
-                selection,
-                result,
-                tournamentResult,
-                matchParticipationService,
-                matchReservationService,
-                tournamentService);
+        final ModelAndView mav =
+                MatchDashboardPageSupport.buildListPage(
+                        user,
+                        "events/list",
+                        path,
+                        pageTitleCode,
+                        listTitleCode,
+                        selection,
+                        result,
+                        tournamentResult,
+                        matchParticipationService,
+                        matchReservationService,
+                        tournamentService);
+        if (bindingResult.hasFieldErrors("q")) {
+            // Expose the bound form (whose BindingResult carries the query error) so the
+            // listing re-renders with the inline validation message instead of the
+            // normalized copy, which would drop the error.
+            mav.addObject("searchForm", searchForm);
+        }
+        return mav;
+    }
+
+    private static boolean hasErrorsOutsideQuery(final BindingResult bindingResult) {
+        if (bindingResult.hasGlobalErrors()) {
+            return true;
+        }
+        return bindingResult.getFieldErrors().stream()
+                .anyMatch(error -> !"q".equals(error.getField()));
     }
 }
