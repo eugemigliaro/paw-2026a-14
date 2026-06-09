@@ -115,7 +115,7 @@ public class TournamentJpaDaoTest {
     public void shouldFindHostedAndPublicActiveTournaments() {
         final Tournament first = createTournament(TournamentStatus.REGISTRATION);
         final Tournament second = createTournament(TournamentStatus.IN_PROGRESS);
-        createTournament(TournamentStatus.COMPLETED);
+        final Tournament completed = createTournament(TournamentStatus.COMPLETED);
         final Tournament unscheduled = createUnscheduledTournament(TournamentStatus.REGISTRATION);
         createTournament(player, "Other Host Cup", TournamentStatus.REGISTRATION);
         final Tournament deleted = createTournament(TournamentStatus.REGISTRATION);
@@ -162,9 +162,12 @@ public class TournamentJpaDaoTest {
                         10);
         final List<Tournament> publicActive = tournamentDao.findPublicRegistrationOrLive(0, 10);
 
-        Assertions.assertEquals(4, hosted.size());
-        Assertions.assertEquals(4, hostedCount);
+        Assertions.assertEquals(3, hosted.size());
+        Assertions.assertEquals(3, hostedCount);
         Assertions.assertTrue(hosted.stream().anyMatch(t -> t.getId().equals(unscheduled.getId())));
+        Assertions.assertTrue(hosted.stream().noneMatch(t -> t.getId().equals(completed.getId())));
+        Assertions.assertTrue(
+                hostedPast.stream().anyMatch(t -> t.getId().equals(completed.getId())));
         Assertions.assertTrue(
                 hostedPast.stream().noneMatch(t -> t.getId().equals(unscheduled.getId())));
         Assertions.assertEquals(4, publicActive.size());
@@ -203,6 +206,51 @@ public class TournamentJpaDaoTest {
 
         Assertions.assertEquals(List.of(active.getId()), tournamentIds(upcoming));
         Assertions.assertEquals(1, upcomingCount);
+    }
+
+    @Test
+    public void shouldTreatCompletedTournamentsAsPastInDashboardEvenWhenEndsInFuture() {
+        final Tournament completed = createTournament(TournamentStatus.COMPLETED);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> upcoming =
+                tournamentDao.findDashboardTournaments(
+                        host,
+                        Boolean.TRUE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
+        final List<Tournament> past =
+                tournamentDao.findDashboardTournaments(
+                        host,
+                        Boolean.FALSE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
+
+        Assertions.assertTrue(
+                upcoming.stream().noneMatch(t -> t.getId().equals(completed.getId())));
+        Assertions.assertEquals(List.of(completed.getId()), tournamentIds(past));
     }
 
     @Test
