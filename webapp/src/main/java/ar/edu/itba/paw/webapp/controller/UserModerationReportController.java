@@ -12,10 +12,8 @@ import ar.edu.itba.paw.webapp.form.ReportAppealForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -66,8 +64,7 @@ public class UserModerationReportController {
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReportsByReporter(
                         user, typeFilters, statusFilters, page, PAGE_SIZE);
-        final Map<Long, ModerationTargetSummary> targetSummaries =
-                targetSummariesByReportId(result.getItems());
+        final List<ReportView> reportViews = reportViews(result.getItems());
 
         final ModelAndView mav = new ModelAndView("reports/mine/list");
         mav.addObject("pageTitle", messageSource.getMessage("page.title.myReports", null, locale));
@@ -81,8 +78,7 @@ public class UserModerationReportController {
                 "reportCountLabel",
                 messageSource.getMessage(
                         "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
-        mav.addObject("reports", result.getItems());
-        mav.addObject("targetSummaries", targetSummaries);
+        mav.addObject("reportViews", reportViews);
         mav.addObject(
                 "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
         mav.addObject(
@@ -131,6 +127,9 @@ public class UserModerationReportController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
+        final ModerationTargetSummary targetSummary =
+                moderationService.resolveTarget(report.getTargetType(), report.getTargetId());
+
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.myReportDetail", null, locale));
@@ -145,9 +144,8 @@ public class UserModerationReportController {
                 "appealAllowed",
                 report.getStatus() == ReportStatus.RESOLVED && report.getAppealCount() < 1);
         mav.addObject("report", report);
-        mav.addObject(
-                "targetSummary",
-                moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
+        mav.addObject("targetSummary", targetSummary);
+        mav.addObject("targetHref", targetHref(targetSummary));
         mav.addObject("action", model.asMap().get("action"));
         return mav;
     }
@@ -178,14 +176,54 @@ public class UserModerationReportController {
         }
     }
 
-    private Map<Long, ModerationTargetSummary> targetSummariesByReportId(
-            final List<ModerationReport> reports) {
-        final Map<Long, ModerationTargetSummary> targetSummaries = new LinkedHashMap<>();
+    private List<ReportView> reportViews(final List<ModerationReport> reports) {
+        final List<ReportView> reportViews = new java.util.ArrayList<>();
         for (final ModerationReport report : reports) {
-            targetSummaries.put(
-                    report.getId(),
-                    moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
+            final ModerationTargetSummary targetSummary =
+                    moderationService.resolveTarget(report.getTargetType(), report.getTargetId());
+            reportViews.add(new ReportView(report, targetSummary, targetHref(targetSummary)));
         }
-        return targetSummaries;
+        return reportViews;
+    }
+
+    private String targetHref(final ModerationTargetSummary targetSummary) {
+        if (targetSummary == null || !targetSummary.isFound()) {
+            return null;
+        }
+        return switch (targetSummary.getTargetType()) {
+            case USER ->
+                    targetSummary.getTargetSlug() == null || targetSummary.getTargetSlug().isBlank()
+                            ? null
+                            : "/users/" + targetSummary.getTargetSlug();
+            case MATCH -> "/matches/" + targetSummary.getTargetId();
+            case REVIEW -> null;
+        };
+    }
+
+    public static final class ReportView {
+        private final ModerationReport report;
+        private final ModerationTargetSummary targetSummary;
+        private final String targetHref;
+
+        public ReportView(
+                final ModerationReport report,
+                final ModerationTargetSummary targetSummary,
+                final String targetHref) {
+            this.report = report;
+            this.targetSummary = targetSummary;
+            this.targetHref = targetHref;
+        }
+
+        public ModerationReport getReport() {
+            return report;
+        }
+
+        public ModerationTargetSummary getTargetSummary() {
+            return targetSummary;
+        }
+
+        public String getTargetHref() {
+            return targetHref;
+        }
     }
 }

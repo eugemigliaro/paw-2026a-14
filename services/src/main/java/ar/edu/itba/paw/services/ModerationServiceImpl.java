@@ -405,7 +405,13 @@ public class ModerationServiceImpl implements ModerationService {
             case USER ->
                     userDataService
                             .findById(targetId)
-                            .map(user -> targetSummary(targetType, targetId, user.getUsername()))
+                            .map(
+                                    user ->
+                                            targetSummary(
+                                                    targetType,
+                                                    targetId,
+                                                    user.getUsername(),
+                                                    user.getUsername()))
                             .orElseGet(() -> missingTargetSummary(targetType, targetId));
             case MATCH ->
                     matchDataService
@@ -428,6 +434,14 @@ public class ModerationServiceImpl implements ModerationService {
     private static ModerationTargetSummary targetSummary(
             final ReportTargetType targetType, final Long targetId, final String displayName) {
         return new ModerationTargetSummary(targetType, targetId, displayName, true);
+    }
+
+    private static ModerationTargetSummary targetSummary(
+            final ReportTargetType targetType,
+            final Long targetId,
+            final String displayName,
+            final String targetSlug) {
+        return new ModerationTargetSummary(targetType, targetId, displayName, targetSlug, true);
     }
 
     private static ModerationTargetSummary missingTargetSummary(
