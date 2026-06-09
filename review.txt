@@ -1,155 +1,71 @@
-CODE REVIEW — chore/url-changes (re-merge triage)
-==================================================
+THINGS TO FIX
+=============
 
-Scope note: PR #70 is already merged into dev. What is being re-merged is the
-uncommitted working-tree work on top of it. Findings are split by origin:
+1. Recovery routes 403 for authenticated users — High
+   webapp/.../config/SecurityConfig.java
+   /verifications/**, /password-reset/**, /forgot-password and
+   /register/resend-verification are gated with .anonymous(), so a logged-in
+   user clicking a verification or password-reset link gets a 403 before the
+   controller runs (violates AGENTS.md "preserve verification-link access").
+   Fix: keep .anonymous() for /login and /register GET; move the email-driven
+   recovery routes to .permitAll(). Add a test for the authenticated path.
 
-  PART A — caused by THIS branch's work (in scope for the re-merge)
-  PART B — pre-existing code already on dev (valid, but NOT re-merge blockers)
+2. register() has no exception catch — Medium
+   webapp/.../controller/AuthController.java
+   No try/catch around accountAuthService.register(...) and no @ControllerAdvice
+   for EmailTakenException/UsernameTakenException/EmailPendingVerificationException.
+   - TOCTOU race (two registrations of same email pass validation) → uncaught
+     EmailTakenException → 500.
+   - An unverified pending account now trips auth.registration.error.emailTaken
+     instead of the "check your inbox / resend verification" affordance.
+   Fix: handle the pending-verification case (restore resend affordance) and
+   the duplicate exceptions gracefully.
 
-Verified against the actual code at the commit/working-tree state on 2026-06-09.
+3. Ownership check lives in the controller — Medium
+   webapp/.../controller/UserModerationReportController.java:127-130
+   Detail handler calls unscoped findReportById(reportId) then checks ownership
+   in the controller. The scoped ModerationService.findReportByIdForReporter(
+   reportId, reporter) exists but is never called.
+   Fix: use the scoped service method; drop the controller-side ownership check.
+   (Reported as being handled in a separate branch — confirm before duplicating.)
 
+4. SearchFormValidator uses default-zone LocalDate.now() — Low
+   webapp/.../validation/SearchFormValidator.java:35
+   validateDateRange compares against raw LocalDate.now() instead of the
+   PlatformTime zone (cf. CreateEventFormValidator), so a same-day UPCOMING
+   search can be wrongly rejected on a UTC-deployed JVM.
+   Fix: use the PlatformTime zone.
 
-===================================================================
-PART A — FROM THIS BRANCH (fix / verify before re-merging)
-===================================================================
+5. SecurityControllerUtils re-hardcodes role authorities — Low (cleanup)
+   webapp/.../utils/SecurityControllerUtils.java
+   authoritiesFor(...) re-hardcodes "ROLE_ADMIN_MOD"/"ROLE_USER", duplicating
+   SecurityAuthorities.forRole(...).
+   Fix: call SecurityAuthorities.forRole(...) and delete the private helper.
 
-A1. NotFound/Forbidden handler returned 302 instead of 404/403  — RESOLVED in working tree
-    webapp/.../exception/AccessExceptionHandler.java — Medium
+6. Unused latitude/longitude parameters in distance helpers — Low (cleanup)
+   webapp/.../utils/EventCardAttributeUtils.java:44
+   matchDistanceLabels/tournamentDistanceLabels take (latitude, longitude) but
+   only read getDistanceKmFromViewer(); FeedController builds extra args to pass
+   them. Fix: drop the unused params.
 
-    Original problem: the @ExceptionHandler methods were annotated
-    @ResponseStatus(NOT_FOUND/FORBIDDEN) but returned
-    new ModelAndView("redirect:/errors/404|403"). The redirect overrode the
-    status, so the requested URL responded 302 and only the follow-up
-    GET /errors/40x carried the real status — callers/crawlers/tests saw a
-    redirect chain instead of an immediate 404/403.
+7. Same series-reservation query run twice per detail render — Low (efficiency)
+   services/.../MatchServiceImpl.java:855
+   buildSeriesReservationState and buildSeriesJoinRequestState each call
+   ...ForSeries(seriesId, viewer, now) for the same render.
+   Fix: reuse the already-shared occurrence set.
 
-    Status: FIXED in the uncommitted changes. The handler now returns the error
-    view directly via the new ErrorPageViews.build(messageSource, "404"|"403",
-    locale) helper, preserving @ResponseStatus on the originally requested URL
-    (no redirect:). ErrorPageController was refactored to share the same helper,
-    and AccessExceptionHandlerTest was added.
-    Action: none beyond running the test suite (mvn test) to confirm green.
-
-A2. Tournament free-text search: live exploit closed, DAO still inconsistent
-    persistence/.../TournamentJpaDao.java:374 — Medium
-
-    This branch had widened the SearchForm.q regex to allow %, _, \, etc., which
-    made an existing TournamentJpaDao weakness reachable: appendSearchFilter
-    builds "%" + query + "%" against a plain LIKE :query with NO ESCAPE clause,
-    while MatchJpaDao.java:828-843 correctly uses escapeLikePattern(...) +
-    LIKE :query ESCAPE '\'. Unescaped %/_ are interpreted as SQL wildcards →
-    over-broad/incorrect tournament results, inconsistent with match search.
-
-    Status of live exploit: CLOSED. The uncommitted change narrows
-    SearchForm.q back to ^[\p{L}\p{N} ]*$, so wildcards can no longer reach the
-    DAO from the form.
-    Remaining (recommended hardening, this branch touched search): bring
-    TournamentJpaDao to parity with MatchJpaDao — add escapeLikePattern(...) and
-    LIKE ... ESCAPE '\' — so correctness does not depend on the form regex alone.
-
-
-===================================================================
-PART B — NOT FROM THIS BRANCH (pre-existing on dev; track separately)
-===================================================================
-
-B1. Verification & password-reset routes broken for authenticated users (403)
-    webapp/.../config/SecurityConfig.java — High (already live on dev: commit cd740939)
-
-    /login (GET), /register, /register/resend-verification, /forgot-password,
-    /password-reset/**, and /verifications/** are gated with .anonymous(). In
-    Spring Security, .anonymous() grants access ONLY to an
-    AnonymousAuthenticationToken; an authenticated session is denied with 403.
-    So a logged-in user who clicks a password-reset link, a resend-verification
-    link, or any /verifications/** link gets a 403 before the controller (and its
-    VerificationExceptionHandler/PasswordResetExceptionHandler) ever runs.
-    AGENTS.md explicitly requires preserving access through verification links,
-    and no test exercises the authenticated-hits-these-routes path.
-
-    Recommendation: keep .anonymous() for /login and /register GET (defensible);
-    move the email-driven recovery routes (/verifications/**, /password-reset/**,
-    /forgot-password, /register/resend-verification) to .permitAll().
-    Not introduced by this re-merge — this rule already shipped on dev.
-
-B2. register() has no exception catch — 500 on duplicate-registration race,
-    and pending-verification mis-message
-    webapp/.../controller/AuthController.java — Medium
-
-    register() calls accountAuthService.register(...) with no try/catch, and the
-    only @ControllerAdvice classes (AccessExceptionHandler,
-    PasswordResetExceptionHandler, VerificationExceptionHandler) do not handle
-    EmailTakenException/UsernameTakenException/EmailPendingVerificationException.
-    The form validators (@ValidUserEmail/@ValidUsername) normally pre-empt the
-    taken-email/username cases, but on a TOCTOU race (two registrations of the
-    same email both pass validation, the second hits EmailTakenException) the
-    exception is uncaught → 500. The race-500 is rare and arguably acceptable.
-    Separately, an unverified pending account now trips @ValidUserEmail with
-    auth.registration.error.emailTaken instead of the old
-    EmailPendingVerificationException "check your inbox / resend verification"
-    affordance — a real UX regression. AuthController is untouched by this branch.
-
-B3. Ownership check lives in the controller; scoped service method unused
-    webapp/.../controller/UserModerationReportController.java:127-130 — Medium
-
-    The detail handler calls the unscoped moderationService.findReportById(reportId)
-    and then checks ownership in the controller
-    (!report.getReporter().getId().equals(user.getId())) — exactly the ownership
-    logic AGENTS.md says belongs in the service. The scoped
-    ModerationService.findReportByIdForReporter(reportId, reporter) exists and is
-    implemented but production code never calls it. Controller is untouched by
-    this branch; colleague reports this is being fixed in a separate branch.
-
-B4. SearchFormValidator uses default-zone LocalDate.now()
-    webapp/.../validation/SearchFormValidator.java:35 — Low
-
-    validateDateRange compares form dates against raw LocalDate.now(), whereas the
-    rest of the code uses PlatformTime (see CreateEventFormValidator). On a
-    UTC-deployed JVM a same-day UPCOMING search can be wrongly rejected with
-    SearchForm.error.startDateInPast even though it is valid in the platform zone.
-    Use the PlatformTime zone.
-
-B5. SecurityControllerUtils re-hardcodes role authorities
-    webapp/.../utils/SecurityControllerUtils.java — Low (cleanup)
-
-    authoritiesFor(...) re-hardcodes the "ROLE_ADMIN_MOD"/"ROLE_USER" literals,
-    duplicating the mapping already centralized in
-    SecurityAuthorities.forRole(...) (used by AccountAuthenticationProvider and
-    AuthenticatedUserPrincipal). The two copies can drift if roles change. Call
-    SecurityAuthorities.forRole(...) and delete the private helper.
-
-B6. Unused latitude/longitude parameters in distance helpers
-    webapp/.../utils/EventCardAttributeUtils.java:44 — Low
-
-    matchDistanceLabels/tournamentDistanceLabels take (latitude, longitude) but
-    only read getDistanceKmFromViewer(); the params are dead. FeedController also
-    builds extra exploreLocation arguments to pass them. Drop the unused params so
-    nobody "fixes" it by re-computing distance and duplicating the DAO-side
-    haversine.
-
-B7. Same series-reservation query run twice per detail render
-    services/.../MatchServiceImpl.java:855 — Low (efficiency)
-
-    buildSeriesReservationState and buildSeriesJoinRequestState each call
-    matchParticipantDataService...ForSeries(seriesId, viewer, now) for the same
-    render — two identical DB round-trips. Reuse the already-shared occurrence set.
-
-B8. Overlapping permission/capability computation
-    services/.../MatchServiceImpl.java — Low (consistency)
-
-    getMatchManagementPermissions and the interaction-state path are separate
-    service methods recomputing the same host/manager/editable facts (also in
-    EventPageSupport.buildMatch...) on one match. They already disagree subtly —
-    one gates on isMatchManagementLifecycleOpen, the other on isEditableMatch — so
-    the button-disabled state and the actual mutation guard can drift. Consider one
-    capability object derived once.
+8. Overlapping permission/capability computation — Low (consistency)
+   services/.../MatchServiceImpl.java
+   getMatchManagementPermissions and the interaction-state path recompute the
+   same host/manager/editable facts and disagree subtly (isMatchManagementLifecycleOpen
+   vs isEditableMatch), so disabled-button state and the mutation guard can drift.
+   Fix: derive one capability object once.
 
 
-===================================================================
-SUMMARY
-===================================================================
-- Nothing in PART A blocks the re-merge: A1 and A2's live issues are already
-  fixed in the working tree. Only optional hardening remains (A2: bring
-  TournamentJpaDao to parity with MatchJpaDao).
-- PART B items are valid but pre-existing on dev; handle as follow-up tickets.
-  Highest value: B1 (recovery-route permitAll, AGENTS.md compliance).
-- Before re-merge: run `mvn test` to confirm the A1 fix and suite are green.
+ALREADY FIXED (no action)
+-------------------------
+- AccessExceptionHandler returned 302 instead of 404/403 — now renders the error
+  view directly via ErrorPageViews.build(...), preserving @ResponseStatus.
+- Tournament search ignored SQL-wildcard escaping — TournamentJpaDao now uses
+  escapeLikePattern(...) + LIKE ... ESCAPE '\' to match MatchJpaDao, and the
+  SearchForm.q regex is narrowed back to ^[\p{L}\p{N} ]*$.
