@@ -240,6 +240,32 @@ class SecurityConfigTest {
     }
 
     @Test
+    void wellKnownRouteIsPublicAndDoesNotRedirectToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/.well-known/appspecific/com.chrome.devtools.json"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void loginAfterWellKnownProbeRedirectsToDefaultPage() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        mockMvc.perform(get("/.well-known/appspecific/com.chrome.devtools.json"))
+                .andExpect(status().isNotFound());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/login")
+                                .param("email", "player@test.com")
+                                .param("password", "Password123!")
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+    }
+
+    @Test
     void loginWithRememberMeSetsPersistentRememberMeCookie() throws Exception {
         // 1. Arrange
         arrangeValidLogin();
