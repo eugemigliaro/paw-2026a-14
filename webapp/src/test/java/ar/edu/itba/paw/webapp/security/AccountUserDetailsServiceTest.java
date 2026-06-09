@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.UserRole;
@@ -103,5 +104,27 @@ class AccountUserDetailsServiceTest {
         assertThrows(
                 UsernameNotFoundException.class,
                 () -> service.loadUserByUsername("legacy@test.com"));
+    }
+
+    @Test
+    void userBasedPrincipalWithoutPasswordHashIsStillEnabled() {
+        // 1. Arrange
+        final User user =
+                new User(
+                        11L,
+                        "player@test.com",
+                        "player_one",
+                        "Player",
+                        "One",
+                        null,
+                        null,
+                        UserLanguages.DEFAULT_LANGUAGE);
+
+        // 2. Exercise
+        final AuthenticatedUserPrincipal principal =
+                new AuthenticatedUserPrincipal(user, UserRole.USER);
+
+        // 3. Assert
+        assertTrue(principal.isEnabled());
     }
 }

@@ -89,6 +89,9 @@ public class AuthenticatedUserPrincipal implements Principal, UserDetails, Seria
 
     @Override
     public boolean isEnabled() {
-        return passwordHash != null && !passwordHash.isBlank();
+        // The application does not currently model disabled accounts.
+        // Password presence is validated during authentication/user loading,
+        // so this method should only represent account enabled/disabled state.
+        return true;
     }
 }
