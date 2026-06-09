@@ -161,8 +161,7 @@ class HostControllerTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new HostController(
-                                        matchService, messageSource, false, "", "", 0, 0, 0))
+                                new HostController(matchService, false, "", "", 0, 0, 0))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())

@@ -51,7 +51,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
@@ -153,9 +152,7 @@ public class HostTournamentController {
             @PathVariable("tournamentId") final Long tournamentId,
             final Locale locale) {
         final Tournament tournament =
-                tournamentService
-                        .findEditableTournamentForHost(tournamentId, user)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                tournamentService.findPublicTournament(tournamentId).orElse(null);
         return createFormView(toForm(tournament), null, locale, editFormConfig(tournament, locale));
     }
 
@@ -169,9 +166,7 @@ public class HostTournamentController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final Tournament tournament =
-                tournamentService
-                        .findEditableTournamentForHost(tournamentId, user)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                tournamentService.findPublicTournament(tournamentId).orElse(null);
         final TournamentFormConfig formConfig = editFormConfig(tournament, locale);
 
         if (bindingResult.hasErrors()) {
@@ -289,18 +284,7 @@ public class HostTournamentController {
             final Model model,
             final Locale locale) {
         final Tournament tournament =
-                tournamentService
-                        .findTournamentForHost(tournamentId, user)
-                        .orElseGet(
-                                () -> {
-                                    if (tournamentService
-                                            .findPublicTournament(tournamentId)
-                                            .isPresent()) {
-                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-                                    }
-                                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-                                });
-
+                tournamentService.findPublicTournament(tournamentId).orElse(null);
         TournamentBracketView bracketView = null;
         boolean bracketGenerated = true;
         try {
@@ -346,10 +330,7 @@ public class HostTournamentController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final Tournament tournament =
-                tournamentService
-                        .findTournamentForHost(tournamentId, user)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
+                tournamentService.findPublicTournament(tournamentId).orElse(null);
         try {
             if (bindingResult.hasErrors()) {
                 final List<TournamentTeam> manualPairingTeams =
@@ -391,10 +372,7 @@ public class HostTournamentController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final Tournament tournament =
-                tournamentService
-                        .findTournamentForHost(tournamentId, user)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
+                tournamentService.findPublicTournament(tournamentId).orElse(null);
         try {
             final TournamentBracketView bracketView =
                     tournamentBracketService.getBracket(tournamentId, user);
