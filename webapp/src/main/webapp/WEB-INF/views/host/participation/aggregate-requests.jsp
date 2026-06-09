@@ -26,7 +26,7 @@
 				<div class="participation-layout">
 					<div class="participation-nav">
 						<c:url var="matchesHref" value="${matchesUrl}" />
-						<spring:message var="matchesLabel" code="nav.player.events" />
+						<spring:message var="matchesLabel" code="nav.player.matches" />
 						<ui:button label="${matchesLabel}" href="${matchesHref}" variant="primary" className="participation-nav__button" />
 					</div>
 

@@ -85,6 +85,6 @@ class PlayerParticipationControllerTest {
 
         mockMvc.perform(post("/matches/51/invites/decline"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/events"));
+                .andExpect(redirectedUrl("/matches"));
     }
 }

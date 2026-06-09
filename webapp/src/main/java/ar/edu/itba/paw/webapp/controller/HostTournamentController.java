@@ -103,11 +103,16 @@ public class HostTournamentController {
     }
 
     @GetMapping("/host/tournaments/new")
+    public ModelAndView redirectLegacyCreateTournament() {
+        return new ModelAndView("redirect:/tournaments/new");
+    }
+
+    @GetMapping("/tournaments/new")
     public ModelAndView showCreateTournament(final Locale locale) {
         return createFormView(createTournamentForm(), null, locale);
     }
 
-    @PostMapping("/host/tournaments")
+    @PostMapping({"/tournaments", "/host/tournaments"})
     public ModelAndView createTournament(
             @AuthenticatedUser final User user,
             @Valid @ModelAttribute("createTournamentForm")
@@ -592,7 +597,7 @@ public class HostTournamentController {
                 null,
                 "tournament.create.title",
                 "tournament.create.description",
-                "/host/tournaments",
+                "/tournaments",
                 "tournament.form.submit.create",
                 "tournament.form.submit.creating",
                 false,

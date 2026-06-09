@@ -71,6 +71,24 @@ public class SecurityConfig {
                                         .anonymous()
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(
+                                                        "/matches", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/new", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/new/", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/matches/new", HttpMethod.POST.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments/new", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments/new/", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments", HttpMethod.POST.name()))
+                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
                                                         "/matches/**", HttpMethod.GET.name()),
                                                 new AntPathRequestMatcher(
                                                         "/tournaments/**", HttpMethod.GET.name()),
@@ -83,6 +101,13 @@ public class SecurityConfig {
                                                 new AntPathRequestMatcher(
                                                         "/explore/location",
                                                         HttpMethod.POST.name()))
+                                        .permitAll()
+                                        .requestMatchers(
+                                                new AntPathRequestMatcher(
+                                                        "/host/matches/new", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/host/tournaments/new",
+                                                        HttpMethod.GET.name()))
                                         .permitAll()
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(

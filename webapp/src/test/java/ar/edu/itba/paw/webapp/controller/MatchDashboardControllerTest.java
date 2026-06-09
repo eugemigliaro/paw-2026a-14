@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -366,7 +367,7 @@ class MatchDashboardControllerTest {
         bindingResult.rejectValue("q", "Pattern");
 
         try {
-            controller.showEventsPage(UserUtils.getUser(1L), searchForm, bindingResult);
+            controller.showMatchesPage(UserUtils.getUser(1L), searchForm, bindingResult);
             fail("Expected a bad request response");
         } catch (final ResponseStatusException exception) {
             assertEquals(400, exception.getStatus().value());
@@ -374,55 +375,57 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getEventsRouteRendersEventsPage() throws Exception {
+    void getMatchesRouteRendersMatchesPage() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/events"))
+        mockMvc.perform(get("/matches"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("events/list"))
                 .andExpect(model().attributeExists("events"))
-                .andExpect(model().attribute("pageTitleCode", "page.title.events"));
+                .andExpect(model().attribute("pageTitleCode", "page.title.matches"))
+                .andExpect(model().attribute("listTitleCode", "matches.title"));
     }
 
     @Test
-    void getEventsRouteBindsSubmittedPageParameter() throws Exception {
+    void getMatchesRouteBindsSubmittedPageParameter() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/events").param("page", "2"))
+        mockMvc.perform(get("/matches").param("page", "2"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("events/list"))
                 .andExpect(model().attribute("pageNumber", 2));
     }
 
     @Test
-    void getEventsRouteRendersSortLinksAgainstEventsPath() throws Exception {
+    void getMatchesRouteRendersSortLinksAgainstMatchesPath() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         final MvcResult result =
-                mockMvc.perform(get("/events")).andExpect(status().isOk()).andReturn();
+                mockMvc.perform(get("/matches")).andExpect(status().isOk()).andReturn();
 
         final MatchListControlsViewModel listControls =
                 (MatchListControlsViewModel)
                         result.getModelAndView().getModel().get("listControls");
         final SelectOptionViewModel firstSortOption = listControls.getSortOptions().get(0);
+        Assertions.assertEquals("/matches", listControls.getSearchAction());
         Assertions.assertNull(firstSortOption.getHref());
         Assertions.assertTrue(firstSortOption.getParams().containsKey("sort"));
     }
 
     @Test
-    void getEventsRouteRejectsInvalidPageParameter() throws Exception {
+    void getMatchesRouteRejectsInvalidPageParameter() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/events").param("page", "0")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/matches").param("page", "0")).andExpect(status().isBadRequest());
     }
 
     @Test
-    void getEventsRouteBindsSportSelectionsAsTypedEnums() throws Exception {
+    void getMatchesRouteBindsSportSelectionsAsTypedEnums() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         final MvcResult result =
                 mockMvc.perform(
-                                get("/events")
+                                get("/matches")
                                         .param("sport", "padel")
                                         .param("sport", "tennis")
                                         .param("sort", "price")
@@ -445,11 +448,11 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getEventsRoutePreservesPastFilterAsLowercaseQueryParam() throws Exception {
+    void getMatchesRoutePreservesPastFilterAsLowercaseQueryParam() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         final MvcResult result =
-                mockMvc.perform(get("/events").param("filter", "past"))
+                mockMvc.perform(get("/matches").param("filter", "past"))
                         .andExpect(status().isOk())
                         .andReturn();
 
@@ -459,18 +462,20 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getEventsRouteRendersHostedTournamentsWhenTournamentTypeSelected() throws Exception {
+    void getTournamentsRouteRendersHostedTournamentsAndForcesTournamentType() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         final MvcResult result =
                 mockMvc.perform(
-                                get("/events")
-                                        .param("type", "tournament")
+                                get("/tournaments")
+                                        .param("type", "match")
                                         .param("startDate", "2099-04-10")
                                         .param("endDate", "2099-04-11"))
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andExpect(model().attribute("selectedType", "tournament"))
+                        .andExpect(model().attribute("pageTitleCode", "page.title.tournaments"))
+                        .andExpect(model().attribute("listTitleCode", "tournaments.title"))
                         .andReturn();
 
         final SearchForm searchForm =
@@ -486,12 +491,43 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getEventsRouteDoesNotIncludePendingCategoryByDefault() throws Exception {
+    void getMatchesRouteForcesMatchTypeWhenTournamentTypeIsSubmitted() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches").param("type", "tournament"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedType", "match"));
+    }
+
+    @Test
+    void getEventsRouteRedirectsToMatchesAndDropsType() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/events").param("type", "match").param("q", "summer cup"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches?q=summer%20cup"));
+    }
+
+    @Test
+    void getEventsRouteRedirectsTournamentTypeToTournamentsAndPreservesQuery() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        get("/events")
+                                .param("type", "tournament")
+                                .param("q", "summer cup")
+                                .param("page", "2"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments?q=summer%20cup&page=2"));
+    }
+
+    @Test
+    void getMatchesRouteDoesNotIncludePendingCategoryByDefault() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
         currentUserHasSeriesJoinRequest = true;
 
         final MvcResult result =
-                mockMvc.perform(get("/events"))
+                mockMvc.perform(get("/matches"))
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andReturn();
@@ -505,12 +541,12 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getEventsRouteIncludesPendingOnlyWhenPendingCategorySelected() throws Exception {
+    void getMatchesRouteIncludesPendingOnlyWhenPendingCategorySelected() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
         currentUserHasSeriesJoinRequest = true;
 
         final MvcResult result =
-                mockMvc.perform(get("/events").param("category", "pending"))
+                mockMvc.perform(get("/matches").param("category", "pending"))
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andReturn();
@@ -524,12 +560,12 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getEventsRouteShowsHostedAndGoingBadgesTogether() throws Exception {
+    void getMatchesRouteShowsHostedAndGoingBadgesTogether() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
         currentUserHasReservation = true;
 
         final MvcResult result =
-                mockMvc.perform(get("/events").param("category", "hosted"))
+                mockMvc.perform(get("/matches").param("category", "hosted"))
                         .andExpect(status().isOk())
                         .andExpect(view().name("events/list"))
                         .andReturn();

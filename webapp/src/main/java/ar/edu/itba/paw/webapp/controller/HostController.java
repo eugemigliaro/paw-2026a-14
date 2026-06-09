@@ -87,11 +87,16 @@ public class HostController {
     }
 
     @GetMapping("/host/matches/new")
+    public ModelAndView redirectLegacyCreateEvent() {
+        return new ModelAndView("redirect:/matches/new");
+    }
+
+    @GetMapping("/matches/new")
     public ModelAndView showCreateEvent(final Locale locale) {
         return hostFormView(createEventForm(), null, locale, createFormConfig(locale));
     }
 
-    @PostMapping("/host/matches/new")
+    @PostMapping({"/matches/new", "/host/matches/new"})
     public ModelAndView publishEvent(
             @AuthenticatedUser final User user,
             @Valid @ModelAttribute("createEventForm") final CreateEventForm createEventForm,
@@ -302,7 +307,7 @@ public class HostController {
                 "host.eyebrow",
                 "host.title",
                 "host.description",
-                "/host/matches/new",
+                "/matches/new",
                 "host.form.submit",
                 "host.form.submitting",
                 "publish-match-button",
