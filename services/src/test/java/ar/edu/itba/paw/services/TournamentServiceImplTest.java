@@ -20,8 +20,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -844,6 +846,22 @@ public class TournamentServiceImplTest {
         // 3. Assert
         Assertions.assertEquals(1, result.getTotalCount());
         Assertions.assertEquals(completed, result.getItems().get(0));
+    }
+
+    @Test
+    public void findParticipatingTournamentIdsDeduplicatesPageIdsBeforeBatchLookup() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(1L);
+        Mockito.when(tournamentDataService.findParticipatingTournamentIds(user, List.of(10L, 11L)))
+                .thenReturn(Set.of(11L));
+
+        // 2. Exercise
+        final Set<Long> result =
+                tournamentService.findParticipatingTournamentIds(
+                        user, Arrays.asList(10L, 11L, 10L, null));
+
+        // 3. Assert
+        Assertions.assertEquals(Set.of(11L), result);
     }
 
     private static CreateTournamentRequest validCreateRequest() {

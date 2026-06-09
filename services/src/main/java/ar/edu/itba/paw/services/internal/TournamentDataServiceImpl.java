@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -175,6 +176,12 @@ public class TournamentDataServiceImpl implements TournamentDataService {
                 startsAtTo,
                 minPrice,
                 maxPrice);
+    }
+
+    @Override
+    public Set<Long> findParticipatingTournamentIds(
+            final User user, final List<Long> tournamentIds) {
+        return tournamentDao.findParticipatingTournamentIds(user, tournamentIds);
     }
 
     @Override

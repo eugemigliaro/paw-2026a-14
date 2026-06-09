@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.PersistableEnum;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
+import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -49,7 +50,8 @@ final class MatchDashboardPageSupport {
             final PaginatedResult<Match> result,
             final PaginatedResult<Tournament> tournamentResult,
             final MatchParticipationService matchParticipationService,
-            final MatchReservationService matchReservationService) {
+            final MatchReservationService matchReservationService,
+            final TournamentService tournamentService) {
         final ModelAndView mav = new ModelAndView(view);
         final SearchForm searchForm = selection.searchForm();
         final EventType selectedType = searchForm.getType();
@@ -119,7 +121,13 @@ final class MatchDashboardPageSupport {
                 "eventRelationshipBadgeCodes",
                 selectedType == EventType.TOURNAMENT
                         ? EventCardAttributeUtils.tournamentRelationshipBadgeCodes(
-                                tournamentResult.getItems(), currentUser)
+                                tournamentResult.getItems(),
+                                currentUser,
+                                tournamentService.findParticipatingTournamentIds(
+                                        currentUser,
+                                        tournamentResult.getItems().stream()
+                                                .map(Tournament::getId)
+                                                .toList()))
                         : EventCardAttributeUtils.matchRelationshipBadgeCodes(
                                 result.getItems(),
                                 currentUser,

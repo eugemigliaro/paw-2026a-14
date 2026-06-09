@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface TournamentService {
 
@@ -55,6 +56,8 @@ public interface TournamentService {
     Tournament update(long tournamentId, User actingUser, UpdateTournamentRequest request);
 
     Tournament cancel(long tournamentId, User actingUser, String reason);
+
+    Set<Long> findParticipatingTournamentIds(User user, List<Long> tournamentIds);
 
     TournamentViewerCapabilities viewerCapabilities(Tournament tournament, User viewer);
 }

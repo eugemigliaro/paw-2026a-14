@@ -20,6 +20,7 @@ import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
+import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import java.math.BigDecimal;
@@ -33,11 +34,13 @@ class MatchDashboardPageSupportTest {
 
     private MatchParticipationService matchParticipationService;
     private MatchReservationService matchReservationService;
+    private TournamentService tournamentService;
 
     @BeforeEach
     void setUp() {
         matchParticipationService = mock(MatchParticipationService.class);
         matchReservationService = mock(MatchReservationService.class);
+        tournamentService = mock(TournamentService.class);
     }
 
     @Test
@@ -71,7 +74,8 @@ class MatchDashboardPageSupportTest {
                         null,
                         tournamentResult,
                         matchParticipationService,
-                        matchReservationService);
+                        matchReservationService,
+                        tournamentService);
 
         assertEquals("tournament", mav.getModel().get("selectedType"));
         assertNull(mav.getModel().get("selectedStartDateValue"));
@@ -123,7 +127,8 @@ class MatchDashboardPageSupportTest {
                         matchResult,
                         tournamentResult,
                         matchParticipationService,
-                        matchReservationService);
+                        matchReservationService,
+                        tournamentService);
 
         assertEquals("match", mav.getModel().get("selectedType"));
         assertEquals(List.of("joined", "pending"), mav.getModel().get("selectedCategories"));
