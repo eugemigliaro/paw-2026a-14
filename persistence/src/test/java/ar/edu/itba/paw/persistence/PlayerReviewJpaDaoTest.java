@@ -4,6 +4,10 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchParticipant;
 import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.PlayerReviewSummary;
+import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
+import ar.edu.itba.paw.models.TournamentTeam;
+import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -13,6 +17,10 @@ import ar.edu.itba.paw.models.types.ParticipantScope;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
+import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -384,6 +392,59 @@ public class PlayerReviewJpaDaoTest {
     }
 
     @Test
+    public void testCanReviewSharedDoneTournamentMatchOpponent() {
+        Tournament tournament = createTournament();
+        TournamentTeam teamA = createTeam(tournament, 1);
+        TournamentTeam teamB = createTeam(tournament, 2);
+        addTeamMember(teamA, user2);
+        addTeamMember(teamB, user3);
+        createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.DONE);
+
+        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
+    }
+
+    @Test
+    public void testCanReviewSharedDoneTournamentMatchTeammate() {
+        Tournament tournament = createTournament();
+        TournamentTeam teamA = createTeam(tournament, 1);
+        TournamentTeam teamB = createTeam(tournament, 2);
+        addTeamMember(teamA, user2);
+        addTeamMember(teamA, user3);
+        addTeamMember(teamB, user4);
+        createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.DONE);
+
+        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
+    }
+
+    @Test
+    public void testCanReviewRejectsTournamentMatchNotDone() {
+        Tournament tournament = createTournament();
+        TournamentTeam teamA = createTeam(tournament, 1);
+        TournamentTeam teamB = createTeam(tournament, 2);
+        addTeamMember(teamA, user2);
+        addTeamMember(teamB, user3);
+        createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.AWAITING_RESULT);
+
+        Assertions.assertFalse(playerReviewDao.canReview(user2, user3));
+    }
+
+    @Test
+    public void testFindReviewableUserIdsIncludesTournamentMatchPlayers() {
+        Tournament tournament = createTournament();
+        TournamentTeam teamA = createTeam(tournament, 1);
+        TournamentTeam teamB = createTeam(tournament, 2);
+        addTeamMember(teamA, user2);
+        addTeamMember(teamA, user3);
+        addTeamMember(teamB, user4);
+        createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.DONE);
+
+        final Set<Long> reviewableUserIds =
+                Set.copyOf(playerReviewDao.findReviewableUserIds(user2));
+
+        Assertions.assertEquals(Set.of(user3.getId(), user4.getId()), reviewableUserIds);
+    }
+
+    @Test
     public void shouldUpsertReview_WithNullComment_WhenDislikeReaction() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.JOINED);
@@ -539,6 +600,83 @@ public class PlayerReviewJpaDaoTest {
         MatchParticipant participant =
                 new MatchParticipant(match, user, status, Instant.now(), ParticipantScope.MATCH);
         em.persist(participant);
+    }
+
+    private Tournament createTournament() {
+        Instant now = Instant.now();
+        Tournament tournament =
+                new Tournament(
+                        null,
+                        user1,
+                        Sport.FOOTBALL,
+                        "Cup",
+                        "Description",
+                        "Address",
+                        null,
+                        null,
+                        PAST_START,
+                        PAST_START.plusSeconds(3600),
+                        BigDecimal.ZERO,
+                        null,
+                        TournamentFormat.SINGLE_ELIMINATION,
+                        8,
+                        2,
+                        true,
+                        false,
+                        PAST_START.minusSeconds(86400),
+                        PAST_START.minusSeconds(3600),
+                        TournamentStatus.COMPLETED,
+                        now,
+                        now);
+        em.persist(tournament);
+        return tournament;
+    }
+
+    private TournamentTeam createTeam(Tournament tournament, int seed) {
+        TournamentTeam team =
+                new TournamentTeam(
+                        null,
+                        tournament,
+                        "Team " + seed,
+                        TournamentTeamOrigin.SOLO_POOL,
+                        seed,
+                        Instant.now());
+        em.persist(team);
+        return team;
+    }
+
+    private void addTeamMember(TournamentTeam team, User user) {
+        TournamentTeamMember member =
+                new TournamentTeamMember(null, team, user, false, Instant.now());
+        em.persist(member);
+    }
+
+    private TournamentMatch createTournamentMatch(
+            Tournament tournament,
+            TournamentTeam teamA,
+            TournamentTeam teamB,
+            TournamentMatchStatus status) {
+        TournamentMatch match =
+                new TournamentMatch(
+                        null,
+                        tournament,
+                        1,
+                        0,
+                        teamA,
+                        teamB,
+                        null,
+                        PAST_START,
+                        PAST_START.plusSeconds(3600),
+                        "Address",
+                        null,
+                        null,
+                        status,
+                        null,
+                        null,
+                        Instant.now(),
+                        Instant.now());
+        em.persist(match);
+        return match;
     }
 
     private void flushAndClear() {
