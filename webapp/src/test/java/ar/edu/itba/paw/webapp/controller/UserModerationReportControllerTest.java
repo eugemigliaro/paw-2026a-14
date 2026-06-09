@@ -24,6 +24,7 @@ import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -180,8 +181,8 @@ class UserModerationReportControllerTest {
     @Test
     void getMyReportDetailReturnsNotFoundForOtherUser() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
-        Mockito.when(moderationService.findReportByIdForReporter(90L, UserUtils.getUser(7L)))
-                .thenReturn(Optional.empty());
+        Mockito.when(moderationService.findReportById(90L))
+                .thenReturn(Optional.of(sampleReport(90L, ReportTargetType.USER, 13L, 8L)));
 
         mockMvc.perform(get("/reports/mine/90")).andExpect(status().isNotFound());
     }
@@ -219,9 +220,17 @@ class UserModerationReportControllerTest {
 
     private static ModerationReport sampleReport(
             final Long reportId, final ReportTargetType targetType, final Long targetId) {
+        return sampleReport(reportId, targetType, targetId, 7L);
+    }
+
+    private static ModerationReport sampleReport(
+            final Long reportId,
+            final ReportTargetType targetType,
+            final Long targetId,
+            final Long reporterId) {
         return new ModerationReport(
                 reportId,
-                UserUtils.getUser(7L),
+                UserUtils.getUser(reporterId),
                 targetType,
                 targetId,
                 ReportReason.OTHER,
