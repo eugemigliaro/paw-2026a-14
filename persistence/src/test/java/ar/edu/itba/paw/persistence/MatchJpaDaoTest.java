@@ -1645,6 +1645,62 @@ public class MatchJpaDaoTest {
     }
 
     @Test
+    public void shouldExcludeCancelledMatchesFromDashboardWhenNoStatusSelected() {
+        final Match open =
+                createMatchWithPolicy(
+                        "Open Match",
+                        EventStatus.OPEN,
+                        ZonedDateTime.now().plusDays(1),
+                        host,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT);
+        createMatchWithPolicy(
+                "Cancelled Match",
+                EventStatus.CANCELLED,
+                ZonedDateTime.now().plusDays(2),
+                host,
+                EventVisibility.PUBLIC,
+                EventJoinPolicy.DIRECT);
+        em.flush();
+        em.clear();
+
+        final List<Match> upcoming =
+                matchDao.findDashboardMatches(
+                        host,
+                        Boolean.TRUE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null,
+                        0,
+                        10);
+        final int upcomingCount =
+                matchDao.countDashboardMatches(
+                        host,
+                        Boolean.TRUE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null);
+
+        Assertions.assertEquals(
+                List.of(open.getId()), upcoming.stream().map(Match::getId).toList());
+        Assertions.assertEquals(1, upcomingCount);
+    }
+
+    @Test
     public void shouldPagePublicMatches() {
         final Match first = createOpenMatch("First", ZonedDateTime.now().plusDays(1), 5);
         final Match second = createOpenMatch("Second", ZonedDateTime.now().plusDays(2), 5);

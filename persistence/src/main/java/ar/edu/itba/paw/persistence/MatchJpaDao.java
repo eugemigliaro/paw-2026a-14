@@ -743,6 +743,16 @@ public class MatchJpaDao implements MatchDao {
         }
     }
 
+    private static void appendDashboardStatusFilter(
+            final QueryParts parts, final List<EventStatus> statuses) {
+        if (statuses != null && !statuses.isEmpty()) {
+            appendStatusFilter(parts, statuses);
+            return;
+        }
+        parts.where.add("m.status <> :excludedDashboardStatus");
+        parts.params.put("excludedDashboardStatus", EventStatus.CANCELLED);
+    }
+
     private static void appendStatusFilter(
             final QueryParts parts, final List<EventStatus> statuses) {
         if (statuses == null || statuses.isEmpty()) {
@@ -995,7 +1005,7 @@ public class MatchJpaDao implements MatchDao {
             parts.where.add("(" + String.join(" OR ", orClauses) + ")");
         }
 
-        appendManagedFilters(parts, null, statuses);
+        appendDashboardStatusFilter(parts, statuses);
         appendFilters(
                 parts, query, sports, null, startsAtFrom, startsAtTo, minPrice, maxPrice, upcoming);
 
@@ -1038,7 +1048,7 @@ public class MatchJpaDao implements MatchDao {
             parts.where.add("(" + String.join(" OR ", orClauses) + ")");
         }
 
-        appendManagedFilters(parts, null, statuses);
+        appendDashboardStatusFilter(parts, statuses);
         appendFilters(
                 parts, query, sports, null, startsAtFrom, startsAtTo, minPrice, maxPrice, upcoming);
 

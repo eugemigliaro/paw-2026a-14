@@ -174,6 +174,38 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldExcludeCancelledTournamentsFromDashboard() {
+        final Tournament active = createTournament(TournamentStatus.REGISTRATION);
+        createTournament(TournamentStatus.CANCELLED);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> upcoming =
+                tournamentDao.findDashboardTournaments(
+                        host,
+                        Boolean.TRUE,
+                        Boolean.TRUE,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.SOONEST,
+                        null,
+                        null,
+                        0,
+                        10);
+        final int upcomingCount =
+                tournamentDao.countDashboardTournaments(
+                        host, Boolean.TRUE, Boolean.TRUE, null, null, null, null, null, null);
+
+        Assertions.assertEquals(List.of(active.getId()), tournamentIds(upcoming));
+        Assertions.assertEquals(1, upcomingCount);
+    }
+
+    @Test
     public void shouldSearchPublicTournamentsByActiveStatusAndCountMatchesResults() {
         final Instant now = Instant.parse("2026-04-05T00:00:00Z");
         final Tournament registration =
