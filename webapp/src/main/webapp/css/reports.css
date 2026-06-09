@@ -27,6 +27,22 @@
 	margin-top: 1rem;
 }
 
+a.report-target-link {
+	color: inherit;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+a.report-target-link:hover,
+a.report-target-link:focus-visible {
+	text-decoration: underline;
+}
+
+a.report-target-link:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+}
+
 .report-dropdown {
 	position: relative;
 	width: 100%;

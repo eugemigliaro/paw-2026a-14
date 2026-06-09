@@ -352,6 +352,7 @@ public class ModerationServiceImplTest {
         Assertions.assertEquals(ReportTargetType.USER, summary.getTargetType());
         Assertions.assertEquals(88L, summary.getTargetId());
         Assertions.assertEquals(UserUtils.getUser(88L).getUsername(), summary.getDisplayName());
+        Assertions.assertEquals(UserUtils.getUser(88L).getUsername(), summary.getTargetSlug());
         Assertions.assertTrue(summary.isFound());
     }
 

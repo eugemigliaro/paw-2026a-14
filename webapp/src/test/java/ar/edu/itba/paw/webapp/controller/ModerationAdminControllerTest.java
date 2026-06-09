@@ -20,6 +20,7 @@ import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.ModerationTargetSummary;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.config.converters.StringToAppealDecisionConverter;
+import ar.edu.itba.paw.webapp.controller.ModerationAdminController.AdminReportView;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -35,6 +37,7 @@ import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
@@ -74,14 +77,50 @@ class ModerationAdminControllerTest {
                 .thenReturn(new PaginatedResult<>(List.of(sampleAppealedReport()), 1, 1, 4));
         Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
                 .thenReturn(
-                        new ModerationTargetSummary(ReportTargetType.USER, 44L, "user44", true));
+                        new ModerationTargetSummary(
+                                ReportTargetType.USER, 44L, "User Forty Four", "user44", true));
 
         mockMvc.perform(get("/admin/reports").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reports/list"))
-                .andExpect(model().attributeExists("reports"))
-                .andExpect(model().attributeExists("targetSummaries"))
+                .andExpect(model().attributeExists("reportViews"))
                 .andExpect(model().attributeExists("emptyMessage"));
+    }
+
+    @Test
+    void getReportsExposesPerRowTargetHrefsForAdminQueue() throws Exception {
+        final ModerationReport userReport = sampleReport(17L, ReportTargetType.USER, 44L);
+        final ModerationReport matchReport = sampleReport(18L, ReportTargetType.MATCH, 42L);
+        final ModerationReport reviewReport = sampleReport(19L, ReportTargetType.REVIEW, 77L);
+        Mockito.when(moderationService.findReports(List.of(), List.of(), 1, 4))
+                .thenReturn(
+                        new PaginatedResult<>(
+                                List.of(userReport, matchReport, reviewReport), 3, 1, 4));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
+                .thenReturn(
+                        new ModerationTargetSummary(
+                                ReportTargetType.USER, 44L, "User Forty Four", "user44", true));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.MATCH, 42L))
+                .thenReturn(
+                        new ModerationTargetSummary(
+                                ReportTargetType.MATCH, 42L, "Friday football", true));
+        Mockito.when(moderationService.resolveTarget(ReportTargetType.REVIEW, 77L))
+                .thenReturn(
+                        new ModerationTargetSummary(
+                                ReportTargetType.REVIEW, 77L, "reviewerOne", true));
+
+        final MvcResult result =
+                mockMvc.perform(get("/admin/reports").locale(Locale.ENGLISH))
+                        .andExpect(status().isOk())
+                        .andExpect(view().name("admin/reports/list"))
+                        .andReturn();
+
+        final List<AdminReportView> reportViews = reportViewsFrom(result);
+        Assertions.assertEquals("/users/user44", reportViews.get(0).getTargetHref());
+        Assertions.assertEquals(
+                "User Forty Four", reportViews.get(0).getTargetSummary().getDisplayName());
+        Assertions.assertEquals("/matches/42", reportViews.get(1).getTargetHref());
+        Assertions.assertNull(reportViews.get(2).getTargetHref());
     }
 
     @Test
@@ -134,13 +173,15 @@ class ModerationAdminControllerTest {
                 .thenReturn(Optional.of(sampleAppealedReport()));
         Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
                 .thenReturn(
-                        new ModerationTargetSummary(ReportTargetType.USER, 44L, "user44", true));
+                        new ModerationTargetSummary(
+                                ReportTargetType.USER, 44L, "User Forty Four", "user44", true));
 
         mockMvc.perform(get("/admin/reports/17").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reports/detail"))
                 .andExpect(model().attributeExists("report"))
-                .andExpect(model().attributeExists("targetSummary"));
+                .andExpect(model().attributeExists("targetSummary"))
+                .andExpect(model().attribute("targetHref", "/users/user44"));
     }
 
     @Test
@@ -152,7 +193,8 @@ class ModerationAdminControllerTest {
                 .thenReturn(Optional.of(samplePendingReport()));
         Mockito.when(moderationService.resolveTarget(ReportTargetType.USER, 44L))
                 .thenReturn(
-                        new ModerationTargetSummary(ReportTargetType.USER, 44L, "user44", true));
+                        new ModerationTargetSummary(
+                                ReportTargetType.USER, 44L, "User Forty Four", "user44", true));
 
         mockMvc.perform(get("/admin/reports/3").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
@@ -213,6 +255,35 @@ class ModerationAdminControllerTest {
                 null,
                 Instant.parse("2026-04-12T09:00:00Z"),
                 Instant.parse("2026-04-12T09:00:00Z"));
+    }
+
+    private static ModerationReport sampleReport(
+            final Long reportId, final ReportTargetType targetType, final Long targetId) {
+        return new ModerationReport(
+                reportId,
+                UserUtils.getUser(7L),
+                targetType,
+                targetId,
+                ReportReason.HARASSMENT,
+                "Harassing messages",
+                ReportStatus.PENDING,
+                null,
+                null,
+                null,
+                null,
+                null,
+                (short) 0,
+                null,
+                null,
+                null,
+                null,
+                Instant.parse("2026-04-12T09:00:00Z"),
+                Instant.parse("2026-04-12T09:00:00Z"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<AdminReportView> reportViewsFrom(final MvcResult result) {
+        return (List<AdminReportView>) result.getModelAndView().getModel().get("reportViews");
     }
 
     private static MessageSource messageSource() {

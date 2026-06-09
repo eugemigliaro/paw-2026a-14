@@ -92,18 +92,20 @@
 				<p class="report-count-label"><strong><c:out value="${reportCountLabel}" /></strong></p>
 
 				<c:choose>
-					<c:when test="${empty reports}">
+					<c:when test="${empty reportViews}">
 						<ui:card className="report-section">
 							<p class="participation-empty-state"><c:out value="${emptyMessage}" /></p>
 						</ui:card>
 					</c:when>
 					<c:otherwise>
 						<div class="report-card-list" id="report-card-list">
-							<c:forEach var="report" items="${reports}">
+							<c:forEach var="reportView" items="${reportViews}">
+								<c:set var="report" value="${reportView.report}" />
 								<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetType.dbValue}" />
 								<spring:message var="reasonLabel" code="admin.reports.reason.${report.reason.dbValue}" />
 								<spring:message var="statusLabel" code="admin.reports.status.${report.status.dbValue}" />
-								<c:set var="targetSummary" value="${targetSummaries[report.id]}" />
+								<c:set var="targetSummary" value="${reportView.targetSummary}" />
+								<c:set var="targetHref" value="${reportView.targetHref}" />
 
 								<div class="report-card">
 									<ui:card className="report-section report-card__inner">
@@ -130,8 +132,11 @@
 														<c:when test="${targetSummary.found and targetSummary.targetType.dbValue eq 'review'}">
 															<spring:message code="moderation.target.review.label" arguments="${targetSummary.displayName}" />
 														</c:when>
-														<c:when test="${targetSummary.found}">
-															<c:out value="${targetSummary.displayName}" />
+														<c:when test="${targetSummary.found and not empty targetHref}">
+															<c:url var="reportTargetHref" value="${targetHref}" />
+															<a class="report-target-link" href="${reportTargetHref}">
+																<c:out value="${targetSummary.displayName}" />
+															</a>
 														</c:when>
 														<c:otherwise>
 															<spring:message code="moderation.target.${targetSummary.targetType.dbValue}.fallback" arguments="${targetSummary.targetId}" />
