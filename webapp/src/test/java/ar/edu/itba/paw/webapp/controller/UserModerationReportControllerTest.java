@@ -122,27 +122,6 @@ class UserModerationReportControllerTest {
     @Test
     void getMyReportDetailReturnsNotFoundForOtherUser() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
-        final ModerationReport reportFromOtherUser =
-                new ModerationReport(
-                        90L,
-                        UserUtils.getUser(99L),
-                        ReportTargetType.MATCH,
-                        42L,
-                        ReportReason.OTHER,
-                        "details",
-                        ReportStatus.RESOLVED,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        (short) 0,
-                        null,
-                        null,
-                        null,
-                        null,
-                        Instant.now(),
-                        Instant.now());
         Mockito.when(moderationService.findReportByIdForReporter(90L, UserUtils.getUser(7L)))
                 .thenReturn(Optional.empty());
 

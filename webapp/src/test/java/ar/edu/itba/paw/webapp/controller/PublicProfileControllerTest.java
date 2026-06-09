@@ -37,8 +37,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -56,7 +54,6 @@ class PublicProfileControllerTest {
     private PlayerReviewService playerReviewService;
     private ModerationService moderationService;
     private UserSportRatingService userSportRatingService;
-    private MessageSource messageSource;
 
     @BeforeEach
     void setUp() {
@@ -64,7 +61,6 @@ class PublicProfileControllerTest {
         playerReviewService = Mockito.mock(PlayerReviewService.class);
         moderationService = Mockito.mock(ModerationService.class);
         userSportRatingService = Mockito.mock(UserSportRatingService.class);
-        messageSource = messageSource();
 
         Mockito.when(userSportRatingService.findRatingsForUser(Mockito.any()))
                 .thenReturn(java.util.List.of());
@@ -501,15 +497,6 @@ class PublicProfileControllerTest {
                                     && r.getId().equals(9L)
                                     && rd.getId().equals(3L);
                         });
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 
     private static DefaultFormattingConversionService conversionService() {
