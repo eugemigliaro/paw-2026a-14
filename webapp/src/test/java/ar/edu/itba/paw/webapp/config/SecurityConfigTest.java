@@ -1,17 +1,22 @@
 package ar.edu.itba.paw.webapp.config;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.UserBan;
+import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
@@ -23,6 +28,7 @@ import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import javax.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,9 +45,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,6 +62,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 @ExtendWith(SpringExtension.class)
 @WebAppConfiguration
 @ContextConfiguration(classes = SecurityConfigTest.TestConfig.class)
+@TestPropertySource(
+        properties = "security.rememberMe.key=0123456789abcdef0123456789abcdef0123456789abcdef")
 class SecurityConfigTest {
 
     private MockMvc mockMvc;
@@ -62,8 +72,13 @@ class SecurityConfigTest {
 
     @Autowired private ModerationService moderationService;
 
+    @Autowired private AccountAuthService accountAuthService;
+
+    @Autowired private PasswordEncoder passwordEncoder;
+
     @BeforeEach
     void setUp() {
+        Mockito.reset(moderationService, accountAuthService, passwordEncoder);
         Mockito.when(moderationService.findActiveBan(any(User.class))).thenReturn(Optional.empty());
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
@@ -225,6 +240,152 @@ class SecurityConfigTest {
         mockMvc.perform(get("/assets/logo.png")).andExpect(status().isNotFound());
     }
 
+    @Test
+    void wellKnownRouteIsPublicAndDoesNotRedirectToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/.well-known/appspecific/com.chrome.devtools.json"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void loginAfterWellKnownProbeRedirectsToDefaultPage() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        mockMvc.perform(get("/.well-known/appspecific/com.chrome.devtools.json"))
+                .andExpect(status().isNotFound());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/login")
+                                .param("email", "player@test.com")
+                                .param("password", "Password123!")
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    void loginLogoutBackToLoginAndLoginAgainDoesNotReturnMethodNotAllowed() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        mockMvc.perform(get("/login")).andExpect(status().isOk());
+        final MvcResult firstLogin =
+                mockMvc.perform(
+                                post("/login")
+                                        .param("email", "player@test.com")
+                                        .param("password", "Password123!")
+                                        .with(csrf()))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/"))
+                        .andReturn();
+
+        mockMvc.perform(
+                        post("/logout")
+                                .session(
+                                        (org.springframework.mock.web.MockHttpSession)
+                                                firstLogin.getRequest().getSession())
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?logout=1"));
+        mockMvc.perform(get("/login?logout=1")).andExpect(status().isOk());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/login")
+                                .param("email", "player@test.com")
+                                .param("password", "Password123!")
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    void loginWithRememberMeSetsPersistentRememberMeCookie() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/login")
+                                .param("email", "player@test.com")
+                                .param("password", "Password123!")
+                                .param("remember-me", "true")
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(cookie().exists("remember-me"))
+                .andExpect(
+                        result -> {
+                            final Cookie rememberMe = result.getResponse().getCookie("remember-me");
+                            assertNotNull(rememberMe);
+                            assertEquals(
+                                    SecurityConfig.REMEMBER_ME_TOKEN_VALIDITY_SECONDS,
+                                    rememberMe.getMaxAge());
+                            assertEquals(true, rememberMe.isHttpOnly());
+                        });
+    }
+
+    @Test
+    void loginWithoutRememberMeClearsStaleRememberMeCookie() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        final Cookie staleRememberMe = new Cookie("remember-me", "stale");
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/login")
+                                .cookie(staleRememberMe)
+                                .param("email", "player@test.com")
+                                .param("password", "Password123!")
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(cookie().maxAge("remember-me", 0));
+    }
+
+    @Test
+    void rememberMeCookieAuthenticatesProtectedRouteWithoutSessionCookie() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        final Cookie rememberMeCookie =
+                mockMvc.perform(
+                                post("/login")
+                                        .param("email", "player@test.com")
+                                        .param("password", "Password123!")
+                                        .param("remember-me", "true")
+                                        .with(csrf()))
+                        .andReturn()
+                        .getResponse()
+                        .getCookie("remember-me");
+        assertNotNull(rememberMeCookie);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/host/tournaments/new").cookie(rememberMeCookie))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void logoutClearsRememberMeCookie() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        final Cookie rememberMeCookie =
+                mockMvc.perform(
+                                post("/login")
+                                        .param("email", "player@test.com")
+                                        .param("password", "Password123!")
+                                        .param("remember-me", "true")
+                                        .with(csrf()))
+                        .andReturn()
+                        .getResponse()
+                        .getCookie("remember-me");
+        assertNotNull(rememberMeCookie);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/logout").cookie(rememberMeCookie).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(cookie().maxAge("remember-me", 0));
+    }
+
     private static RequestPostProcessor authenticatedUser() {
         return authentication(authenticationFor(UserRole.USER, "ROLE_USER"));
     }
@@ -267,6 +428,25 @@ class SecurityConfigTest {
                 null,
                 Instant.now(),
                 Instant.now());
+    }
+
+    private void arrangeValidLogin() {
+        final UserAccount account =
+                new UserAccount(
+                        7L,
+                        "player@test.com",
+                        "player",
+                        "Player",
+                        "One",
+                        null,
+                        null,
+                        "{bcrypt}hash",
+                        UserRole.USER,
+                        Instant.parse("2026-04-10T18:00:00Z"),
+                        UserLanguages.DEFAULT_LANGUAGE);
+        Mockito.when(accountAuthService.findAccountByEmail("player@test.com"))
+                .thenReturn(Optional.of(account));
+        Mockito.when(passwordEncoder.matches("Password123!", "{bcrypt}hash")).thenReturn(true);
     }
 
     @Configuration
@@ -343,6 +523,12 @@ class SecurityConfigTest {
         @ResponseBody
         String publicProfile(@PathVariable("username") final String username) {
             return username;
+        }
+
+        @GetMapping("/login")
+        @ResponseBody
+        String login() {
+            return "login";
         }
     }
 }

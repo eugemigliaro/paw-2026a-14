@@ -3,9 +3,13 @@ package ar.edu.itba.paw.webapp.config;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.webapp.security.AccountAuthenticationProvider;
+import ar.edu.itba.paw.webapp.security.AccountUserDetailsService;
 import ar.edu.itba.paw.webapp.security.BannedAccountAuthorizationFilter;
 import ar.edu.itba.paw.webapp.security.ContinueFlagLoginEntryPoint;
 import ar.edu.itba.paw.webapp.security.LoginFailureHandler;
+import ar.edu.itba.paw.webapp.security.RememberMeKey;
+import ar.edu.itba.paw.webapp.security.RememberMeLoginSuccessHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +20,8 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices.RememberMeTokenAlgorithm;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -23,11 +29,18 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    static final String REMEMBER_ME_COOKIE_NAME = "remember-me";
+    static final String REMEMBER_ME_PARAMETER_NAME = "remember-me";
+    static final int REMEMBER_ME_TOKEN_VALIDITY_SECONDS = 14 * 24 * 60 * 60;
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             final HttpSecurity http,
             final AccountAuthenticationProvider accountAuthenticationProvider,
             final LoginFailureHandler loginFailureHandler,
+            final RememberMeLoginSuccessHandler rememberMeLoginSuccessHandler,
+            final TokenBasedRememberMeServices rememberMeServices,
+            final RememberMeKey rememberMeKey,
             final BannedAccountAuthorizationFilter bannedAccountAuthorizationFilter)
             throws Exception {
         final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
@@ -39,6 +52,8 @@ public class SecurityConfig {
                                 authorize
                                         .requestMatchers(
                                                 new AntPathRequestMatcher("/"),
+                                                new AntPathRequestMatcher(
+                                                        "/.well-known/appspecific/com.chrome.devtools.json"),
                                                 new AntPathRequestMatcher("/errors/**"))
                                         .permitAll()
                                         .requestMatchers(
@@ -135,7 +150,13 @@ public class SecurityConfig {
                                         .loginProcessingUrl("/login")
                                         .usernameParameter("email")
                                         .passwordParameter("password")
-                                        .failureHandler(loginFailureHandler))
+                                        .failureHandler(loginFailureHandler)
+                                        .successHandler(rememberMeLoginSuccessHandler))
+                .rememberMe(
+                        remember ->
+                                remember.key(rememberMeKey.value())
+                                        .rememberMeServices(rememberMeServices)
+                                        .rememberMeParameter(REMEMBER_ME_PARAMETER_NAME))
                 .logout(
                         logout ->
                                 logout.logoutUrl("/logout")
@@ -173,6 +194,40 @@ public class SecurityConfig {
     @Bean
     public LoginFailureHandler loginFailureHandler() {
         return new LoginFailureHandler();
+    }
+
+    @Bean
+    public AccountUserDetailsService accountUserDetailsService(
+            final AccountAuthService accountAuthService) {
+        return new AccountUserDetailsService(accountAuthService);
+    }
+
+    @Bean
+    public RememberMeKey rememberMeKey(
+            @Value("${security.rememberMe.key:}") final String rememberMeKey) {
+        return RememberMeKey.fromConfiguredValue(rememberMeKey);
+    }
+
+    @Bean
+    public TokenBasedRememberMeServices rememberMeServices(
+            final RememberMeKey rememberMeKey,
+            final AccountUserDetailsService accountUserDetailsService) {
+        final TokenBasedRememberMeServices services =
+                new TokenBasedRememberMeServices(
+                        rememberMeKey.value(),
+                        accountUserDetailsService,
+                        RememberMeTokenAlgorithm.SHA256);
+        services.setMatchingAlgorithm(RememberMeTokenAlgorithm.SHA256);
+        services.setCookieName(REMEMBER_ME_COOKIE_NAME);
+        services.setParameter(REMEMBER_ME_PARAMETER_NAME);
+        services.setTokenValiditySeconds(REMEMBER_ME_TOKEN_VALIDITY_SECONDS);
+        return services;
+    }
+
+    @Bean
+    public RememberMeLoginSuccessHandler rememberMeLoginSuccessHandler() {
+        return new RememberMeLoginSuccessHandler(
+                REMEMBER_ME_COOKIE_NAME, REMEMBER_ME_PARAMETER_NAME);
     }
 
     @Bean

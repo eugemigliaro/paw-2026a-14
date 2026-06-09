@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -91,6 +92,11 @@ class AuthFlowControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/login"))
                 .andExpect(model().attributeDoesNotExist("shell"))
+                .andExpect(
+                        header().string(
+                                        "Cache-Control",
+                                        "no-store, no-cache, must-revalidate, max-age=0"))
+                .andExpect(header().string("Pragma", "no-cache"))
                 .andReturn();
     }
 

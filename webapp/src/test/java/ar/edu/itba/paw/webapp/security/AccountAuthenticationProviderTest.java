@@ -52,7 +52,10 @@ class AccountAuthenticationProviderTest {
                         new UsernamePasswordAuthenticationToken("player@test.com", "Password123!"));
 
         assertTrue(authentication.isAuthenticated());
-        assertEquals("player_one", authentication.getName());
+        assertEquals("player@test.com", authentication.getName());
+        assertEquals(
+                "player_one",
+                ((AuthenticatedUserPrincipal) authentication.getPrincipal()).getName());
         assertTrue(
                 authentication.getAuthorities().stream()
                         .anyMatch(authority -> "ROLE_ADMIN_MOD".equals(authority.getAuthority())));

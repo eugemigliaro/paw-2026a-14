@@ -79,6 +79,15 @@
 								showLabel="${showPasswordLabel}"
 								hideLabel="${hidePasswordLabel}" />
 							<div class="auth-form__support">
+								<label class="auth-form__remember" for="remember-me">
+									<input
+										class="auth-form__remember-input"
+										type="checkbox"
+										id="remember-me"
+										name="remember-me"
+										value="true" />
+									<span><spring:message code="auth.login.rememberMe" /></span>
+								</label>
 								<a class="auth-link auth-link--inline" href="${forgotPasswordHref}">
 									<spring:message code="auth.login.forgotPassword" />
 								</a>
