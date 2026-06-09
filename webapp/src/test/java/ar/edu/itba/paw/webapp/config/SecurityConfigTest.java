@@ -49,6 +49,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -254,6 +255,41 @@ class SecurityConfigTest {
         arrangeValidLogin();
         mockMvc.perform(get("/.well-known/appspecific/com.chrome.devtools.json"))
                 .andExpect(status().isNotFound());
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(
+                        post("/login")
+                                .param("email", "player@test.com")
+                                .param("password", "Password123!")
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    void loginLogoutBackToLoginAndLoginAgainDoesNotReturnMethodNotAllowed() throws Exception {
+        // 1. Arrange
+        arrangeValidLogin();
+        mockMvc.perform(get("/login")).andExpect(status().isOk());
+        final MvcResult firstLogin =
+                mockMvc.perform(
+                                post("/login")
+                                        .param("email", "player@test.com")
+                                        .param("password", "Password123!")
+                                        .with(csrf()))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/"))
+                        .andReturn();
+
+        mockMvc.perform(
+                        post("/logout")
+                                .session(
+                                        (org.springframework.mock.web.MockHttpSession)
+                                                firstLogin.getRequest().getSession())
+                                .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?logout=1"));
+        mockMvc.perform(get("/login?logout=1")).andExpect(status().isOk());
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(
@@ -487,6 +523,12 @@ class SecurityConfigTest {
         @ResponseBody
         String publicProfile(@PathVariable("username") final String username) {
             return username;
+        }
+
+        @GetMapping("/login")
+        @ResponseBody
+        String login() {
+            return "login";
         }
     }
 }

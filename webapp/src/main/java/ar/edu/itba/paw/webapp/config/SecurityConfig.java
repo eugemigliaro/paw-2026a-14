@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 authorize
                                         .requestMatchers(
                                                 new AntPathRequestMatcher("/"),
-                                                new AntPathRequestMatcher("/.well-known/**"),
+                                                new AntPathRequestMatcher(
+                                                        "/.well-known/appspecific/com.chrome.devtools.json"),
                                                 new AntPathRequestMatcher("/errors/**"))
                                         .permitAll()
                                         .requestMatchers(

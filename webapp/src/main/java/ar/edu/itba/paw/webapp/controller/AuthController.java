@@ -10,6 +10,7 @@ import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,9 @@ public class AuthController {
                     @RequestParam(value = "reset", required = false) final String reset,
                     @RequestParam(value = "logout", required = false) final String logout,
                     @RequestParam(value = "continue", required = false) final String continueFlag,
+                    final HttpServletResponse response,
                     final Locale locale) {
+        disableBrowserCaching(response);
         final ModelAndView mav = new ModelAndView("auth/login");
         mav.addObject("loginEmail", email == null ? "" : email);
         mav.addObject("loginError", loginErrorMessage(error, locale));
@@ -67,6 +70,12 @@ public class AuthController {
         mav.addObject("loggedOut", "1".equals(logout));
         mav.addObject("loginContinue", continueFlag != null);
         return mav;
+    }
+
+    private static void disableBrowserCaching(final HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
     }
 
     @GetMapping("/register")
