@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.security;
 
+import java.util.Locale;
+
 public final class RememberMeKey {
 
     private static final int MINIMUM_LENGTH = 32;
@@ -12,7 +14,7 @@ public final class RememberMeKey {
 
     public static RememberMeKey fromConfiguredValue(final String configuredValue) {
         final String normalized = configuredValue == null ? "" : configuredValue.trim();
-        final String lowerCase = normalized.toLowerCase();
+        final String lowerCase = normalized.toLowerCase(Locale.ROOT);
         if (normalized.isBlank()
                 || normalized.length() < MINIMUM_LENGTH
                 || normalized.startsWith("${")

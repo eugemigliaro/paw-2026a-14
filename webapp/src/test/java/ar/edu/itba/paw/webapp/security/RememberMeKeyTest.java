@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 class RememberMeKeyTest {
@@ -55,5 +56,24 @@ class RememberMeKeyTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> RememberMeKey.fromConfiguredValue("<generate-a-strong-random-secret>"));
+    }
+
+    @Test
+    void fromConfiguredValueRejectsPlaceholderWithTurkishDefaultLocale() {
+        // 1. Arrange
+        final Locale originalLocale = Locale.getDefault();
+
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+
+            // 2. Exercise + 3. Assert
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            RememberMeKey.fromConfiguredValue(
+                                    "PLACEHOLDER-0123456789abcdef0123456789abcdef"));
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
     }
 }
