@@ -54,7 +54,10 @@
 												loading="eager"
 												decoding="async" />
 											<div class	="report-summary__body">
-												<strong><c:out value="${targetUser.username}" /></strong>
+												<c:url var="reportTargetUserHref" value="/users/${targetUser.username}" />
+												<a class="report-target-link" href="${reportTargetUserHref}">
+													<c:out value="${targetUser.username}" />
+												</a>
 											</div>
 										</dd>
 									</div>
@@ -70,7 +73,7 @@
 											<c:choose>
 												<c:when test="${not empty targetReview.reviewer.username}">
 													<c:url var="reportReviewAuthorHref" value="/users/${targetReview.reviewer.username}" />
-													<a href="${reportReviewAuthorHref}"><c:out value="${targetReview.reviewer.username}" /></a>
+													<a class="report-target-link" href="${reportReviewAuthorHref}"><c:out value="${targetReview.reviewer.username}" /></a>
 												</c:when>
 												<c:otherwise>
 													<spring:message code="profile.reviews.unknownReviewer" />
@@ -104,7 +107,7 @@
 												<c:choose>
 													<c:when test="${not empty targetReview.reviewed.username}">
 														<c:url var="reportReviewedUserHref" value="/users/${targetReview.reviewed.username}" />
-															<a href="${reportReviewedUserHref}"><c:out value="${targetReview.reviewed.username}" /></a>
+															<a class="report-target-link" href="${reportReviewedUserHref}"><c:out value="${targetReview.reviewed.username}" /></a>
 														</c:when>
 														<c:otherwise>
 															<spring:message code="profile.reviews.unknownReviewer" />
@@ -121,7 +124,12 @@
 								<dl class="stack">
 									<div class="report-section-field report-section-field__row">
 										<dt class="detail-label"><spring:message code="report.page.match.name" /></dt>
-										<dd><c:out value="${targetMatch.title}" /></dd>
+										<dd>
+											<c:url var="reportTargetMatchHref" value="/matches/${targetMatch.id}" />
+											<a class="report-target-link" href="${reportTargetMatchHref}">
+												<c:out value="${targetMatch.title}" />
+											</a>
+										</dd>
 									</div>
 									<c:if test="${not empty targetMatch.description}">
 										<div class="report-section-field report-section-field__row">
@@ -135,7 +143,7 @@
 											<c:choose>
 												<c:when test="${not empty targetMatch.host.username}">
 													<c:url var="reportMatchHostHref" value="/users/${targetMatch.host.username}" />
-													<a href="${reportMatchHostHref}"><c:out value="${targetMatch.host.username}" /></a>
+													<a class="report-target-link" href="${reportMatchHostHref}"><c:out value="${targetMatch.host.username}" /></a>
 												</c:when>
 												<c:otherwise>
 													<spring:message code="profile.reviews.unknownReviewer" />

@@ -27,17 +27,18 @@
 	margin-top: 1rem;
 }
 
-.report-target-link {
+a.report-target-link {
 	color: inherit;
+	font-weight: 700;
 	text-decoration: none;
 }
 
-.report-target-link:hover,
-.report-target-link:focus-visible {
+a.report-target-link:hover,
+a.report-target-link:focus-visible {
 	text-decoration: underline;
 }
 
-.report-target-link:focus-visible {
+a.report-target-link:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 3px;
 }

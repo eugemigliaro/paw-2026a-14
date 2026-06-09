@@ -16,10 +16,8 @@ import ar.edu.itba.paw.webapp.form.ModerationAppealResolutionForm;
 import ar.edu.itba.paw.webapp.form.ModerationResolutionForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import javax.validation.Valid;
 import javax.validation.groups.Default;
@@ -83,8 +81,7 @@ public class ModerationAdminController {
 
         final PaginatedResult<ModerationReport> result =
                 moderationService.findReports(typeFilters, statusFilters, page, PAGE_SIZE);
-        final Map<Long, ModerationTargetSummary> targetSummaries =
-                targetSummariesByReportId(result.getItems());
+        final List<AdminReportView> reportViews = reportViews(result.getItems());
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
         mav.addObject(
@@ -100,8 +97,7 @@ public class ModerationAdminController {
                         "admin.reports.count", new Object[] {result.getTotalCount()}, locale));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
-        mav.addObject("reports", result.getItems());
-        mav.addObject("targetSummaries", targetSummaries);
+        mav.addObject("reportViews", reportViews);
         mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
                 "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
@@ -162,9 +158,10 @@ public class ModerationAdminController {
                 messageSource.getMessage("admin.reports.detail.description", null, locale));
 
         mav.addObject("report", report);
-        mav.addObject(
-                "targetSummary",
-                moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
+        final ModerationTargetSummary targetSummary =
+                moderationService.resolveTarget(report.getTargetType(), report.getTargetId());
+        mav.addObject("targetSummary", targetSummary);
+        mav.addObject("targetHref", targetHref(targetSummary));
 
         final boolean showResolution =
                 report.getResolution() != null
@@ -357,15 +354,28 @@ public class ModerationAdminController {
                 .addObject(BindingResult.MODEL_KEY_PREFIX + "appealResolutionForm", bindingResult);
     }
 
-    private Map<Long, ModerationTargetSummary> targetSummariesByReportId(
-            final List<ModerationReport> reports) {
-        final Map<Long, ModerationTargetSummary> targetSummaries = new LinkedHashMap<>();
+    private List<AdminReportView> reportViews(final List<ModerationReport> reports) {
+        final List<AdminReportView> reportViews = new java.util.ArrayList<>();
         for (final ModerationReport report : reports) {
-            targetSummaries.put(
-                    report.getId(),
-                    moderationService.resolveTarget(report.getTargetType(), report.getTargetId()));
+            final ModerationTargetSummary targetSummary =
+                    moderationService.resolveTarget(report.getTargetType(), report.getTargetId());
+            reportViews.add(new AdminReportView(report, targetSummary, targetHref(targetSummary)));
         }
-        return targetSummaries;
+        return reportViews;
+    }
+
+    private String targetHref(final ModerationTargetSummary targetSummary) {
+        if (targetSummary == null || !targetSummary.isFound()) {
+            return null;
+        }
+        return switch (targetSummary.getTargetType()) {
+            case USER ->
+                    targetSummary.getTargetSlug() == null || targetSummary.getTargetSlug().isBlank()
+                            ? null
+                            : "/users/" + targetSummary.getTargetSlug();
+            case MATCH -> "/matches/" + targetSummary.getTargetId();
+            case REVIEW -> null;
+        };
     }
 
     private UserBan userBan(final ModerationReport report) {
@@ -387,5 +397,32 @@ public class ModerationAdminController {
         }
 
         return latestBanForUser.get();
+    }
+
+    public static final class AdminReportView {
+        private final ModerationReport report;
+        private final ModerationTargetSummary targetSummary;
+        private final String targetHref;
+
+        public AdminReportView(
+                final ModerationReport report,
+                final ModerationTargetSummary targetSummary,
+                final String targetHref) {
+            this.report = report;
+            this.targetSummary = targetSummary;
+            this.targetHref = targetHref;
+        }
+
+        public ModerationReport getReport() {
+            return report;
+        }
+
+        public ModerationTargetSummary getTargetSummary() {
+            return targetSummary;
+        }
+
+        public String getTargetHref() {
+            return targetHref;
+        }
     }
 }

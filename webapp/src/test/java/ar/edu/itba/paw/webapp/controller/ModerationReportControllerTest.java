@@ -142,6 +142,20 @@ class ModerationReportControllerTest {
                 .andExpect(flash().attribute("reportSent", true));
     }
 
+    @Test
+    void getMatchReportPageExposesTargetMatchForLink() throws Exception {
+        AuthenticationUtils.authenticateUser(9L);
+        final Match match =
+                MatchUtils.createMatchWithId(
+                        42L, 7L, Sport.FOOTBALL, Instant.parse("2026-04-10T10:00:00Z"), 10);
+        Mockito.when(matchService.findMatchById(42L)).thenReturn(Optional.of(match));
+
+        mockMvc.perform(get("/reports/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reports/create"))
+                .andExpect(model().attribute("targetMatch", match));
+    }
+
     private static DefaultFormattingConversionService conversionService() {
         final DefaultFormattingConversionService conversionService =
                 new DefaultFormattingConversionService();

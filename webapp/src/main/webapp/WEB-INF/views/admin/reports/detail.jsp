@@ -48,8 +48,11 @@
 									<c:when test="${targetSummary.found and targetSummary.targetType.dbValue eq 'review'}">
 										<spring:message code="moderation.target.review.label" arguments="${targetSummary.displayName}" />
 									</c:when>
-									<c:when test="${targetSummary.found}">
-										<c:out value="${targetSummary.displayName}" />
+									<c:when test="${targetSummary.found and not empty targetHref}">
+										<c:url var="reportTargetHref" value="${targetHref}" />
+										<a class="report-target-link" href="${reportTargetHref}">
+											<c:out value="${targetSummary.displayName}" />
+										</a>
 									</c:when>
 									<c:otherwise>
 										<spring:message code="moderation.target.${targetSummary.targetType.dbValue}.fallback" arguments="${targetSummary.targetId}" />
