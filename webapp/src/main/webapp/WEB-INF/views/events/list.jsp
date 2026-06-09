@@ -6,8 +6,9 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <c:set var="resolvedPageTitleCode" value="${empty pageTitleCode ? 'app.brand' : pageTitleCode}" />
+<c:set var="resolvedListTitleCode" value="${empty listTitleCode ? 'events.title' : listTitleCode}" />
 <spring:message var="pageTitle" code="${resolvedPageTitleCode}" />
-<spring:message var="listTitle" code="events.title" />
+<spring:message var="listTitle" code="${resolvedListTitleCode}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -24,7 +25,6 @@
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
-					<spring:message var="eventTypeFilterTitle" code="filter.eventType" />
 
 				<main class="page-shell page-shell--matches-list">
 
@@ -57,9 +57,6 @@
 										<input type="hidden" name="category"
 											value="<c:out value='${selectedCategory}' />" />
 									</c:forEach>
-									<c:if test="${searchForm.type.getValue() eq 'tournament'}">
-										<input type="hidden" name="type" value="tournament" />
-									</c:if>
 									<c:forEach var="selectedVisibilityItem"
 										items="${searchForm.visibility}">
 										<input type="hidden" name="visibility"
@@ -102,58 +99,6 @@
 							<div class="horizontal-filters-bar" aria-label="${filtersAriaLabel}">
 
 								<c:forEach var="group" items="${listControls.filterGroups}">
-									<c:choose>
-										<c:when test="${group.titleCode eq 'filter.eventType'}">
-											<c:forEach var="option" items="${group.options}" varStatus="optionStatus">
-												<c:choose>
-													<c:when test="${optionStatus.first}">
-														<spring:message var="eventTypeMatchLabel" code="${option.labelCode}" />
-														<c:choose>
-															<c:when test="${not empty option.params}">
-																<c:url var="eventTypeMatchHref" value="${listControls.searchAction}">
-																	<c:forEach var="p" items="${option.params}">
-																		<c:param name="${p.key}" value="${p.value}" />
-																	</c:forEach>
-																</c:url>
-															</c:when>
-															<c:otherwise>
-																<c:set var="eventTypeMatchHref" value="${option.href}" />
-															</c:otherwise>
-														</c:choose>
-													</c:when>
-													<c:otherwise>
-														<spring:message var="eventTypeTournamentLabel" code="${option.labelCode}" />
-														<c:choose>
-															<c:when test="${not empty option.params}">
-																<c:url var="eventTypeTournamentHref" value="${listControls.searchAction}">
-																	<c:forEach var="p" items="${option.params}">
-																		<c:param name="${p.key}" value="${p.value}" />
-																	</c:forEach>
-																</c:url>
-															</c:when>
-															<c:otherwise>
-																<c:set var="eventTypeTournamentHref" value="${option.href}" />
-															</c:otherwise>
-														</c:choose>
-													</c:otherwise>
-												</c:choose>
-											</c:forEach>
-											<ui:eventsFilterToggle
-												className="feed-event-type-toggle"
-												ariaLabel="${eventTypeFilterTitle}"
-												currentValue="${selectedType}"
-												leftValue="match"
-												rightValue="tournament"
-												leftLabel="${eventTypeMatchLabel}"
-												rightLabel="${eventTypeTournamentLabel}"
-												leftHref="${eventTypeMatchHref}"
-												rightHref="${eventTypeTournamentHref}"
-												iconOnly="${true}"
-												leftIcon="ball"
-												rightIcon="trophy"
-												forceLeftOnEmpty="${true}" />
-										</c:when>
-										<c:otherwise>
 									<spring:message var="groupTitleLabel" code="${group.titleCode}" />
 									<div class="filter-dropdown" data-filter-name="${group.titleCode}">
 										<button type="button" class="filter-dropdown__toggle">
@@ -241,8 +186,6 @@
 												</div>
 											</c:if>
 										</div>
-										</c:otherwise>
-									</c:choose>
 									</c:forEach>
 
 								<c:if test="${selectedType ne 'tournament'}">
@@ -276,9 +219,6 @@
 												<input type="hidden" name="category"
 													value="<c:out value='${selectedCategory}' />" />
 											</c:forEach>
-											<c:if test="${searchForm.type.getValue() eq 'tournament'}">
-												<input type="hidden" name="type" value="tournament" />
-											</c:if>
 											<c:forEach var="selectedVisibilityItem"
 												items="${searchForm.visibility}">
 												<input type="hidden" name="visibility"
@@ -325,9 +265,6 @@
 													<c:forEach var="selectedCategory" items="${searchForm.category}">
 														<c:param name="category" value="${selectedCategory}" />
 													</c:forEach>
-													<c:if test="${searchForm.type.getValue() eq 'tournament'}">
-														<c:param name="type" value="tournament" />
-													</c:if>
 													<c:forEach var="selectedVisibilityItem" items="${searchForm.visibility}">
 														<c:param name="visibility" value="${selectedVisibilityItem}" />
 													</c:forEach>
@@ -406,9 +343,6 @@
 												<input type="hidden" name="visibility"
 													value="<c:out value='${selectedVisibilityItem}' />" />
 											</c:forEach>
-											<c:if test="${searchForm.type.getValue() eq 'tournament'}">
-												<input type="hidden" name="type" value="tournament" />
-											</c:if>
 											<c:if test="${searchForm.type.getValue() ne 'tournament'}">
 												<input type="hidden" name="startDate"
 													value="<c:out value='${searchForm.startDate}' />" />
@@ -467,9 +401,6 @@
 													<c:forEach var="selectedCategory" items="${searchForm.category}">
 														<c:param name="category" value="${selectedCategory}" />
 													</c:forEach>
-													<c:if test="${searchForm.type.getValue() eq 'tournament'}">
-														<c:param name="type" value="tournament" />
-													</c:if>
 													<c:forEach var="selectedVisibilityItem" items="${searchForm.visibility}">
 														<c:param name="visibility" value="${selectedVisibilityItem}" />
 													</c:forEach>
@@ -513,7 +444,6 @@
 									</div>
 
 								<c:url var="clearSearchHref" value="${listControls.cleanSearchAction}">
-									<c:param name="type" value="${searchForm.type}" />
 									<c:param name="filter" value="${searchForm.filterName}" />
 								</c:url>
 									<spring:message var="clearAllLabel" code="filter.clearAll" />

@@ -13,7 +13,6 @@ import java.time.format.FormatStyle;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -46,14 +44,11 @@ public class UserBanAppealController {
     @GetMapping
     public ModelAndView showBanPage(
             @AuthenticatedUser final User user, final Model model, final Locale locale) {
-        final UserBan activeBan =
-                moderationService
-                        .findActiveBan(user)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        final UserBan activeBan = moderationService.findActiveBan(user).orElse(null);
         final ModerationReport report =
                 moderationService
                         .findReportById(activeBan.getModerationReport().getId())
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                        .orElse(null);
         final ModelAndView mav = new ModelAndView("account/banned");
         mav.addObject(
                 "pageTitle", messageSource.getMessage("page.title.accountBanned", null, locale));
@@ -89,10 +84,7 @@ public class UserBanAppealController {
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final UserBan activeBan =
-                moderationService
-                        .findActiveBan(user)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
+        final UserBan activeBan = moderationService.findActiveBan(user).orElse(null);
 
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute(

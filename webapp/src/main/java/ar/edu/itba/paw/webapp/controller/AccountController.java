@@ -83,7 +83,6 @@ public class AccountController {
             final boolean updated,
             final AccountProfileForm accountProfileForm,
             final String profileImageError) {
-        // View labels are resolved in account/index.jsp via <spring:message>.
         final ModelAndView mav = new ModelAndView("account/index");
         mav.addObject("accountUpdated", updated);
         mav.addObject("accountProfileImageError", profileImageError);

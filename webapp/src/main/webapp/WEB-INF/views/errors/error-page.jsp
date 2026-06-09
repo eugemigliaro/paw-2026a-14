@@ -33,7 +33,7 @@
 							size="lg" />
 							<sec:authorize access="!isAnonymous()">
 								<spring:message var="hostLabel" code="common.hostEvent" />
-								<c:url var="hostHref" value="/host/matches/new" />
+								<c:url var="hostHref" value="/matches/new" />
 								<ui:button
 									label="${hostLabel}"
 									href="${hostHref}"

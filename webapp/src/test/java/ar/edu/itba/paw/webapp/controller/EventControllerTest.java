@@ -1141,7 +1141,7 @@ class EventControllerTest {
 
         mockMvc.perform(post("/matches/51/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/events"));
+                .andExpect(redirectedUrl("/matches"));
     }
 
     @Test

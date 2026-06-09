@@ -56,7 +56,7 @@ class HostParticipationControllerTest {
                                         matchParticipationService, userService, messageSource))
                         .setValidator(validator(userEmailValidator))
                         .setControllerAdvice(
-                                new AccessExceptionHandler(),
+                                new AccessExceptionHandler(messageSource),
                                 new PasswordResetExceptionHandler(),
                                 new VerificationExceptionHandler())
                         .build();
@@ -78,7 +78,7 @@ class HostParticipationControllerTest {
                 .andExpect(view().name("host/participation/aggregate-requests"))
                 .andExpect(model().attribute("aggregateRequests", true))
                 .andExpect(model().attributeExists("pendingRequests"))
-                .andExpect(model().attribute("matchesUrl", "/events"));
+                .andExpect(model().attribute("matchesUrl", "/matches"));
     }
 
     @Test

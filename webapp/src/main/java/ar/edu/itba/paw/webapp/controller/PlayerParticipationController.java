@@ -90,7 +90,7 @@ public class PlayerParticipationController {
             @AuthenticatedUser final User user, @PathVariable("matchId") final Long matchId) {
         try {
             matchParticipationService.declineInvite(matchId, user);
-            return new ModelAndView("redirect:/events");
+            return new ModelAndView("redirect:/matches");
         } catch (MatchException e) {
             final String errorCode = e.getMessage();
             return new ModelAndView("redirect:/matches/" + matchId + "?inviteError=" + errorCode);

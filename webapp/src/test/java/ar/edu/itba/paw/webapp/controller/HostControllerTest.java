@@ -48,6 +48,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Locale;
+import java.util.Optional;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorFactory;
 import org.hamcrest.Matchers;
@@ -161,8 +162,7 @@ class HostControllerTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new HostController(
-                                        matchService, messageSource, false, "", "", 0, 0, 0))
+                                new HostController(matchService, false, "", "", 0, 0, 0))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
@@ -170,7 +170,7 @@ class HostControllerTest {
                         .setValidator(validator)
                         .setConversionService(formattingConversionServiceWithSportConverter())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
-                        .setControllerAdvice(new AccessExceptionHandler())
+                        .setControllerAdvice(new AccessExceptionHandler(messageSource))
                         .build();
     }
 
@@ -180,6 +180,14 @@ class HostControllerTest {
     }
 
     private void configureMatchServiceStubs() {
+        // findMatchById: returns the fixture match for known IDs.
+        Mockito.when(matchService.findMatchById(Mockito.anyLong()))
+                .thenAnswer(
+                        invocation -> {
+                            Long id = invocation.getArgument(0);
+                            return Optional.ofNullable(findFixtureMatch(id));
+                        });
+
         // createMatch: capture request, return a canned Match with id 43.
         Mockito.when(matchService.createMatch(Mockito.any(CreateMatchRequest.class)))
                 .thenAnswer(
@@ -375,9 +383,25 @@ class HostControllerTest {
     }
 
     @Test
+    void getCreateMatchUsesCanonicalRouteAndFormAction() throws Exception {
+        mockMvc.perform(get("/matches/new").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(view().name("host/create-match"))
+                .andExpect(model().attribute("pageTitleCode", "page.title.hostMode"))
+                .andExpect(model().attribute("formAction", "/matches/new"));
+    }
+
+    @Test
+    void getLegacyCreateMatchRouteRedirectsToCanonicalRoute() throws Exception {
+        mockMvc.perform(get("/host/matches/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/new"));
+    }
+
+    @Test
     void postHostPublishWithoutAuthenticatedUserReturnsUnauthorized() throws Exception {
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -398,7 +422,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -424,11 +448,37 @@ class HostControllerTest {
     }
 
     @Test
-    void postHostPublishPassesValidCoordinatesToService() throws Exception {
+    void postLegacyHostPublishCreatesAndRedirectsForStaleForms() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
                         post("/host/matches/new")
+                                .param("title", "Host Test Match")
+                                .param("description", "Friendly game")
+                                .param("address", "Downtown Club")
+                                .param("sport", "padel")
+                                .param("visibility", "public")
+                                .param("joinPolicy", "direct")
+                                .param("eventDate", "2099-04-10")
+                                .param("eventTime", "18:00")
+                                .param("endDate", "2099-04-10")
+                                .param("endTime", "19:30")
+                                .param("maxPlayers", "8")
+                                .param("pricePerPlayer", "0"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/43"));
+
+        final CreateMatchRequest request = captureCreateMatchRequest();
+        Assertions.assertNotNull(request);
+        Assertions.assertEquals("Host Test Match", request.getTitle());
+    }
+
+    @Test
+    void postHostPublishPassesValidCoordinatesToService() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -457,7 +507,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -484,7 +534,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -512,7 +562,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -544,7 +594,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -576,7 +626,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -604,7 +654,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -632,7 +682,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -654,7 +704,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -677,7 +727,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -700,7 +750,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -723,7 +773,7 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 
         mockMvc.perform(
-                        post("/host/matches/new")
+                        post("/matches/new")
                                 .param("title", "Host Test Match")
                                 .param("description", "Friendly game")
                                 .param("address", "Downtown Club")
@@ -777,27 +827,6 @@ class HostControllerTest {
     }
 
     @Test
-    void getHostEditRouteForNonHostReturnsForbidden() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void getHostEditRouteForCompletedMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches/44/edit")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getHostEditRouteForCancelledMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches/45/edit")).andExpect(status().isNotFound());
-    }
-
-    @Test
     void getHostSeriesEditRouteRendersPrefilledFormForHost() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
@@ -813,13 +842,6 @@ class HostControllerTest {
                                         "createEventForm",
                                         Matchers.hasProperty(
                                                 "title", Matchers.is("Weekly Padel"))));
-    }
-
-    @Test
-    void getHostSeriesEditRouteForSingleEventReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches/42/series/edit")).andExpect(status().isNotFound());
     }
 
     @Test

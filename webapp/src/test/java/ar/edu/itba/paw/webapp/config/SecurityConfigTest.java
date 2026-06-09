@@ -23,7 +23,9 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.SecurityService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
@@ -57,6 +59,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 @ExtendWith(SpringExtension.class)
@@ -71,6 +74,7 @@ class SecurityConfigTest {
     @Autowired private WebApplicationContext context;
 
     @Autowired private ModerationService moderationService;
+    @Autowired private SecurityService securityService;
 
     @Autowired private AccountAuthService accountAuthService;
 
@@ -84,22 +88,170 @@ class SecurityConfigTest {
     }
 
     @Test
-    void hostRouteRedirectsAnonymousToLogin() throws Exception {
+    void canonicalTournamentCreateRouteRedirectsAnonymousToLogin() throws Exception {
         // 1. Arrange
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/new"))
+        mockMvc.perform(get("/tournaments/new"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?continue"));
     }
 
     @Test
-    void hostRouteAllowsRegularUser() throws Exception {
+    void trailingSlashTournamentCreateRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/new/"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void canonicalTournamentCreateRouteAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/new").with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void legacyTournamentCreateRouteRedirectsToCanonicalRoute() throws Exception {
         // 1. Arrange
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/host/tournaments/new").with(authenticatedUser()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/new"));
+    }
+
+    @Test
+    void legacyMatchCreateRouteRedirectsToCanonicalRoute() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/host/matches/new").with(authenticatedUser()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/matches/new"));
+    }
+
+    @Test
+    void canonicalMatchCreateRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void trailingSlashMatchCreateRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches/new/"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void canonicalMatchCreateRouteAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches/new").with(authenticatedUser())).andExpect(status().isOk());
+    }
+
+    @Test
+    void canonicalMatchesListRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void canonicalMatchesListRouteAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches").with(authenticatedUser())).andExpect(status().isOk());
+    }
+
+    @Test
+    void canonicalTournamentsListRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void canonicalTournamentsListRouteAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments").with(authenticatedUser())).andExpect(status().isOk());
+    }
+
+    @Test
+    void canonicalMatchCreatePostRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/matches/new").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void canonicalMatchCreatePostAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/matches/new").with(csrf()).with(authenticatedUser()))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void canonicalTournamentCreatePostRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/tournaments").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void canonicalTournamentCreatePostAllowsRegularUser() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(post("/tournaments").with(csrf()).with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void publicMatchDetailRouteAllowsAnonymous() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches/42")).andExpect(status().isOk());
+    }
+
+    @Test
+    void publicTournamentDetailRouteAllowsAnonymous() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77")).andExpect(status().isOk());
     }
 
     @Test
@@ -169,6 +321,7 @@ class SecurityConfigTest {
     @Test
     void reportCreationRouteAllowsRegularUser() throws Exception {
         // 1. Arrange
+        Mockito.when(securityService.canReportUser("player")).thenReturn(true);
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/reports/users/player").with(authenticatedUser()))
@@ -360,7 +513,23 @@ class SecurityConfigTest {
         assertNotNull(rememberMeCookie);
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/new").cookie(rememberMeCookie))
+        mockMvc.perform(get("/tournaments/new").cookie(rememberMeCookie))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void myReportDetailRejectsNonReporter() throws Exception {
+        Mockito.when(securityService.canViewOwnReport(90L)).thenReturn(false);
+
+        mockMvc.perform(get("/reports/mine/90").with(authenticatedUser()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void myReportDetailAllowsReporter() throws Exception {
+        Mockito.when(securityService.canViewOwnReport(90L)).thenReturn(true);
+
+        mockMvc.perform(get("/reports/mine/90").with(authenticatedUser()))
                 .andExpect(status().isOk());
     }
 
@@ -384,6 +553,22 @@ class SecurityConfigTest {
         mockMvc.perform(post("/logout").cookie(rememberMeCookie).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(cookie().maxAge("remember-me", 0));
+    }
+
+    @Test
+    void deleteReviewRejectsWhenNoReview() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+        Mockito.when(securityService.canDeleteReview("target")).thenReturn(false);
+
+        mockMvc.perform(post("/users/target/reviews/delete")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getHostEditRouteForNonHostReturnsForbidden() throws Exception {
+        Mockito.when(securityService.canEditMatch(42L)).thenReturn(false);
+
+        mockMvc.perform(get("/host/matches/42/edit").with(authenticatedUser()))
+                .andExpect(status().isForbidden());
     }
 
     private static RequestPostProcessor authenticatedUser() {
@@ -475,6 +660,11 @@ class SecurityConfigTest {
         }
 
         @Bean
+        SecurityService securityService() {
+            return Mockito.mock(SecurityService.class);
+        }
+
+        @Bean
         TestRoutes testRoutes() {
             return new TestRoutes();
         }
@@ -484,9 +674,61 @@ class SecurityConfigTest {
     static class TestRoutes {
 
         @GetMapping("/host/tournaments/new")
+        ModelAndView legacyHostTournamentCreate() {
+            return new ModelAndView("redirect:/tournaments/new");
+        }
+
+        @GetMapping("/host/matches/new")
+        ModelAndView legacyHostMatchCreate() {
+            return new ModelAndView("redirect:/matches/new");
+        }
+
+        @GetMapping("/matches")
         @ResponseBody
-        String hostTournamentCreate() {
-            return "host";
+        String matchesList() {
+            return "matches";
+        }
+
+        @GetMapping("/tournaments")
+        @ResponseBody
+        String tournamentsList() {
+            return "tournaments";
+        }
+
+        @GetMapping("/matches/new")
+        @ResponseBody
+        String matchCreate() {
+            return "match-create";
+        }
+
+        @PostMapping("/matches/new")
+        @ResponseBody
+        String createMatch() {
+            return "match-created";
+        }
+
+        @GetMapping("/tournaments/new")
+        @ResponseBody
+        String tournamentCreate() {
+            return "tournament-create";
+        }
+
+        @PostMapping("/tournaments")
+        @ResponseBody
+        String createTournament() {
+            return "tournament-created";
+        }
+
+        @GetMapping("/matches/{matchId:\\d+}")
+        @ResponseBody
+        String matchDetail(@PathVariable("matchId") final Long matchId) {
+            return "match-" + matchId;
+        }
+
+        @GetMapping("/tournaments/{tournamentId:\\d+}")
+        @ResponseBody
+        String tournamentDetail(@PathVariable("tournamentId") final Long tournamentId) {
+            return "tournament-" + tournamentId;
         }
 
         @GetMapping("/admin/reports")
@@ -507,10 +749,22 @@ class SecurityConfigTest {
             return "my-reports";
         }
 
+        @GetMapping("/reports/mine/{reportId}")
+        @ResponseBody
+        String myReportDetail(@PathVariable("reportId") final Long reportId) {
+            return "report-detail-" + reportId;
+        }
+
         @GetMapping("/reports/users/{username}")
         @ResponseBody
         String reportUser(@PathVariable("username") final String username) {
             return "report-" + username;
+        }
+
+        @GetMapping("/users/{username}/reviews/delete")
+        @ResponseBody
+        String deleteReview(@PathVariable("username") final String username) {
+            return "delete-review-" + username;
         }
 
         @PostMapping("/matches/{matchId}/invites/accept")

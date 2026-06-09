@@ -119,14 +119,9 @@ public class AuthController {
             @RequestParam(value = "email", required = false) final String email,
             final Locale locale) {
         Optional<VerificationRequestResult> result = Optional.empty();
-        try {
-            if (email != null && !email.isBlank()) {
-                result = accountAuthService.resendVerification(email);
-                LOGGER.info("Resend verification requested locale={}", locale);
-            }
-        } catch (final IllegalArgumentException ignored) {
-            LOGGER.debug("Resend verification rejected due to invalid email format");
-            result = Optional.empty();
+        if (email != null && !email.isBlank()) {
+            result = accountAuthService.resendVerification(email);
+            LOGGER.info("Resend verification requested locale={}", locale);
         }
 
         return checkEmailView(

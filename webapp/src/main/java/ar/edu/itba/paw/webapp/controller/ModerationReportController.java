@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -66,10 +64,7 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        final User reportedUser =
-                userService
-                        .findByUsername(username)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final User reportedUser = userService.findByUsername(username).orElse(null);
         return baseReportView(
                 locale,
                 model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
@@ -97,10 +92,7 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        final PlayerReview review =
-                playerReviewService
-                        .findReviewById(reviewId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final PlayerReview review = playerReviewService.findReviewById(reviewId).orElse(null);
         final User author = review.getReviewer();
         final User reviewedUser = review.getReviewed();
         return baseReportView(
@@ -134,10 +126,7 @@ public class ModerationReportController {
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model,
             final Locale locale) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = matchService.findMatchById(matchId).orElse(null);
         return baseReportView(
                 locale,
                 model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
@@ -165,14 +154,7 @@ public class ModerationReportController {
             final BindingResult errors,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final User reportedUser =
-                userService
-                        .findByUsername(username)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        if (reportedUser.getId().equals(user.getId())) {
-            errors.reject("moderation.report.error.self");
-        }
+        final User reportedUser = userService.findByUsername(username).orElse(null);
 
         if (errors.hasErrors()) {
             LOGGER.warn(
@@ -213,10 +195,7 @@ public class ModerationReportController {
             final BindingResult errors,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final PlayerReview review =
-                playerReviewService
-                        .findReviewById(reviewId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final PlayerReview review = playerReviewService.findReviewById(reviewId).orElse(null);
 
         if (errors.hasErrors()) {
             LOGGER.warn(
@@ -257,10 +236,7 @@ public class ModerationReportController {
             final BindingResult errors,
             final RedirectAttributes redirectAttributes,
             final Locale locale) {
-        final Match match =
-                matchService
-                        .findMatchById(matchId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        final Match match = matchService.findMatchById(matchId).orElse(null);
 
         if (errors.hasErrors()) {
             LOGGER.warn(

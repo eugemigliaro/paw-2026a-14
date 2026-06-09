@@ -54,12 +54,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 class FeedControllerTest {
 
     private MatchService matchService;
     private TournamentService tournamentService;
+    private FeedController feedController;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -122,19 +124,21 @@ class FeedControllerTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
 
+        feedController =
+                new FeedController(
+                        matchService,
+                        matchParticipationService,
+                        matchReservationService,
+                        tournamentService,
+                        false,
+                        "",
+                        "",
+                        0,
+                        0,
+                        0);
+
         mockMvc =
-                MockMvcBuilders.standaloneSetup(
-                                new FeedController(
-                                        matchService,
-                                        matchParticipationService,
-                                        matchReservationService,
-                                        tournamentService,
-                                        false,
-                                        "",
-                                        "",
-                                        0,
-                                        0,
-                                        0))
+                MockMvcBuilders.standaloneSetup(feedController)
                         .setViewResolvers(viewResolver)
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
@@ -142,9 +146,30 @@ class FeedControllerTest {
                         .build();
     }
 
+    private MockMvc validatingMockMvc() {
+        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+        return MockMvcBuilders.standaloneSetup(feedController)
+                .setViewResolvers(new InternalResourceViewResolver("/WEB-INF/views/", ".jsp"))
+                .setConversionService(conversionService())
+                .setValidator(validator)
+                .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
+                .defaultRequest(get("/").locale(Locale.ENGLISH))
+                .build();
+    }
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void homeFeedWithWildcardQueryRendersPageWithInlineError() throws Exception {
+        validatingMockMvc()
+                .perform(get("/").param("q", "%"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("feed/index"))
+                .andExpect(model().attributeHasFieldErrors("searchForm", "q"));
     }
 
     @Test

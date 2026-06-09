@@ -7,9 +7,12 @@ import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
@@ -206,7 +209,7 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
             return false;
         }
 
-        final Long count =
+        final Long matchCount =
                 em.createQuery(
                                 "SELECT COUNT(reviewer.id)"
                                         + " FROM MatchParticipant reviewer"
@@ -229,7 +232,27 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                         .setParameter("completedStatus", EventStatus.COMPLETED)
                         .setParameter("openStatus", EventStatus.OPEN)
                         .getSingleResult();
-        return count != null && count > 0;
+        if (matchCount != null && matchCount > 0) {
+            return true;
+        }
+
+        final Long tournamentCount =
+                em.createQuery(
+                                "SELECT COUNT(tm.id)"
+                                        + " FROM TournamentMatch tm"
+                                        + " WHERE tm.status = :doneStatus"
+                                        + " AND EXISTS (SELECT 1 FROM TournamentTeamMember rm"
+                                        + " WHERE rm.user.id = :reviewerUserId"
+                                        + " AND (rm.team = tm.teamA OR rm.team = tm.teamB))"
+                                        + " AND EXISTS (SELECT 1 FROM TournamentTeamMember dm"
+                                        + " WHERE dm.user.id = :reviewedUserId"
+                                        + " AND (dm.team = tm.teamA OR dm.team = tm.teamB))",
+                                Long.class)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter("reviewedUserId", reviewed.getId())
+                        .setParameter("doneStatus", TournamentMatchStatus.DONE)
+                        .getSingleResult();
+        return tournamentCount != null && tournamentCount > 0;
     }
 
     @Override
@@ -238,27 +261,47 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
             return List.of();
         }
 
-        return em.createQuery(
-                        "SELECT DISTINCT reviewed.user.id"
-                                + " FROM MatchParticipant reviewer"
-                                + " JOIN MatchParticipant reviewed"
-                                + " ON reviewed.match.id = reviewer.match.id"
-                                + " JOIN reviewer.match m"
-                                + " WHERE reviewer.user.id = :reviewerUserId"
-                                + " AND reviewer.status IN :participantStatuses"
-                                + " AND reviewed.user.id <> :reviewerUserId"
-                                + " AND reviewed.status IN :participantStatuses"
-                                + " AND (m.status = :completedStatus"
-                                + " OR (m.status = :openStatus"
-                                + " AND COALESCE(m.endsAt, m.startsAt) <= CURRENT_TIMESTAMP))",
-                        Long.class)
-                .setParameter("reviewerUserId", reviewer.getId())
-                .setParameter(
-                        "participantStatuses",
-                        List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
-                .setParameter("completedStatus", EventStatus.COMPLETED)
-                .setParameter("openStatus", EventStatus.OPEN)
-                .getResultList();
+        final List<Long> matchUserIds =
+                em.createQuery(
+                                "SELECT DISTINCT reviewed.user.id"
+                                        + " FROM MatchParticipant reviewer"
+                                        + " JOIN MatchParticipant reviewed"
+                                        + " ON reviewed.match.id = reviewer.match.id"
+                                        + " JOIN reviewer.match m"
+                                        + " WHERE reviewer.user.id = :reviewerUserId"
+                                        + " AND reviewer.status IN :participantStatuses"
+                                        + " AND reviewed.user.id <> :reviewerUserId"
+                                        + " AND reviewed.status IN :participantStatuses"
+                                        + " AND (m.status = :completedStatus"
+                                        + " OR (m.status = :openStatus"
+                                        + " AND COALESCE(m.endsAt, m.startsAt) <= CURRENT_TIMESTAMP))",
+                                Long.class)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter(
+                                "participantStatuses",
+                                List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
+                        .setParameter("completedStatus", EventStatus.COMPLETED)
+                        .setParameter("openStatus", EventStatus.OPEN)
+                        .getResultList();
+
+        final List<Long> tournamentUserIds =
+                em.createQuery(
+                                "SELECT DISTINCT other.user.id"
+                                        + " FROM TournamentMatch tm, TournamentTeamMember other"
+                                        + " WHERE tm.status = :doneStatus"
+                                        + " AND (other.team = tm.teamA OR other.team = tm.teamB)"
+                                        + " AND other.user.id <> :reviewerUserId"
+                                        + " AND EXISTS (SELECT 1 FROM TournamentTeamMember self"
+                                        + " WHERE self.user.id = :reviewerUserId"
+                                        + " AND (self.team = tm.teamA OR self.team = tm.teamB))",
+                                Long.class)
+                        .setParameter("reviewerUserId", reviewer.getId())
+                        .setParameter("doneStatus", TournamentMatchStatus.DONE)
+                        .getResultList();
+
+        final Set<Long> userIds = new LinkedHashSet<>(matchUserIds);
+        userIds.addAll(tournamentUserIds);
+        return List.copyOf(userIds);
     }
 
     private void applyUpsertValues(

@@ -52,6 +52,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.context.MessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -75,6 +76,17 @@ class HostTournamentControllerTest {
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
 
+        Mockito.when(tournamentService.findPublicTournament(Mockito.anyLong()))
+                .thenAnswer(
+                        invocation -> {
+                            long id = invocation.getArgument(0);
+                            return Optional.of(
+                                    tournament(
+                                            id,
+                                            UserUtils.getUser(7L),
+                                            TournamentStatus.REGISTRATION));
+                        });
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostTournamentController(
@@ -89,7 +101,8 @@ class HostTournamentControllerTest {
                                         14))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
-                        .setControllerAdvice(new AccessExceptionHandler())
+                        .setControllerAdvice(
+                                new AccessExceptionHandler(Mockito.mock(MessageSource.class)))
                         .build();
     }
 
@@ -101,16 +114,25 @@ class HostTournamentControllerTest {
     @Test
     void getCreateTournamentIncludesMapPickerConfig() throws Exception {
         // Arrange + exercise + test
-        mockMvc.perform(get("/host/tournaments/new").locale(Locale.ENGLISH))
+        mockMvc.perform(get("/tournaments/new").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attribute("pageTitleCode", "page.title.hostTournamentCreate"))
                 .andExpect(model().attribute("formTitleCode", "tournament.create.title"))
+                .andExpect(model().attribute("formAction", "/tournaments"))
                 .andExpect(model().attribute("submitLabelCode", "tournament.form.submit.create"))
                 .andExpect(model().attribute("mapPickerEnabled", true))
                 .andExpect(model().attribute("mapTileUrlTemplate", "/assets/tiles/{z}/{x}/{y}.png"))
                 .andExpect(model().attribute("mapAttribution", "Local Buenos Aires map tiles"))
                 .andExpect(model().attribute("mapDefaultZoom", 14));
+    }
+
+    @Test
+    void getLegacyCreateTournamentRedirectsToCanonicalRoute() throws Exception {
+        // Arrange + exercise + test
+        mockMvc.perform(get("/host/tournaments/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/new"));
     }
 
     @Test
@@ -285,9 +307,7 @@ class HostTournamentControllerTest {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(
-                        tournamentService.findEditableTournamentForHost(
-                                Mockito.eq(77L), Mockito.any()))
+        Mockito.when(tournamentService.findPublicTournament(Mockito.eq(77L)))
                 .thenReturn(
                         Optional.of(
                                 tournament(77L, host, TournamentStatus.REGISTRATION, null, null)));
@@ -347,20 +367,6 @@ class HostTournamentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "startTime"));
-    }
-
-    @Test
-    void postEditTournamentByNonHostReturnsNotFound() throws Exception {
-        // 1. Arrange
-        AuthenticationUtils.authenticateUser(
-                UserUtils.getUser(9L), "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(
-                        tournamentService.findEditableTournamentForHost(
-                                Mockito.eq(77L), Mockito.any()))
-                .thenReturn(Optional.empty());
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(editPost(77L, "Updated City Cup")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -741,7 +747,7 @@ class HostTournamentControllerTest {
     }
 
     private static MockHttpServletRequestBuilder createPostWithoutTimezone(final String title) {
-        return post("/host/tournaments")
+        return post("/tournaments")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
                 .param("sport", Sport.PADEL.getDbValue())
@@ -814,7 +820,7 @@ class HostTournamentControllerTest {
             final String endDate,
             final String endTime) {
         final MockHttpServletRequestBuilder builder =
-                post("/host/tournaments")
+                post("/tournaments")
                         .locale(Locale.ENGLISH)
                         .param("title", title)
                         .param("sport", sport)

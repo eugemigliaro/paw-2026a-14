@@ -376,11 +376,15 @@ public class TournamentJpaDao implements TournamentDao {
             return;
         }
         parts.where.add(
-                "(LOWER(t.title) LIKE :query"
-                        + " OR LOWER(COALESCE(t.description, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(t.address, '')) LIKE :query"
-                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query)");
-        parts.params.put("query", "%" + query.trim().toLowerCase() + "%");
+                "(LOWER(t.title) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(t.description, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(t.address, '')) LIKE :query ESCAPE '\\'"
+                        + " OR LOWER(COALESCE(hu.username, '')) LIKE :query ESCAPE '\\')");
+        parts.params.put("query", "%" + escapeLikePattern(query.trim().toLowerCase()) + "%");
+    }
+
+    private static String escapeLikePattern(final String query) {
+        return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     private static String whereClause(final QueryParts parts) {

@@ -127,7 +127,7 @@ public class EventController {
                     matchId, user, user); // TODO: sending user twice ?
             if (eventPageSupport.shouldRedirectToPlayerMatchesAfterCancellation(
                     cancellationContext, user)) {
-                return new ModelAndView("redirect:/events");
+                return new ModelAndView("redirect:/matches");
             }
             redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
             return new ModelAndView("redirect:/matches/" + matchId);

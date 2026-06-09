@@ -46,6 +46,7 @@ final class MatchDashboardPageSupport {
             final String view,
             final String path,
             final String pageTitleCode,
+            final String listTitleCode,
             final MatchDashboardQueryState.DashboardSelection selection,
             final PaginatedResult<Match> result,
             final PaginatedResult<Tournament> tournamentResult,
@@ -74,9 +75,10 @@ final class MatchDashboardPageSupport {
                 searchForm.getCategory().stream().map(EventCategory::getQueryValue).toList();
         final DateRangeBounds dateBounds = dateRangeBounds(selectedFilter);
 
-        // listTitle (events.title) is resolved in events/list.jsp via <spring:message>;
+        // listTitle is resolved in events/list.jsp via <spring:message>;
         // description/empty copy is not rendered on this view.
         mav.addObject("pageTitleCode", pageTitleCode);
+        mav.addObject("listTitleCode", listTitleCode);
         mav.addObject("selectedType", selectedTypeStr);
         mav.addObject("selectedSort", sort);
         mav.addObject("selectedStartDateValue", startDate);
@@ -174,25 +176,6 @@ final class MatchDashboardPageSupport {
             final List<String> selectedVisibility,
             final List<String> selectedCategories) {
         final List<FilterGroupViewModel> filterGroups = new ArrayList<>();
-        if ("/events".equals(path)) {
-            filterGroups.add(
-                    new FilterGroupViewModel(
-                            "filter.eventType",
-                            buildEventTypeFilterOptions(
-                                    path,
-                                    selectedType,
-                                    selectedFilter,
-                                    searchQuery,
-                                    sort,
-                                    selectedStartDate,
-                                    selectedEndDate,
-                                    minPrice,
-                                    maxPrice,
-                                    selectedStatuses,
-                                    selectedSports,
-                                    selectedVisibility,
-                                    selectedCategories)));
-        }
         filterGroups.add(
                 new FilterGroupViewModel(
                         "filter.categories",
@@ -211,7 +194,7 @@ final class MatchDashboardPageSupport {
                                 selectedVisibility,
                                 selectedCategories)));
 
-        if ("/events".equals(path) && selectedType != EventType.TOURNAMENT) {
+        if (selectedType != EventType.TOURNAMENT) {
             filterGroups.add(
                     new FilterGroupViewModel(
                             "filter.category",
@@ -401,15 +384,11 @@ final class MatchDashboardPageSupport {
             final int page) {
         final Map<String, String> params = new LinkedHashMap<>();
         params.put("page", Integer.toString(page));
-        if ("/events"
-                .equals(path)) { // TODO: this is a bit hacky, find a better way to determine which
-            // params to include
-            if (selectedType == EventType.TOURNAMENT) {
-                params.put("type", EventType.TOURNAMENT.getDbValue());
-            }
-            if ("past".equalsIgnoreCase(selectedFilter)) {
-                params.put("filter", EventFilter.PAST.name());
-            }
+        if ("/events".equals(path) && selectedType == EventType.TOURNAMENT) {
+            params.put("type", EventType.TOURNAMENT.getDbValue());
+        }
+        if ("past".equalsIgnoreCase(selectedFilter)) {
+            params.put("filter", EventFilter.PAST.name());
         }
         addCommonQueryParams(
                 params,
@@ -547,63 +526,6 @@ final class MatchDashboardPageSupport {
                         categories,
                         1);
         return new FilterOptionViewModel(labelCode, null, params, null, active);
-    }
-
-    private static List<FilterOptionViewModel> buildEventTypeFilterOptions(
-            final String path,
-            final EventType selectedType,
-            final String selectedFilter,
-            final String searchQuery,
-            final String sort,
-            final String startDate,
-            final String endDate,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final List<String> selectedStatuses,
-            final List<String> selectedSports,
-            final List<String> selectedVisibility,
-            final List<String> selectedCategories) {
-        return List.of(
-                new FilterOptionViewModel(
-                        "filter.eventType.matches",
-                        null,
-                        buildParamsMap(
-                                path,
-                                EventType.MATCH,
-                                selectedFilter,
-                                searchQuery,
-                                sort,
-                                startDate,
-                                endDate,
-                                minPrice,
-                                maxPrice,
-                                selectedStatuses,
-                                selectedSports,
-                                selectedVisibility,
-                                selectedCategories,
-                                1),
-                        null,
-                        selectedType == EventType.MATCH),
-                new FilterOptionViewModel(
-                        "filter.eventType.tournaments",
-                        null,
-                        buildParamsMap(
-                                path,
-                                EventType.TOURNAMENT,
-                                selectedFilter,
-                                searchQuery,
-                                sort,
-                                null,
-                                null,
-                                null,
-                                null,
-                                List.of(),
-                                selectedSports,
-                                List.of(),
-                                List.of(),
-                                1),
-                        null,
-                        selectedType == EventType.TOURNAMENT));
     }
 
     private static List<FilterOptionViewModel> buildSportFilterOptions(

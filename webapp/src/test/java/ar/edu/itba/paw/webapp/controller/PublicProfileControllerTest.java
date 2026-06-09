@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.context.MessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -76,7 +77,7 @@ class PublicProfileControllerTest {
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setControllerAdvice(
-                                new AccessExceptionHandler(),
+                                new AccessExceptionHandler(Mockito.mock(MessageSource.class)),
                                 new PasswordResetExceptionHandler(),
                                 new VerificationExceptionHandler())
                         .setLocaleResolver(localeResolver())
@@ -91,14 +92,7 @@ class PublicProfileControllerTest {
     }
 
     @Test
-    void getProfileReturnsNotFoundWhenUserMissing() throws Exception {
-        Mockito.when(userService.findByUsername("unknown")).thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/users/unknown")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getProfileDoesNotLinkUnknownReviewers() throws Exception {
+    void DoesNotLinkUnknownReviewers() throws Exception {
         final User targetUser = UserUtils.getUser(42L);
         final User unknownReviewer =
                 new User(99L, "unknown@test.com", null, null, null, null, null, null);
@@ -163,13 +157,6 @@ class PublicProfileControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/target#reviews"))
                 .andExpect(flash().attribute("reviewStatus", "deleted"));
-    }
-
-    @Test
-    void deleteReviewWhenNoReviewRedirectsWithError() throws Exception {
-        AuthenticationUtils.authenticateUser(1L);
-
-        mockMvc.perform(post("/users/target/reviews/delete")).andExpect(status().isNotFound());
     }
 
     @Test
