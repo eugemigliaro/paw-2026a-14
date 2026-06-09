@@ -51,7 +51,6 @@ public class EventController {
         this.eventPageSupport =
                 new EventPageSupport(
                         matchService,
-                        matchReservationService,
                         matchParticipationService,
                         playerReviewService,
                         messageSource,

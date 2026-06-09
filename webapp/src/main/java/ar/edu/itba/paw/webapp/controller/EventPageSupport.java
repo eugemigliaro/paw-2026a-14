@@ -14,7 +14,6 @@ import ar.edu.itba.paw.services.MatchActionCapabilities;
 import ar.edu.itba.paw.services.MatchInteractionState;
 import ar.edu.itba.paw.services.MatchManagementPermissions;
 import ar.edu.itba.paw.services.MatchParticipationService;
-import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
@@ -36,7 +35,6 @@ final class EventPageSupport {
     private static final int SERIES_PAGE_SIZE = 5;
 
     private final MatchService matchService;
-    private final MatchReservationService matchReservationService;
     private final MatchParticipationService matchParticipationService;
     private final PlayerReviewService playerReviewService;
     private final MessageSource messageSource;
@@ -48,7 +46,6 @@ final class EventPageSupport {
 
     EventPageSupport(
             final MatchService matchService,
-            final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
             final MessageSource messageSource,
@@ -58,7 +55,6 @@ final class EventPageSupport {
             final String mapAttribution,
             final int mapDefaultZoom) {
         this.matchService = matchService;
-        this.matchReservationService = matchReservationService;
         this.matchParticipationService = matchParticipationService;
         this.playerReviewService = playerReviewService;
         this.messageSource = messageSource;

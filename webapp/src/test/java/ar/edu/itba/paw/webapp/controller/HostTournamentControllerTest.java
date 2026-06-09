@@ -52,15 +52,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 class HostTournamentControllerTest {
 
@@ -78,21 +75,18 @@ class HostTournamentControllerTest {
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
 
-        final MessageSource messageSource = messageSource();
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostTournamentController(
                                         tournamentService,
                                         tournamentRegistrationService,
                                         tournamentBracketService,
-                                        messageSource,
                                         true,
                                         "/assets/tiles/{z}/{x}/{y}.png",
                                         "Local Buenos Aires map tiles",
                                         -34.6037,
                                         -58.3816,
                                         14))
-                        .setValidator(validator(messageSource))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setControllerAdvice(new AccessExceptionHandler())
@@ -951,27 +945,11 @@ class HostTournamentControllerTest {
                 FIXED_NOW);
     }
 
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
-    }
-
     private static DefaultFormattingConversionService conversionService() {
         final DefaultFormattingConversionService conversionService =
                 new DefaultFormattingConversionService();
         conversionService.addConverter(new StringToSportConverter());
         conversionService.addConverter(new StringToTournamentPairingStrategyConverter());
         return conversionService;
-    }
-
-    private static LocalValidatorFactoryBean validator(final MessageSource messageSource) {
-        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-        validator.setValidationMessageSource(messageSource);
-        validator.afterPropertiesSet();
-        return validator;
     }
 }

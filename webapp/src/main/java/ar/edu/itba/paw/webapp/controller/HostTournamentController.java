@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -67,7 +66,6 @@ public class HostTournamentController {
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
     private final TournamentBracketService tournamentBracketService;
-    private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -80,7 +78,6 @@ public class HostTournamentController {
             final TournamentService tournamentService,
             final TournamentRegistrationService tournamentRegistrationService,
             final TournamentBracketService tournamentBracketService,
-            final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -92,7 +89,6 @@ public class HostTournamentController {
         this.tournamentService = tournamentService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentBracketService = tournamentBracketService;
-        this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
