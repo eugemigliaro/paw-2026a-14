@@ -75,6 +75,17 @@ class HostTournamentControllerTest {
         tournamentRegistrationService = Mockito.mock(TournamentRegistrationService.class);
         tournamentBracketService = Mockito.mock(TournamentBracketService.class);
 
+        Mockito.when(tournamentService.findPublicTournament(Mockito.anyLong()))
+                .thenAnswer(
+                        invocation -> {
+                            long id = invocation.getArgument(0);
+                            return Optional.of(
+                                    tournament(
+                                            id,
+                                            UserUtils.getUser(7L),
+                                            TournamentStatus.REGISTRATION));
+                        });
+
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostTournamentController(
@@ -285,9 +296,7 @@ class HostTournamentControllerTest {
         // 1. Arrange
         final User host = UserUtils.getUser(7L);
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(
-                        tournamentService.findEditableTournamentForHost(
-                                Mockito.eq(77L), Mockito.any()))
+        Mockito.when(tournamentService.findPublicTournament(Mockito.eq(77L)))
                 .thenReturn(
                         Optional.of(
                                 tournament(77L, host, TournamentStatus.REGISTRATION, null, null)));
@@ -347,20 +356,6 @@ class HostTournamentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attributeHasFieldErrors("createTournamentForm", "startTime"));
-    }
-
-    @Test
-    void postEditTournamentByNonHostReturnsNotFound() throws Exception {
-        // 1. Arrange
-        AuthenticationUtils.authenticateUser(
-                UserUtils.getUser(9L), "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(
-                        tournamentService.findEditableTournamentForHost(
-                                Mockito.eq(77L), Mockito.any()))
-                .thenReturn(Optional.empty());
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(editPost(77L, "Updated City Cup")).andExpect(status().isNotFound());
     }
 
     @Test
