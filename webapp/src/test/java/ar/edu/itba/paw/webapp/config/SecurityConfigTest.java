@@ -121,7 +121,7 @@ class SecurityConfigTest {
         // 1. Arrange
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/new"))
+        mockMvc.perform(get("/host/tournaments/new").with(authenticatedUser()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/tournaments/new"));
     }
@@ -131,7 +131,7 @@ class SecurityConfigTest {
         // 1. Arrange
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/matches/new"))
+        mockMvc.perform(get("/host/matches/new").with(authenticatedUser()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/new"));
     }
@@ -513,7 +513,7 @@ class SecurityConfigTest {
         assertNotNull(rememberMeCookie);
 
         // 2. Exercise + 3. Assert
-        mockMvc.perform(get("/host/tournaments/new").cookie(rememberMeCookie))
+        mockMvc.perform(get("/tournaments/new").cookie(rememberMeCookie))
                 .andExpect(status().isOk());
     }
 
