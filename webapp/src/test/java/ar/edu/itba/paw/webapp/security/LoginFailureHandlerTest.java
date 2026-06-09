@@ -45,7 +45,7 @@ class LoginFailureHandlerTest {
                 new PasswordSetupRequiredAuthenticationException("Password setup required"));
 
         assertNotNull(response.getRedirectedUrl());
-        assertTrue(response.getRedirectedUrl().contains("/login?error=set-password"));
+        assertTrue(response.getRedirectedUrl().contains("/login?error=passwordSetup"));
         assertTrue(response.getRedirectedUrl().contains("email=legacy@test.com"));
     }
 

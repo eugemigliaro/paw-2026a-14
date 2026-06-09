@@ -39,28 +39,30 @@ public class SecurityConfig {
                                 authorize
                                         .requestMatchers(
                                                 new AntPathRequestMatcher("/"),
+                                                new AntPathRequestMatcher("/errors/**"))
+                                        .permitAll()
+                                        .requestMatchers(
                                                 new AntPathRequestMatcher(
-                                                        "/users/**", HttpMethod.GET.name()),
-                                                new AntPathRequestMatcher("/errors/**"),
-                                                new AntPathRequestMatcher("/login"),
-                                                new AntPathRequestMatcher("/register"),
+                                                        "/login", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/register", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/register", HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
                                                         "/register/resend-verification"),
                                                 new AntPathRequestMatcher("/forgot-password"),
                                                 new AntPathRequestMatcher("/password-reset/**"),
                                                 new AntPathRequestMatcher("/verifications/**"))
-                                        .permitAll()
+                                        .anonymous()
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(
-                                                        "/matches/**", HttpMethod.GET.name()))
-                                        .permitAll()
-                                        .requestMatchers(
+                                                        "/matches/**", HttpMethod.GET.name()),
                                                 new AntPathRequestMatcher(
-                                                        "/tournaments/**", HttpMethod.GET.name()))
-                                        .permitAll()
-                                        .requestMatchers(
+                                                        "/tournaments/**", HttpMethod.GET.name()),
                                                 new AntPathRequestMatcher(
-                                                        "/images/**", HttpMethod.GET.name()))
+                                                        "/images/**", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/users/**", HttpMethod.GET.name()))
                                         .permitAll()
                                         .requestMatchers(
                                                 new AntPathRequestMatcher(
@@ -133,8 +135,7 @@ public class SecurityConfig {
                                         .loginProcessingUrl("/login")
                                         .usernameParameter("email")
                                         .passwordParameter("password")
-                                        .failureHandler(loginFailureHandler)
-                                        .permitAll())
+                                        .failureHandler(loginFailureHandler))
                 .logout(
                         logout ->
                                 logout.logoutUrl("/logout")

@@ -6,8 +6,6 @@ import ar.edu.itba.paw.services.RegisterAccountRequest;
 import ar.edu.itba.paw.services.VerificationRequestResult;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordForm;
 import ar.edu.itba.paw.webapp.form.RegisterForm;
-import ar.edu.itba.paw.webapp.security.CurrentAuthenticatedUser;
-import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import ar.edu.itba.paw.webapp.utils.VerificationViews;
 import java.time.Instant;
 import java.util.Locale;
@@ -60,12 +58,6 @@ public class AuthController {
                     @RequestParam(value = "logout", required = false) final String logout,
                     @RequestParam(value = "continue", required = false) final String continueFlag,
                     final Locale locale) {
-        if (SecurityControllerUtils.currentUserOrNull()
-                != null) { // TODO: redundant with SecurityConfig? check and remove if so
-            LOGGER.debug("Authenticated user redirected from /login");
-            return new ModelAndView("redirect:/");
-        }
-
         final ModelAndView mav = new ModelAndView("auth/login");
         mav.addObject("loginEmail", email == null ? "" : email);
         mav.addObject("loginError", loginErrorMessage(error, locale));
@@ -79,11 +71,6 @@ public class AuthController {
 
     @GetMapping("/register")
     public ModelAndView showRegister(final Locale locale) {
-        if (SecurityControllerUtils.currentUserOrNull()
-                != null) { // TODO: redundant with SecurityConfig? check and remove if so
-            LOGGER.debug("Authenticated user redirected from /register");
-            return new ModelAndView("redirect:/");
-        }
         return registerView(new RegisterForm(), locale);
     }
 
@@ -144,13 +131,6 @@ public class AuthController {
 
     @GetMapping("/forgot-password")
     public ModelAndView showForgotPassword(final Locale locale) {
-        if (CurrentAuthenticatedUser.get().isPresent()) {
-            LOGGER.debug(
-                    "Authenticated user redirected from /forgot-password"); // TODO: redundant with
-            // SecurityConfig? check
-            // and remove if so
-            return new ModelAndView("redirect:/");
-        }
         return forgotPasswordView(new ForgotPasswordForm(), locale);
     }
 
@@ -218,7 +198,7 @@ public class AuthController {
         if ("verify".equalsIgnoreCase(error)) {
             return messageSource.getMessage("auth.login.error.verify", null, locale);
         }
-        if ("set-password".equalsIgnoreCase(error)) {
+        if ("passwordSetup".equalsIgnoreCase(error)) {
             return messageSource.getMessage("auth.login.error.passwordSetup", null, locale);
         }
         if ("invalid".equalsIgnoreCase(error)) {

@@ -42,7 +42,7 @@ public class LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
             return "verify";
         }
         if (exception instanceof PasswordSetupRequiredAuthenticationException) {
-            return "set-password";
+            return "passwordSetup";
         }
         if (exception instanceof BadCredentialsException) {
             return "invalid";
