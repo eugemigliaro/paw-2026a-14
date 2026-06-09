@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -33,7 +32,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -74,7 +72,7 @@ public class PublicProfileController {
                     final PlayerReviewFilter reviewFilter,
             @RequestParam(value = "reviewPage", defaultValue = "1") final int reviewPage,
             final Model model) {
-        final User targetUser = findUserByUsernameOrThrow(username);
+        final User targetUser = userService.findByUsername(username).orElse(null);
 
         final ModelAndView mav = new ModelAndView("users/profile");
         mav.addObject("reviewStatus", model.asMap().get("reviewStatus"));
@@ -109,7 +107,7 @@ public class PublicProfileController {
             return redirectToProfile(username, "invalid_form", null);
         }
 
-        final User reviewedUser = findUserByUsernameOrThrow(username);
+        final User reviewedUser = userService.findByUsername(username).orElse(null);
         try {
             playerReviewService.submitReview(
                     user, reviewedUser, reviewForm.getReaction(), reviewForm.getComment());
@@ -125,7 +123,7 @@ public class PublicProfileController {
             @AuthenticatedUser final User user,
             @PathVariable("username") final String username,
             final RedirectAttributes redirectAttributes) {
-        final User reviewedUser = findUserByUsernameOrThrow(username);
+        final User reviewedUser = userService.findByUsername(username).orElse(null);
 
         try {
             playerReviewService.deleteReview(user, reviewedUser);
@@ -290,12 +288,6 @@ public class PublicProfileController {
             builder.queryParam("reviewForm", reviewForm);
         }
         return builder.fragment("reviews").build().toUriString();
-    }
-
-    private User findUserByUsernameOrThrow(final String username) {
-        return userService
-                .findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     private static ModelAndView redirectToProfile(

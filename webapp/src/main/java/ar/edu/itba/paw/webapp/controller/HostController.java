@@ -5,11 +5,9 @@ import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.bannerUrlFor;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.models.exceptions.match.MatchNotRecurringException;
 import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityAboveMaxException;
 import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateCapacityBelowConfirmedException;
-import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdateException;
 import ar.edu.itba.paw.models.exceptions.matchUpdate.MatchUpdatePendingRequestsExceedAvailableException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -30,7 +28,6 @@ import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -51,7 +48,6 @@ public class HostController {
     private static final int DEFAULT_MAP_ZOOM = 14;
 
     private final MatchService matchService;
-    private final MessageSource messageSource;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
     private final String mapAttribution;
@@ -62,7 +58,6 @@ public class HostController {
     @Autowired
     public HostController(
             final MatchService matchService,
-            final MessageSource messageSource,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
             @Value("${map.tiles.attribution:}") final String mapAttribution,
@@ -72,7 +67,6 @@ public class HostController {
                     final double mapDefaultLongitude,
             @Value("${map.default.zoom:" + DEFAULT_MAP_ZOOM + "}") final int mapDefaultZoom) {
         this.matchService = matchService;
-        this.messageSource = messageSource;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
@@ -132,13 +126,8 @@ public class HostController {
                         bannerUpload(createEventForm.getBannerImage()),
                         toRecurrenceRequest(createEventForm));
 
-        try {
-            final Match createdMatch = matchService.createMatch(request);
-            return new ModelAndView("redirect:/matches/" + createdMatch.getId());
-        } catch (final MatchException e) {
-            final String errorMessage = messageSource.getMessage(e.getMessage(), null, locale);
-            return hostFormView(createEventForm, errorMessage, locale, formConfig);
-        }
+        final Match createdMatch = matchService.createMatch(request);
+        return new ModelAndView("redirect:/matches/" + createdMatch.getId());
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/edit")
@@ -146,7 +135,7 @@ public class HostController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final Locale locale) {
-        final Match match = findEditableMatchOrThrowNotFound(matchId, user);
+        final Match match = matchService.findMatchById(matchId).orElse(null);
         return hostFormView(toForm(match), null, locale, editFormConfig(match, locale));
     }
 
@@ -158,7 +147,7 @@ public class HostController {
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final Match existingMatch = findEditableMatchOrThrowNotFound(matchId, user);
+        final Match existingMatch = matchService.findMatchById(matchId).orElse(null);
         final HostFormConfig formConfig = editFormConfig(existingMatch, locale);
 
         if (bindingResult.hasErrors()) {
@@ -205,7 +194,7 @@ public class HostController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final Locale locale) {
-        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, user);
+        final Match match = matchService.findMatchById(matchId).orElse(null);
         return hostFormView(toForm(match), null, locale, seriesEditFormConfig(match, locale));
     }
 
@@ -217,7 +206,7 @@ public class HostController {
             final BindingResult bindingResult,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final Match match = findEditableRecurringMatchOrThrowNotFound(matchId, user);
+        final Match match = matchService.findMatchById(matchId).orElse(null);
         final HostFormConfig formConfig = seriesEditFormConfig(match, locale);
 
         if (bindingResult.hasErrors()) {
@@ -407,23 +396,6 @@ public class HostController {
             return match.getEndsAt();
         }
         return match.getStartsAt().plus(Duration.ofMinutes(90));
-    }
-
-    private Match findEditableMatchOrThrowNotFound(final Long matchId, final User actingUser) {
-        try {
-            return matchService.findEditableMatchForHost(matchId, actingUser);
-        } catch (final MatchUpdateException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    private Match findEditableRecurringMatchOrThrowNotFound(
-            final Long matchId, final User actingUser) {
-        try {
-            return matchService.findEditableRecurringMatchForHost(matchId, actingUser);
-        } catch (final MatchException exception) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
     }
 
     private static CreateRecurrenceRequest toRecurrenceRequest(final CreateEventForm form) {

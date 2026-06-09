@@ -56,11 +56,7 @@ public class HostParticipationController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             final Locale locale) {
-        try {
-            matchParticipationService.findPendingRequests(matchId, user);
-        } catch (final MatchException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+        matchParticipationService.findPendingRequests(matchId, user);
         return new ModelAndView("redirect:/matches/" + matchId + "#pending-requests");
     }
 

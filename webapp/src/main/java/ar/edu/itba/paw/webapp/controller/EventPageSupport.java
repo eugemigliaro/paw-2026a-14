@@ -320,9 +320,6 @@ final class EventPageSupport {
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
             final User currentUser) {
-        // Host name, participant count, empty-state hint, default description and the
-        // per-occurrence
-        // spots label are resolved in matches/detail.jsp via <spring:message> / <ui:pluralMessage>.
         final User host = match.getHost();
         mav.addObject("event", match);
         mav.addObject("eventMediaClass", mediaClassFor(match.getSport()));
@@ -360,7 +357,6 @@ final class EventPageSupport {
     }
 
     private static List<String> buildAboutParagraphs(final Match match) {
-        // A blank description renders the default copy in matches/detail.jsp via <spring:message>.
         if (match.getDescription() == null || match.getDescription().isBlank()) {
             return List.of();
         }
