@@ -22,6 +22,7 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
+import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -68,8 +69,9 @@ class MatchDashboardPageSupportTest {
                 MatchDashboardPageSupport.buildListPage(
                         null,
                         "events/list",
-                        "/events",
-                        "page.title.events",
+                        "/tournaments",
+                        "page.title.tournaments",
+                        "tournaments.title",
                         selection,
                         null,
                         tournamentResult,
@@ -95,12 +97,20 @@ class MatchDashboardPageSupportTest {
                 (List<PaginationItemViewModel>) mav.getModel().get("paginationItems");
         assertNotNull(paginationItems);
         assertEquals(2, paginationItems.size());
-        assertTrue(paginationItems.get(0).getHref().contains("type=tournament"));
+        assertTrue(paginationItems.get(0).getHref().startsWith("/tournaments?"));
+        assertFalse(paginationItems.get(0).getHref().contains("type="));
         assertTrue(paginationItems.get(0).getHref().contains("filter=PAST"));
         assertTrue(paginationItems.get(0).getHref().contains("q=summer%20cup"));
         assertTrue(paginationItems.get(0).getHref().contains("sport=padel"));
         assertTrue(paginationItems.get(0).getHref().contains("minPrice=12.50"));
         assertTrue(paginationItems.get(0).getHref().contains("maxPrice=50.00"));
+
+        final MatchListControlsViewModel listControls =
+                (MatchListControlsViewModel) mav.getModel().get("listControls");
+        assertTrue(
+                listControls.getFilterGroups().stream()
+                        .noneMatch(group -> "filter.eventType".equals(group.getTitleCode())));
+        assertEquals("filter.categories", listControls.getFilterGroups().get(0).getTitleCode());
     }
 
     @Test
@@ -121,8 +131,9 @@ class MatchDashboardPageSupportTest {
                 MatchDashboardPageSupport.buildListPage(
                         null,
                         "events/list",
-                        "/events",
-                        "page.title.events",
+                        "/matches",
+                        "page.title.matches",
+                        "matches.title",
                         selection,
                         matchResult,
                         tournamentResult,

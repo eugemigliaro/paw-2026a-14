@@ -221,7 +221,7 @@ class ViewTemplateAssetsTest {
     }
 
     @Test
-    void eventsClearAllKeepsEventTypeSortAndFilterState() throws IOException {
+    void eventsClearAllKeepsFilterStateWithoutLegacyEventType() throws IOException {
         final String eventsList = read("src/main/webapp/WEB-INF/views/events/list.jsp");
         final int clearAllIndex = eventsList.indexOf("var=\"clearSearchHref\"");
         final int clearAllLabelIndex = eventsList.indexOf("var=\"clearAllLabel\"");
@@ -231,7 +231,10 @@ class ViewTemplateAssetsTest {
         assertTrue(
                 eventsList.contains(
                         "<c:url var=\"clearSearchHref\" value=\"${listControls.cleanSearchAction}\">"));
-        assertTrue(eventsList.contains("<c:param name=\"type\" value=\"${searchForm.type}\" />"));
+        assertFalse(eventsList.contains("<c:param name=\"type\" value=\"${searchForm.type}\" />"));
+        assertFalse(eventsList.contains("name=\"type\""));
+        assertFalse(eventsList.contains("filter.eventType"));
+        assertFalse(eventsList.contains("feed-event-type-toggle"));
         assertTrue(
                 eventsList.contains(
                         "<c:param name=\"filter\" value=\"${searchForm.filterName}\" />"));
@@ -330,9 +333,14 @@ class ViewTemplateAssetsTest {
         assertTrue(siteHeader.contains("sec:authorize access=\"isAuthenticated()\""));
         assertTrue(siteHeader.contains("sec:authorize access=\"hasRole('ADMIN_MOD')\""));
         assertTrue(siteHeader.contains("nav.explore"));
-        assertTrue(siteHeader.contains("nav.player.events"));
+        assertTrue(siteHeader.contains("nav.player.matches"));
+        assertTrue(siteHeader.contains("nav.player.tournaments"));
         assertTrue(siteHeader.contains("nav.hostAMatch"));
         assertTrue(siteHeader.contains("nav.hostATournament"));
+        assertTrue(siteHeader.contains("/matches/new"));
+        assertTrue(siteHeader.contains("/tournaments/new"));
+        assertFalse(siteHeader.contains("/host/matches/new"));
+        assertFalse(siteHeader.contains("/host/tournaments/new"));
         assertTrue(siteHeader.contains("nav.profile"));
         assertTrue(siteHeader.contains("nav.player.reports"));
         assertTrue(siteHeader.contains("nav.admin.reports"));

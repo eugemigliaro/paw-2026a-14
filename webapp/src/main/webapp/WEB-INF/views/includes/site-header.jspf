@@ -65,10 +65,17 @@
 				<c:out value="${exploreLabel}" />
 			</a>
 			<sec:authorize access="isAuthenticated()">
-				<spring:message var="myEventsLabel" code="nav.player.events" />
-				<c:url var="myEventsHref" value="/events" />
-				<a href="${myEventsHref}" class="site-header__nav-link ${currentPath eq '/events' ? 'site-header__nav-link--active' : ''}">
-					<c:out value="${myEventsLabel}" />
+				<spring:message var="myMatchesLabel" code="nav.player.matches" />
+				<c:set var="myMatchesPath" value="/matches" />
+				<c:url var="myMatchesHref" value="${myMatchesPath}" />
+				<a href="${myMatchesHref}" class="site-header__nav-link ${currentPath eq myMatchesPath ? 'site-header__nav-link--active' : ''}">
+					<c:out value="${myMatchesLabel}" />
+				</a>
+				<spring:message var="myTournamentsLabel" code="nav.player.tournaments" />
+				<c:set var="myTournamentsPath" value="/tournaments" />
+				<c:url var="myTournamentsHref" value="${myTournamentsPath}" />
+				<a href="${myTournamentsHref}" class="site-header__nav-link ${currentPath eq myTournamentsPath ? 'site-header__nav-link--active' : ''}">
+					<c:out value="${myTournamentsLabel}" />
 				</a>
 			</sec:authorize>
 		</nav>
@@ -77,12 +84,14 @@
 			<sec:authorize access="isAuthenticated()">
 				<spring:message var="hostMatchLabel" code="nav.hostAMatch" />
 				<spring:message var="hostTournamentLabel" code="nav.hostATournament" />
-				<c:url var="hostMatchHref" value="/host/matches/new" />
-				<c:url var="hostTournamentHref" value="/host/tournaments/new" />
-				<a href="${hostMatchHref}" class="site-header__nav-link site-header__host-button ${currentPath eq hostMatchHref ? 'site-header__nav-link--active' : ''}">
+				<c:set var="hostMatchPath" value="/matches/new" />
+				<c:set var="hostTournamentPath" value="/tournaments/new" />
+				<c:url var="hostMatchHref" value="${hostMatchPath}" />
+				<c:url var="hostTournamentHref" value="${hostTournamentPath}" />
+				<a href="${hostMatchHref}" class="site-header__nav-link site-header__host-button ${currentPath eq hostMatchPath ? 'site-header__nav-link--active' : ''}">
 					<c:out value="${hostMatchLabel}" />
 				</a>
-				<a href="${hostTournamentHref}" class="site-header__nav-link site-header__host-button ${currentPath eq hostTournamentHref ? 'site-header__nav-link--active' : ''}">
+				<a href="${hostTournamentHref}" class="site-header__nav-link site-header__host-button ${currentPath eq hostTournamentPath ? 'site-header__nav-link--active' : ''}">
 					<c:out value="${hostTournamentLabel}" />
 				</a>
 			</sec:authorize>

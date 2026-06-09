@@ -101,16 +101,25 @@ class HostTournamentControllerTest {
     @Test
     void getCreateTournamentIncludesMapPickerConfig() throws Exception {
         // Arrange + exercise + test
-        mockMvc.perform(get("/host/tournaments/new").locale(Locale.ENGLISH))
+        mockMvc.perform(get("/tournaments/new").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/tournaments/create"))
                 .andExpect(model().attribute("pageTitleCode", "page.title.hostTournamentCreate"))
                 .andExpect(model().attribute("formTitleCode", "tournament.create.title"))
+                .andExpect(model().attribute("formAction", "/tournaments"))
                 .andExpect(model().attribute("submitLabelCode", "tournament.form.submit.create"))
                 .andExpect(model().attribute("mapPickerEnabled", true))
                 .andExpect(model().attribute("mapTileUrlTemplate", "/assets/tiles/{z}/{x}/{y}.png"))
                 .andExpect(model().attribute("mapAttribution", "Local Buenos Aires map tiles"))
                 .andExpect(model().attribute("mapDefaultZoom", 14));
+    }
+
+    @Test
+    void getLegacyCreateTournamentRedirectsToCanonicalRoute() throws Exception {
+        // Arrange + exercise + test
+        mockMvc.perform(get("/host/tournaments/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/tournaments/new"));
     }
 
     @Test
@@ -741,7 +750,7 @@ class HostTournamentControllerTest {
     }
 
     private static MockHttpServletRequestBuilder createPostWithoutTimezone(final String title) {
-        return post("/host/tournaments")
+        return post("/tournaments")
                 .locale(Locale.ENGLISH)
                 .param("title", title)
                 .param("sport", Sport.PADEL.getDbValue())
@@ -814,7 +823,7 @@ class HostTournamentControllerTest {
             final String endDate,
             final String endTime) {
         final MockHttpServletRequestBuilder builder =
-                post("/host/tournaments")
+                post("/tournaments")
                         .locale(Locale.ENGLISH)
                         .param("title", title)
                         .param("sport", sport)
