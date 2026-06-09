@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -292,6 +293,23 @@ public class TournamentServiceImpl implements TournamentService {
         final Tournament updatedTournament = tournamentDataService.update(tournament);
         tournamentMailService.sendTournamentCancelledEmail(updatedTournament);
         return updatedTournament;
+    }
+
+    @Override
+    public Set<Long> findParticipatingTournamentIds(
+            final User user, final List<Long> tournamentIds) {
+        if (user == null
+                || user.getId() == null
+                || tournamentIds == null
+                || tournamentIds.isEmpty()) {
+            return Set.of();
+        }
+        final List<Long> safeTournamentIds =
+                tournamentIds.stream().filter(id -> id != null).distinct().toList();
+        if (safeTournamentIds.isEmpty()) {
+            return Set.of();
+        }
+        return tournamentDataService.findParticipatingTournamentIds(user, safeTournamentIds);
     }
 
     @Override

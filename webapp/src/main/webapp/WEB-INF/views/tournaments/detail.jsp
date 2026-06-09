@@ -28,6 +28,11 @@
 									<span class="tournament-status tournament-status--${fn:replace(tournament.status.dbValue, '_', '-')}">
 										<spring:message code="tournament.status.${tournament.status.dbValue}" />
 									</span>
+									<c:forEach var="relationshipBadgeCode" items="${tournamentRelationshipBadgeCodes}">
+										<span class="event-badge event-badge--${relationshipBadgeCode}">
+											<spring:message code="event.relationship.${relationshipBadgeCode}" />
+										</span>
+									</c:forEach>
 								</div>
 								<h1 class="event-heading__title"><c:out value="${tournament.title}" /></h1>
 							</div>

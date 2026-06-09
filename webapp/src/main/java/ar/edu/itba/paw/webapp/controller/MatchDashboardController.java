@@ -100,6 +100,7 @@ public class MatchDashboardController {
                 result,
                 tournamentResult,
                 matchParticipationService,
-                matchReservationService);
+                matchReservationService,
+                tournamentService);
     }
 }

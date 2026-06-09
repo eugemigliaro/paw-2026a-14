@@ -229,6 +229,39 @@ class TournamentControllerTest {
     }
 
     @Test
+    void hostParticipantPublicDetailExposesMyEventAndGoingBadges() throws Exception {
+        // 1. Arrange
+        AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(tournamentService.findPublicTournament(77L))
+                .thenReturn(Optional.of(tournament(77L, TournamentStatus.REGISTRATION)));
+        Mockito.when(tournamentRegistrationService.findSoloEntry(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(tournamentRegistrationService.findUserTeam(Mockito.eq(77L), Mockito.eq(host)))
+                .thenReturn(Optional.empty());
+        Mockito.when(
+                        tournamentService.findParticipatingTournamentIds(
+                                Mockito.argThat(
+                                        user ->
+                                                user != null
+                                                        && Long.valueOf(7L).equals(user.getId())),
+                                Mockito.eq(List.of(77L))))
+                .thenReturn(java.util.Set.of(77L));
+        Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.eq(host)))
+                .thenReturn(
+                        capabilities(
+                                false, false, false, false, true, true, false, false, false, true,
+                                false));
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/77").locale(Locale.ENGLISH))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "tournamentRelationshipBadgeCodes",
+                                        Matchers.contains("my_event", "going")));
+    }
+
+    @Test
     void hostPublicDetailDisablesCloseRegistrationWhenUnderCapacity() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(host, "{bcrypt}hash", UserRole.USER, true);

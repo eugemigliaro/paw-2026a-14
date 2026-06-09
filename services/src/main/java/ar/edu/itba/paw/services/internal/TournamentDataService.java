@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface TournamentDataService {
 
@@ -88,6 +89,8 @@ public interface TournamentDataService {
             Instant startsAtTo,
             BigDecimal minPrice,
             BigDecimal maxPrice);
+
+    Set<Long> findParticipatingTournamentIds(User user, List<Long> tournamentIds);
 
     Optional<Tournament> refreshScheduleWindow(long tournamentId);
 
