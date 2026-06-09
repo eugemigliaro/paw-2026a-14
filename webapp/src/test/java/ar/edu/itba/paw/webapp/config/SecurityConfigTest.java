@@ -80,6 +80,16 @@ class SecurityConfigTest {
     }
 
     @Test
+    void trailingSlashTournamentCreateRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/tournaments/new/"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
     void canonicalTournamentCreateRouteAllowsRegularUser() throws Exception {
         // 1. Arrange
 
@@ -114,6 +124,16 @@ class SecurityConfigTest {
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/matches/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?continue"));
+    }
+
+    @Test
+    void trailingSlashMatchCreateRouteRedirectsAnonymousToLogin() throws Exception {
+        // 1. Arrange
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/matches/new/"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?continue"));
     }

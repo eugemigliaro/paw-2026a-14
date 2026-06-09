@@ -62,9 +62,13 @@ public class SecurityConfig {
                                                 new AntPathRequestMatcher(
                                                         "/matches/new", HttpMethod.GET.name()),
                                                 new AntPathRequestMatcher(
+                                                        "/matches/new/", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
                                                         "/matches/new", HttpMethod.POST.name()),
                                                 new AntPathRequestMatcher(
                                                         "/tournaments/new", HttpMethod.GET.name()),
+                                                new AntPathRequestMatcher(
+                                                        "/tournaments/new/", HttpMethod.GET.name()),
                                                 new AntPathRequestMatcher(
                                                         "/tournaments", HttpMethod.POST.name()))
                                         .hasAnyRole("USER", "ADMIN_MOD")
