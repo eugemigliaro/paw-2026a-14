@@ -351,6 +351,7 @@ public class FeedController {
             final Locale locale,
             final String email,
             final ExploreLocation exploreLocation) {
+        final List<Long> tournamentIds = result.getItems().stream().map(Tournament::getId).toList();
 
         addFeedPageAttributes(
                 mav,
@@ -373,7 +374,10 @@ public class FeedController {
                         exploreLocation == null ? null : exploreLocation.longitude(),
                         locale),
                 EventCardAttributeUtils.tournamentRelationshipBadgeCodes(
-                        result.getItems(), currentUser),
+                        result.getItems(),
+                        currentUser,
+                        tournamentService.findParticipatingTournamentIds(
+                                currentUser, tournamentIds)),
                 result.getPage(),
                 result.getTotalPages(),
                 PaginationUtils.buildPaginationItems(

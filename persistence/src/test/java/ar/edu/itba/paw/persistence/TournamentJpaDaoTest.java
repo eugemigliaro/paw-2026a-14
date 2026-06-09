@@ -565,6 +565,38 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldFindParticipatingTournamentIdsForSoloAndTeamMemberships() {
+        final Tournament soloTournament = createTournament(TournamentStatus.REGISTRATION);
+        final Tournament teamTournament = createTournament(TournamentStatus.BRACKET_SETUP);
+        final Tournament leftTournament = createTournament(TournamentStatus.REGISTRATION);
+        final Tournament unassignedTournament = createTournament(TournamentStatus.BRACKET_SETUP);
+        final Tournament unrelatedTournament = createTournament(TournamentStatus.REGISTRATION);
+        tournamentSoloEntryDao.create(soloTournament, player, TournamentSoloEntryStatus.IN_POOL);
+        tournamentSoloEntryDao.create(leftTournament, player, TournamentSoloEntryStatus.LEFT);
+        tournamentSoloEntryDao.create(
+                unassignedTournament, player, TournamentSoloEntryStatus.UNASSIGNED);
+        final TournamentTeam team =
+                tournamentTeamDao.create(
+                        teamTournament, "Player squad", TournamentTeamOrigin.TEAM_DRAFT, null);
+        tournamentTeamDao.addMember(team, player, false);
+
+        em.flush();
+        em.clear();
+
+        final List<Long> pageTournamentIds =
+                List.of(
+                        soloTournament.getId(),
+                        teamTournament.getId(),
+                        leftTournament.getId(),
+                        unassignedTournament.getId(),
+                        unrelatedTournament.getId());
+
+        Assertions.assertEquals(
+                java.util.Set.of(soloTournament.getId(), teamTournament.getId()),
+                tournamentDao.findParticipatingTournamentIds(player, pageTournamentIds));
+    }
+
+    @Test
     public void shouldRejectDuplicateSoloEntryForUser() {
         final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
         tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.IN_POOL);

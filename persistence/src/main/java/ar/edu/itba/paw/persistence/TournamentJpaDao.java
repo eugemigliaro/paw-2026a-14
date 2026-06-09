@@ -6,15 +6,18 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
@@ -190,6 +193,41 @@ public class TournamentJpaDao implements TournamentDao {
         final QueryParts parts = dashboardSearchParts(host, upcoming, includeHosted);
         appendFilters(parts, query, sports, startsAtFrom, startsAtTo, minPrice, maxPrice);
         return countTournaments(parts);
+    }
+
+    @Override
+    public Set<Long> findParticipatingTournamentIds(
+            final User user, final List<Long> tournamentIds) {
+        if (user == null
+                || user.getId() == null
+                || tournamentIds == null
+                || tournamentIds.isEmpty()) {
+            return Set.of();
+        }
+        return new LinkedHashSet<>(
+                em.createQuery(
+                                "SELECT DISTINCT t.id FROM Tournament t"
+                                        + " WHERE t.id IN :tournamentIds"
+                                        + " AND t.deleted = FALSE"
+                                        + " AND (EXISTS ("
+                                        + " SELECT tse.id FROM TournamentSoloEntry tse"
+                                        + " WHERE tse.tournament = t"
+                                        + " AND tse.user = :user"
+                                        + " AND tse.status IN :activeSoloStatuses"
+                                        + " ) OR EXISTS ("
+                                        + " SELECT ttm.id FROM TournamentTeamMember ttm"
+                                        + " WHERE ttm.team.tournament = t"
+                                        + " AND ttm.user = :user"
+                                        + " ))",
+                                Long.class)
+                        .setParameter("tournamentIds", tournamentIds)
+                        .setParameter("user", user)
+                        .setParameter(
+                                "activeSoloStatuses",
+                                List.of(
+                                        TournamentSoloEntryStatus.IN_POOL,
+                                        TournamentSoloEntryStatus.ASSIGNED))
+                        .getResultList());
     }
 
     @Override

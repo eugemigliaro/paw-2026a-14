@@ -18,6 +18,7 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
@@ -28,6 +29,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.PaginationItemViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
@@ -37,7 +39,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +50,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -59,6 +64,7 @@ class FeedControllerTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.clearContext();
         matchService = Mockito.mock(MatchService.class);
         tournamentService = Mockito.mock(TournamentService.class);
         final MatchParticipationService matchParticipationService =
@@ -136,6 +142,11 @@ class FeedControllerTest {
                         .build();
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void defaultFeedStillUsesMatchSearch() throws Exception {
         Mockito.doThrow(new AssertionError("Default feed must not query tournaments"))
@@ -204,6 +215,57 @@ class FeedControllerTest {
                 paginationItems(result).stream()
                         .filter(item -> item.getHref() != null)
                         .allMatch(item -> item.getHref().contains("type=tournament")));
+    }
+
+    @Test
+    void tournamentFeedBatchesParticipationLookupAndShowsHostGoingBadges() throws Exception {
+        final User hostParticipant = user(8L, "host-tournament");
+        AuthenticationUtils.authenticateUser(hostParticipant, "{bcrypt}hash", UserRole.USER, true);
+        Mockito.when(
+                        tournamentService.searchPublicTournaments(
+                                Mockito.eq(""),
+                                Mockito.<List<Sport>>argThat(
+                                        sports -> sports != null && sports.isEmpty()),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.eq(EventSort.SOONEST),
+                                Mockito.eq(1),
+                                Mockito.eq(12),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.isNull(),
+                                Mockito.isNull()))
+                .thenReturn(
+                        new PaginatedResult<>(
+                                List.of(
+                                        tournament(77L, "Hosted Cup", 8L),
+                                        tournament(78L, "Away Cup", 10L)),
+                                2,
+                                1,
+                                12));
+        Mockito.when(
+                        tournamentService.findParticipatingTournamentIds(
+                                Mockito.argThat(
+                                        user ->
+                                                user != null
+                                                        && Long.valueOf(8L).equals(user.getId())),
+                                Mockito.eq(List.of(77L, 78L))))
+                .thenReturn(Set.of(77L));
+
+        final MvcResult result =
+                mockMvc.perform(get("/").param("type", "tournament"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final Map<Long, List<String>> relationshipBadgeCodes = eventRelationshipBadgeCodes(result);
+        Assertions.assertTrue(relationshipBadgeCodes.get(77L).contains("my_event"));
+        Assertions.assertTrue(relationshipBadgeCodes.get(77L).contains("going"));
+        Assertions.assertFalse(relationshipBadgeCodes.containsKey(78L));
+        Mockito.verify(tournamentService, Mockito.times(1))
+                .findParticipatingTournamentIds(
+                        Mockito.argThat(
+                                user -> user != null && Long.valueOf(8L).equals(user.getId())),
+                        Mockito.eq(List.of(77L, 78L)));
     }
 
     @Test
@@ -465,6 +527,12 @@ class FeedControllerTest {
     }
 
     @SuppressWarnings("unchecked")
+    private static Map<Long, List<String>> eventRelationshipBadgeCodes(final MvcResult result) {
+        return (Map<Long, List<String>>)
+                result.getModelAndView().getModel().get("eventRelationshipBadgeCodes");
+    }
+
+    @SuppressWarnings("unchecked")
     private static List<FilterGroupViewModel> filterGroups(final MvcResult result) {
         return (List<FilterGroupViewModel>)
                 result.getModelAndView().getModel().get("feedFilterGroups");
@@ -520,9 +588,13 @@ class FeedControllerTest {
     }
 
     private static Tournament tournament(final long id, final String title) {
+        return tournament(id, title, 8L);
+    }
+
+    private static Tournament tournament(final long id, final String title, final long hostId) {
         return new Tournament(
                 id,
-                user(8L, "host-tournament"),
+                user(hostId, "host-tournament-" + hostId),
                 Sport.PADEL,
                 title,
                 "Competitive city tournament",

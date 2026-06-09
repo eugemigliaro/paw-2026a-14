@@ -22,12 +22,14 @@ import ar.edu.itba.paw.services.TournamentViewerCapabilities;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
+import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -88,7 +90,13 @@ public class TournamentController {
                 tournamentRegistrationService.findUserTeam(tournamentId, user);
 
         final ModelAndView mav = new ModelAndView("tournaments/detail");
-        addTournamentDetailModel(mav, tournament, user, soloEntry, userTeam);
+        addTournamentDetailModel(
+                mav,
+                tournament,
+                user,
+                soloEntry,
+                userTeam,
+                tournamentService.findParticipatingTournamentIds(user, List.of(tournamentId)));
         mav.addObject("soloJoinPath", "/tournaments/" + tournamentId + "/solo-entry");
         mav.addObject("soloLeavePath", "/tournaments/" + tournamentId + "/solo-entry/leave");
         mav.addObject(
@@ -197,7 +205,8 @@ public class TournamentController {
             final Tournament tournament,
             final User currentUser,
             final Optional<TournamentSoloEntry> soloEntry,
-            final Optional<TournamentTeam> userTeam) {
+            final Optional<TournamentTeam> userTeam,
+            final Set<Long> participatingTournamentIds) {
         final TournamentViewerCapabilities capabilities =
                 tournamentService.viewerCapabilities(tournament, currentUser);
         final List<TournamentTeamMember> teamMembers =
@@ -212,6 +221,11 @@ public class TournamentController {
         mav.addObject("tournamentUnknownHostArgument", unknownHostArgument(tournament.getHost()));
         mav.addObject("tournamentHostProfileImageUrl", profileUrlFor(tournament.getHost()));
         mav.addObject("tournamentBannerImageUrl", bannerUrlFor(tournament));
+        mav.addObject(
+                "tournamentRelationshipBadgeCodes",
+                EventCardAttributeUtils.tournamentRelationshipBadgeCodes(
+                                List.of(tournament), currentUser, participatingTournamentIds)
+                        .getOrDefault(tournament.getId(), List.of()));
         addParticipationModel(mav, soloEntry, userTeam);
         mav.addObject("tournamentNextStepCode", nextStepCode(tournament));
         mav.addObject("tournamentAboutParagraphs", aboutParagraphs(tournament));

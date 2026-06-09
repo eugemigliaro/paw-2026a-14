@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class EventCardAttributeUtils {
 
@@ -88,11 +89,14 @@ public final class EventCardAttributeUtils {
     }
 
     public static Map<Long, List<String>> tournamentRelationshipBadgeCodes(
-            final List<Tournament> tournaments, final User currentUser) {
+            final List<Tournament> tournaments,
+            final User currentUser,
+            final Set<Long> participatingTournamentIds) {
         final Map<Long, List<String>> codes = new LinkedHashMap<>();
         for (final Tournament tournament : tournaments) {
             final List<String> tournamentCodes =
-                    tournamentRelationshipBadgeCodes(tournament, currentUser);
+                    tournamentRelationshipBadgeCodes(
+                            tournament, currentUser, participatingTournamentIds);
             if (!tournamentCodes.isEmpty()) {
                 codes.put(tournament.getId(), tournamentCodes);
             }
@@ -138,15 +142,22 @@ public final class EventCardAttributeUtils {
     }
 
     private static List<String> tournamentRelationshipBadgeCodes(
-            final Tournament tournament, final User currentUser) {
-        if (currentUser == null
-                || tournament == null
-                || tournament.getHost() == null
-                || tournament.getHost().getId() == null) {
+            final Tournament tournament,
+            final User currentUser,
+            final Set<Long> participatingTournamentIds) {
+        if (currentUser == null || tournament == null || currentUser.getId() == null) {
             return List.of();
         }
-        return currentUser.getId().equals(tournament.getHost().getId())
-                ? List.of("my_event")
-                : List.of();
+        final List<String> codes = new ArrayList<>();
+        if (tournament.getHost() != null
+                && currentUser.getId().equals(tournament.getHost().getId())) {
+            codes.add("my_event");
+        }
+        if (participatingTournamentIds != null
+                && tournament.getId() != null
+                && participatingTournamentIds.contains(tournament.getId())) {
+            codes.add("going");
+        }
+        return List.copyOf(codes);
     }
 }
