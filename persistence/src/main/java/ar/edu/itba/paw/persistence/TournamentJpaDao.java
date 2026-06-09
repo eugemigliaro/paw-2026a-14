@@ -320,16 +320,21 @@ public class TournamentJpaDao implements TournamentDao {
             final User user, final Boolean upcoming, final Boolean includeHosted) {
         final QueryParts parts = new QueryParts();
         parts.where.add("t.deleted = FALSE");
+        parts.where.add("t.status <> :excludedStatus");
+        parts.params.put("excludedStatus", TournamentStatus.CANCELLED);
         if (includeHosted != null && includeHosted) {
             parts.where.add("t.host = :user");
             parts.params.put("user", user);
         }
         if (upcoming != null) {
             if (upcoming) {
-                parts.where.add("(t.endsAt IS NULL OR t.endsAt >= :now)");
+                parts.where.add(
+                        "t.status <> :completedStatus"
+                                + " AND (t.endsAt IS NULL OR t.endsAt >= :now)");
             } else {
-                parts.where.add("t.endsAt < :now");
+                parts.where.add("(t.status = :completedStatus OR t.endsAt < :now)");
             }
+            parts.params.put("completedStatus", TournamentStatus.COMPLETED);
             parts.params.put("now", Instant.now());
         }
         return parts;
