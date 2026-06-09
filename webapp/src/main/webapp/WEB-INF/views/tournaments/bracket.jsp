@@ -110,10 +110,10 @@
 										<div class="tournament-bracket-match__teams">
 											<%-- Team A row --%>
 											<span class="tournament-bracket-match__team
-												${match.teamA.id == bracketViewerTeamId ? ' tournament-bracket-match__team--viewer' : ''}
-												${match.teamA.id == match.winnerTeam.id ? ' tournament-bracket-match__team--winner' : ''}
-												${(match.teamA.id != match.winnerTeam.id and match.teamB.id == match.winnerTeam.id) ? ' tournament-bracket-match__team--loser' : ''}">
-												<c:if test="${match.teamA.id == match.winnerTeam.id}">
+												${not empty bracketViewerTeamId and match.teamA.id == bracketViewerTeamId ? ' tournament-bracket-match__team--viewer' : ''}
+												${not empty match.winnerTeam and match.teamA.id == match.winnerTeam.id ? ' tournament-bracket-match__team--winner' : ''}
+												${not empty match.winnerTeam and match.teamA.id != match.winnerTeam.id and match.teamB.id == match.winnerTeam.id ? ' tournament-bracket-match__team--loser' : ''}">
+												<c:if test="${not empty match.winnerTeam and match.teamA.id == match.winnerTeam.id}">
 													<c:choose>
 														<c:when test="${round.key == bracketRoundCount}">
 															<icon:trophy cssClass="bracket-team-icon bracket-team-icon--trophy" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -137,10 +137,10 @@
 											</span>
 											<%-- Team B row --%>
 											<span class="tournament-bracket-match__team
-												${match.teamB.id == bracketViewerTeamId ? ' tournament-bracket-match__team--viewer' : ''}
-												${match.teamB.id == match.winnerTeam.id ? ' tournament-bracket-match__team--winner' : ''}
-												${(match.teamB.id != match.winnerTeam.id and match.teamA.id == match.winnerTeam.id) ? ' tournament-bracket-match__team--loser' : ''}">
-												<c:if test="${match.teamB.id == match.winnerTeam.id}">
+												${not empty bracketViewerTeamId and match.teamB.id == bracketViewerTeamId ? ' tournament-bracket-match__team--viewer' : ''}
+												${not empty match.winnerTeam and match.teamB.id == match.winnerTeam.id ? ' tournament-bracket-match__team--winner' : ''}
+												${not empty match.winnerTeam and match.teamB.id != match.winnerTeam.id and match.teamA.id == match.winnerTeam.id ? ' tournament-bracket-match__team--loser' : ''}">
+												<c:if test="${not empty match.winnerTeam and match.teamB.id == match.winnerTeam.id}">
 													<c:choose>
 														<c:when test="${round.key == bracketRoundCount}">
 															<icon:trophy cssClass="bracket-team-icon bracket-team-icon--trophy" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

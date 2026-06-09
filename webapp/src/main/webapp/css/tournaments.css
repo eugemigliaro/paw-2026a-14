@@ -155,6 +155,10 @@
 	display: none;
 }
 
+.tournament-bracket-page .booking-panel__notice {
+	margin-bottom: 1.5rem;
+}
+
 .tournament-bracket-grid {
 	align-items: start;
 	display: grid;
