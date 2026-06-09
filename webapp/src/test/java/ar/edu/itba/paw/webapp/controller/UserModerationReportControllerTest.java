@@ -23,7 +23,6 @@ import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -117,15 +116,6 @@ class UserModerationReportControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/reports/mine/90"))
                 .andExpect(flash().attribute("action", "appealed"));
-    }
-
-    @Test
-    void getMyReportDetailReturnsNotFoundForOtherUser() throws Exception {
-        AuthenticationUtils.authenticateUser(7L);
-        Mockito.when(moderationService.findReportByIdForReporter(90L, UserUtils.getUser(7L)))
-                .thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/reports/mine/90")).andExpect(status().isNotFound());
     }
 
     private static ModerationReport sampleReport() {

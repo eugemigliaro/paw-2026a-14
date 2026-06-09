@@ -4,7 +4,11 @@ import static org.mockito.Mockito.when;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.internal.MatchDataService;
+import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.util.List;
 import java.util.Optional;
@@ -19,13 +23,27 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 class SecurityServiceImplTest {
 
-    private MatchDataService matchDataService;
     private SecurityServiceImpl securityService;
+    private MatchDataService matchDataService;
+    private TournamentDataService tournamentDataService;
+    private PlayerReviewDataService playerReviewService;
+    private UserDataService userService;
+    private ModerationService moderationService;
 
     @BeforeEach
     void setUp() {
         matchDataService = Mockito.mock(MatchDataService.class);
-        securityService = new SecurityServiceImpl(matchDataService);
+        tournamentDataService = Mockito.mock(TournamentDataService.class);
+        playerReviewService = Mockito.mock(PlayerReviewDataService.class);
+        userService = Mockito.mock(UserDataService.class);
+        moderationService = Mockito.mock(ModerationService.class);
+        securityService =
+                new SecurityServiceImpl(
+                        matchDataService,
+                        tournamentDataService,
+                        playerReviewService,
+                        userService,
+                        moderationService);
     }
 
     @AfterEach

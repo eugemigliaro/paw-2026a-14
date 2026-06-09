@@ -23,7 +23,9 @@ import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.SecurityService;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
@@ -72,6 +74,7 @@ class SecurityConfigTest {
     @Autowired private WebApplicationContext context;
 
     @Autowired private ModerationService moderationService;
+    @Autowired private SecurityService securityService;
 
     @Autowired private AccountAuthService accountAuthService;
 
@@ -318,6 +321,7 @@ class SecurityConfigTest {
     @Test
     void reportCreationRouteAllowsRegularUser() throws Exception {
         // 1. Arrange
+        Mockito.when(securityService.canReportUser("player")).thenReturn(true);
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/reports/users/player").with(authenticatedUser()))
@@ -514,6 +518,22 @@ class SecurityConfigTest {
     }
 
     @Test
+    void myReportDetailRejectsNonReporter() throws Exception {
+        Mockito.when(securityService.canViewOwnReport(90L)).thenReturn(false);
+
+        mockMvc.perform(get("/reports/mine/90").with(authenticatedUser()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void myReportDetailAllowsReporter() throws Exception {
+        Mockito.when(securityService.canViewOwnReport(90L)).thenReturn(true);
+
+        mockMvc.perform(get("/reports/mine/90").with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void logoutClearsRememberMeCookie() throws Exception {
         // 1. Arrange
         arrangeValidLogin();
@@ -533,6 +553,22 @@ class SecurityConfigTest {
         mockMvc.perform(post("/logout").cookie(rememberMeCookie).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(cookie().maxAge("remember-me", 0));
+    }
+
+    @Test
+    void deleteReviewRejectsWhenNoReview() throws Exception {
+        AuthenticationUtils.authenticateUser(1L);
+        Mockito.when(securityService.canDeleteReview("target")).thenReturn(false);
+
+        mockMvc.perform(post("/users/target/reviews/delete")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getHostEditRouteForNonHostReturnsForbidden() throws Exception {
+        Mockito.when(securityService.canEditMatch(42L)).thenReturn(false);
+
+        mockMvc.perform(get("/host/matches/42/edit").with(authenticatedUser()))
+                .andExpect(status().isForbidden());
     }
 
     private static RequestPostProcessor authenticatedUser() {
@@ -624,6 +660,11 @@ class SecurityConfigTest {
         }
 
         @Bean
+        SecurityService securityService() {
+            return Mockito.mock(SecurityService.class);
+        }
+
+        @Bean
         TestRoutes testRoutes() {
             return new TestRoutes();
         }
@@ -708,10 +749,22 @@ class SecurityConfigTest {
             return "my-reports";
         }
 
+        @GetMapping("/reports/mine/{reportId}")
+        @ResponseBody
+        String myReportDetail(@PathVariable("reportId") final Long reportId) {
+            return "report-detail-" + reportId;
+        }
+
         @GetMapping("/reports/users/{username}")
         @ResponseBody
         String reportUser(@PathVariable("username") final String username) {
             return "report-" + username;
+        }
+
+        @GetMapping("/users/{username}/reviews/delete")
+        @ResponseBody
+        String deleteReview(@PathVariable("username") final String username) {
+            return "delete-review-" + username;
         }
 
         @PostMapping("/matches/{matchId}/invites/accept")

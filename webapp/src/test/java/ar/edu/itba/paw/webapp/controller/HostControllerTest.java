@@ -48,6 +48,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Locale;
+import java.util.Optional;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorFactory;
 import org.hamcrest.Matchers;
@@ -161,8 +162,7 @@ class HostControllerTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new HostController(
-                                        matchService, messageSource, false, "", "", 0, 0, 0))
+                                new HostController(matchService, false, "", "", 0, 0, 0))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
@@ -180,6 +180,14 @@ class HostControllerTest {
     }
 
     private void configureMatchServiceStubs() {
+        // findMatchById: returns the fixture match for known IDs.
+        Mockito.when(matchService.findMatchById(Mockito.anyLong()))
+                .thenAnswer(
+                        invocation -> {
+                            Long id = invocation.getArgument(0);
+                            return Optional.ofNullable(findFixtureMatch(id));
+                        });
+
         // createMatch: capture request, return a canned Match with id 43.
         Mockito.when(matchService.createMatch(Mockito.any(CreateMatchRequest.class)))
                 .thenAnswer(
@@ -819,27 +827,6 @@ class HostControllerTest {
     }
 
     @Test
-    void getHostEditRouteForNonHostReturnsForbidden() throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(get("/host/matches/42/edit")).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void getHostEditRouteForCompletedMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches/44/edit")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getHostEditRouteForCancelledMatchReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches/45/edit")).andExpect(status().isNotFound());
-    }
-
-    @Test
     void getHostSeriesEditRouteRendersPrefilledFormForHost() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
@@ -855,13 +842,6 @@ class HostControllerTest {
                                         "createEventForm",
                                         Matchers.hasProperty(
                                                 "title", Matchers.is("Weekly Padel"))));
-    }
-
-    @Test
-    void getHostSeriesEditRouteForSingleEventReturnsNotFound() throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/host/matches/42/series/edit")).andExpect(status().isNotFound());
     }
 
     @Test
