@@ -22,20 +22,30 @@ This is an **additive** change. The existing solo-queue path (`joinSolo` / `leav
 3. **Team name required.** The creator must supply a non-blank name. Per-tournament name
    uniqueness is **not** enforced at this stage (the column is already nullable as of V37; no
    migration needed). Optional `UNIQUE(tournament_id, name)` is noted as possible future work.
-4. **Capacity is a per-person budget, shared across both paths.** Total capacity =
-   `bracketSize × teamSize` **people**, counting every active solo-queue entry plus every team
-   member (whether their team is full or not). A *team* reserves nothing; a *person* consumes
-   one unit the moment they register anywhere. Creating or joining a team is allowed only while
-   registered people `< capacity`. This replaces the earlier "cap at bracketSize teams" idea,
-   which allowed 1-person teams to squat bracket slots.
-   - Consequence: at most `floor(capacity / teamSize) = bracketSize` full teams can ever form,
-     so the bracket always holds every full team assembled at close. No "excess complete teams"
-     case is possible.
-   - First-come semantics: when the tournament is full, further registration is rejected
-     regardless of how existing registrants are grouped (40 one-person teams = a full 40-person
-     tournament, identical to 40 solo-queue entries).
-5. **At close, incomplete teams are salvaged, not blindly dropped** (see §5).
-6. **Unplaced (`UNASSIGNED`) players are emailed** (Option A, see §6). Today they receive no
+4. **Two caps with distinct roles:**
+   - **People capacity (correctness invariant).** Total capacity = `bracketSize × teamSize`
+     **people**, counting every active solo-queue entry plus every team member (whether their
+     team is full or not). A *person* consumes one unit the moment they register anywhere.
+     Creating or joining a team is allowed only while registered people `< capacity`. This is
+     what `closeRegistration` relies on and is shared with the solo queue.
+   - **Team-count cap (UI / product bound).** `createTeam` is blocked once `bracketSize` teams
+     already exist; latecomers must **join an existing team** instead of creating a new one.
+     This keeps the joinable-teams list small (no pagination needed) and matches the chosen
+     "players create teams, capped" model.
+   - The two caps overlap (`teamCount ≤ bracketSize` and `perTeam ≤ teamSize` already imply
+     `people ≤ bracketSize × teamSize`); the people cap remains the invariant, the team cap is
+     the additional product/UI bound.
+   - Consequence: at most `bracketSize` full teams can ever form, so the bracket always holds
+     every full team assembled at close. No "excess complete teams" case is possible.
+   - First-come semantics: when the tournament is full (people) or at the team cap, further
+     creation is rejected; a pre-formed group larger than any existing team's free slots cannot
+     all stay together. Accepted trade-off for this stage.
+5. **Players create teams; no pre-created empty slots.** Teams are created on demand with a
+   required name (§2.3) and deleted when their last member leaves. Pre-seeding empty team slots
+   was rejected: it conflicts with delete-on-empty, adds throwaway seeding/generic-name
+   machinery, and is not a stepping stone toward the create model.
+6. **At close, incomplete teams are salvaged, not blindly dropped** (see §5).
+7. **Unplaced (`UNASSIGNED`) players are emailed** (Option A, see §6). Today they receive no
    notification at all — not even the bracket-published email, because email recipients are
    drawn only from `TournamentTeamMember`s.
 
@@ -45,7 +55,8 @@ This is an **additive** change. The existing solo-queue path (`joinSolo` / `leav
 - New service operations: `createTeam`, `joinTeam`, `leaveTeam`, `listJoinableTeams`.
 - New DAO operations: `removeMember`, `delete`, `countMembers`, `countMembersByTournament`,
   `findJoinableByTournament`.
-- Unified capacity check shared by `joinSolo`, `createTeam`, `joinTeam`.
+- Unified people-capacity check shared by `joinSolo`, `createTeam`, `joinTeam`, plus a
+  team-count cap (`bracketSize`) on `createTeam`.
 - `closeRegistration` change: salvage incomplete teams via top-up + repack (§5).
 - "Not placed" email + i18n templates (§6).
 - Web layer: create/join/leave endpoints, a joinable-teams list on the tournament page, and
@@ -55,6 +66,8 @@ This is an **additive** change. The existing solo-queue path (`joinSolo` / `leav
 ### Out of scope
 - No new `Team` entity, no standalone teams outside a tournament.
 - No captain powers / team ownership / rename / kick.
+- No pre-created empty team slots (players create teams on demand; see §2.5).
+- No pagination of the teams list — the team-count cap (`bracketSize`) keeps it small.
 - No waitlist or priority for pre-formed groups over singletons (first-come wins).
 - No per-tournament team-name uniqueness constraint.
 - No change to bracket generation, match play, or seeding beyond what close already does.
@@ -68,7 +81,8 @@ This is an **additive** change. The existing solo-queue path (`joinSolo` / `leav
 - `TournamentTeamMember` with `captain = false`.
 - New exceptions under `models/.../exceptions/tournamentRegistration/`:
   - `TournamentRegistrationTeamDraftDisabledException` (mirrors the solo-signup-disabled one)
-  - `TournamentRegistrationTournamentFullException` (shared capacity reached)
+  - `TournamentRegistrationTournamentFullException` (shared people-capacity reached)
+  - `TournamentRegistrationTeamCapReachedException` (already `bracketSize` teams exist)
   - `TournamentRegistrationTeamNotFoundException`
   - `TournamentRegistrationTeamFullException`
   - `TournamentRegistrationNotOnTeamException`
@@ -97,8 +111,11 @@ findUserTeam/findSoloEntry helpers):
 - **Mutual exclusion:** the user must not already be on a team
   (`AlreadyOnTeamException`) and must not be `IN_POOL` in the solo queue
   (`AlreadyInSoloPoolException`) — symmetric with how `joinSolo` already blocks team members.
-- **createTeam:** non-blank name; tournament not at capacity; create `TEAM_DRAFT` team, then
-  immediately `addMember(team, user, false)` so the creator is a member.
+- **createTeam:** non-blank name; tournament not at people-capacity; **team count
+  `< bracketSize`** (`countByTournament`) — otherwise
+  `TournamentRegistrationTeamCapReachedException`, and the user is
+  expected to join an existing team; then create `TEAM_DRAFT` team and immediately
+  `addMember(team, user, false)` so the creator is a member.
 - **joinTeam:** team exists and belongs to this tournament; team not full
   (`countMembers(teamId) < teamSize`); tournament not at capacity.
 - **leaveTeam:** user is on a team in this tournament; `removeMember`; if
@@ -187,8 +204,9 @@ bracket-published email through the unchanged `recipients()` path.
 ## 8. Testing
 
 - **Service (JUnit 5 + Mockito, no `verify`, one scenario per test, Arrange/Exercise/Assert):**
-  createTeam happy path + name-blank + team-draft-disabled + at-capacity + already-on-team +
-  already-in-solo; joinTeam happy + team-full + team-not-found + at-capacity; leaveTeam happy +
+  createTeam happy path + name-blank + team-draft-disabled + at-people-capacity +
+  team-cap-reached + already-on-team + already-in-solo; joinTeam happy + team-full +
+  team-not-found + at-people-capacity; leaveTeam happy +
   last-member-deletes-team + not-on-team.
 - **`closeRegistration`:** top-up completes a near-full team; still-incomplete team dissolved and
   repacked; leftovers `UNASSIGNED`; under-capacity throws.
