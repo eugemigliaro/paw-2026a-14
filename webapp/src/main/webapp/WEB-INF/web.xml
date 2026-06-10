@@ -91,8 +91,18 @@
 </error-page>
 
 <error-page>
+	<error-code>405</error-code>
+	<location>/errors/405</location>
+</error-page>
+
+<error-page>
 	<error-code>403</error-code>
 	<location>/errors/403</location>
+</error-page>
+
+<error-page>
+	<error-code>409</error-code>
+	<location>/errors/409</location>
 </error-page>
 
 <error-page>

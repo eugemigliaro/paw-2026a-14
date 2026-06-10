@@ -39,11 +39,27 @@ class ErrorPageControllerTest {
     }
 
     @Test
+    void getMethodNotAllowedErrorRouteRenders405Page() throws Exception {
+        mockMvc.perform(get("/errors/405"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attribute("number", "405"));
+    }
+
+    @Test
     void getForbiddenErrorRouteRenders403Page() throws Exception {
         mockMvc.perform(get("/errors/403"))
                 .andExpect(status().isForbidden())
                 .andExpect(view().name("errors/error-page"))
                 .andExpect(model().attribute("number", "403"));
+    }
+
+    @Test
+    void getConflictErrorRouteRenders409Page() throws Exception {
+        mockMvc.perform(get("/errors/409"))
+                .andExpect(status().isConflict())
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attribute("number", "409"));
     }
 
     @Test
