@@ -10,11 +10,13 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.MatchActionCapabilities;
 import ar.edu.itba.paw.services.MatchInteractionState;
 import ar.edu.itba.paw.services.MatchManagementPermissions;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import java.time.Clock;
@@ -37,6 +39,7 @@ final class EventPageSupport {
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
     private final PlayerReviewService playerReviewService;
+    private final ModerationService moderationService;
     private final MessageSource messageSource;
     private final Clock clock;
     private final boolean mapPickerEnabled;
@@ -48,6 +51,7 @@ final class EventPageSupport {
             final MatchService matchService,
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
+            final ModerationService moderationService,
             final MessageSource messageSource,
             final Clock clock,
             final boolean mapPickerEnabled,
@@ -57,6 +61,7 @@ final class EventPageSupport {
         this.matchService = matchService;
         this.matchParticipationService = matchParticipationService;
         this.playerReviewService = playerReviewService;
+        this.moderationService = moderationService;
         this.messageSource = messageSource;
         this.clock = clock;
         this.mapPickerEnabled = mapPickerEnabled;
@@ -181,6 +186,14 @@ final class EventPageSupport {
         mav.addObject("isConfirmedParticipant", interactionState.isConfirmedParticipant());
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
+        final boolean reportMatchVisible = canReportMatch(currentUser, match, isHost);
+        final boolean reportMatchAlreadySubmitted =
+                reportMatchVisible
+                        && moderationService.hasReportedTarget(
+                                currentUser, ReportTargetType.MATCH, match.getId());
+        mav.addObject("reportMatchVisible", reportMatchVisible);
+        mav.addObject("reportMatchAlreadySubmitted", reportMatchAlreadySubmitted);
+        mav.addObject("reportMatchCanSubmit", reportMatchVisible && !reportMatchAlreadySubmitted);
         mav.addObject("reservationRequiresLogin", interactionState.isReservationRequiresLogin());
         addRealEventPageAttributes(
                 mav, match, confirmedParticipants, seriesOccurrences, currentUser);
@@ -312,6 +325,11 @@ final class EventPageSupport {
         mav.addObject("hostInviteEmail", hostInviteEmail);
         mav.addObject("hostSeriesInviteAvailable", match.isRecurringOccurrence());
         return mav;
+    }
+
+    private static boolean canReportMatch(
+            final User currentUser, final Match match, final boolean isHost) {
+        return currentUser != null && match != null && !isHost;
     }
 
     private void addRealEventPageAttributes(

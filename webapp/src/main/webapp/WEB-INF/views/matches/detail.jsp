@@ -832,10 +832,22 @@
 											<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 										</form>
 									</c:if>
-									<hr class="booking-panel__divider" />
-									<c:url var="hostReportMatchHref" value="/reports/matches/${event.id}" />
-									<spring:message var="hostReportMatchLabel" code="moderation.report.match.menu" />
-									<ui:button label="${hostReportMatchLabel}" href="${hostReportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
+									<c:if test="${reportMatchVisible}">
+										<hr class="booking-panel__divider" />
+										<spring:message var="hostReportMatchLabel" code="moderation.report.match.menu" />
+										<c:choose>
+											<c:when test="${reportMatchAlreadySubmitted}">
+												<spring:message var="reportMatchAlreadySubmittedTitle" code="moderation.report.match.alreadySubmitted" />
+												<span class="btn btn--danger btn--md btn--full-width is-disabled booking-panel__report-button report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${reportMatchAlreadySubmittedTitle}" aria-label="${reportMatchAlreadySubmittedTitle}">
+													<c:out value="${hostReportMatchLabel}" />
+												</span>
+											</c:when>
+											<c:otherwise>
+												<c:url var="hostReportMatchHref" value="/reports/matches/${event.id}" />
+												<ui:button label="${hostReportMatchLabel}" href="${hostReportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
+											</c:otherwise>
+										</c:choose>
+									</c:if>
 								</article>
 							</c:when>
 							<c:otherwise>
@@ -1200,11 +1212,21 @@
 											<ui:button label="${leaveRecurringLabel}" type="submit" fullWidth="${true}" variant="secondary" />
 										</form>
 									</c:if>
-									<c:if test="${not empty pageContext.request.userPrincipal}">
+									<c:if test="${reportMatchVisible}">
 										<hr class="booking-panel__divider" />
-										<c:url var="reportMatchHref" value="/reports/matches/${event.id}" />
 										<spring:message var="reportMatchLabel" code="moderation.report.match.menu" />
-										<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
+										<c:choose>
+											<c:when test="${reportMatchAlreadySubmitted}">
+												<spring:message var="reportMatchAlreadySubmittedTitle" code="moderation.report.match.alreadySubmitted" />
+												<span class="btn btn--danger btn--md btn--full-width is-disabled booking-panel__report-button report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${reportMatchAlreadySubmittedTitle}" aria-label="${reportMatchAlreadySubmittedTitle}">
+													<c:out value="${reportMatchLabel}" />
+												</span>
+											</c:when>
+											<c:otherwise>
+												<c:url var="reportMatchHref" value="/reports/matches/${event.id}" />
+												<ui:button label="${reportMatchLabel}" href="${reportMatchHref}" variant="danger" fullWidth="${true}" className="booking-panel__report-button" />
+											</c:otherwise>
+										</c:choose>
 									</c:if>
 								</article>
 							</c:otherwise>

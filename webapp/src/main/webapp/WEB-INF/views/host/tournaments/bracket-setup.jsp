@@ -84,6 +84,7 @@
 				<c:if test="${not bracketGenerated}">
 					<spring:message var="generateLabel" code="tournament.bracket.generate" />
 					<spring:message var="generatingLabel" code="tournament.bracket.generating" />
+					<spring:message var="generateDisabledTooltip" code="tournament.bracket.generate.disabledTooltip" />
 					<article class="panel form-card tournament-setup-card">
 						<span class="detail-label"><spring:message code="tournament.host.bracket.panel.label" /></span>
 						<h2 class="form-card__title"><spring:message code="tournament.bracket.setup.card.title" /></h2>
@@ -93,11 +94,13 @@
 								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 								<label class="field" for="pairing-strategy">
 									<span class="field__label"><spring:message code="tournament.host.pairingStrategy.label" /></span>
-									<select id="pairing-strategy" name="pairingStrategy" class="field__control field__control--select" required="required" data-initial-value="${selectedPairingStrategy}">
-										<option value="manual" ${selectedPairingStrategy == 'manual' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.manual" /></option>
-										<option value="random" ${selectedPairingStrategy == 'random' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.random" /></option>
-										<option value="elo" ${selectedPairingStrategy == 'elo' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.elo" /></option>
-									</select>
+									<span class="tournament-bracket-actions__strategy-select-wrap">
+										<select id="pairing-strategy" name="pairingStrategy" class="field__control field__control--select tournament-bracket-actions__strategy-select" required="required" data-initial-value="${selectedPairingStrategy}">
+											<option value="manual" ${selectedPairingStrategy == 'manual' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.manual" /></option>
+											<option value="random" ${selectedPairingStrategy == 'random' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.random" /></option>
+											<option value="elo" ${selectedPairingStrategy == 'elo' ? 'selected' : ''}><spring:message code="tournament.host.pairingStrategy.elo" /></option>
+										</select>
+									</span>
 								</label>
 								<spring:message var="updateStrategyLabel" code="tournament.bracket.strategy.update" />
 								<ui:button
@@ -109,7 +112,9 @@
 							</form>
 							<form method="post" action="${generateAction}" data-submit-guard="true" data-submit-loading-label="${generatingLabel}">
 								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-								<ui:button id="generate-bracket-button" label="${generateLabel}" type="submit" />
+								<span id="generate-bracket-button-tooltip" class="tournament-bracket-actions__generate-tooltip" data-tooltip="${generateDisabledTooltip}" aria-label="${generateDisabledTooltip}">
+									<ui:button id="generate-bracket-button" label="${generateLabel}" type="submit" />
+								</span>
 							</form>
 						</div>
 					</article>

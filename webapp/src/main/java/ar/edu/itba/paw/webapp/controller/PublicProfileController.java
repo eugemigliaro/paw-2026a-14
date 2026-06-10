@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.exceptions.playerReview.PlayerReviewException;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -82,6 +84,11 @@ public class PublicProfileController {
         addReviewModel(mav, targetUser, user, reviewForm, reviewFilter, reviewPage);
         final boolean reportUserCanSubmit = moderationService.canReportUser(user, targetUser);
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
+        mav.addObject(
+                "reportUserAlreadySubmitted",
+                reportUserCanSubmit
+                        && moderationService.hasReportedTarget(
+                                user, ReportTargetType.USER, targetUser.getId()));
         final Optional<UserBan> activeBan = moderationService.findActiveBan(targetUser);
         mav.addObject("profileBanned", activeBan.isPresent());
         activeBan.ifPresent(
@@ -162,10 +169,22 @@ public class PublicProfileController {
                         && targetUser != null
                         && !currentUser.getId().equals(targetUser.getId())
                         && playerReviewService.canReview(currentUser, targetUser);
+        final Set<Long> reportableReviewIds =
+                currentUser == null
+                        ? Set.of()
+                        : reviewResult.getItems().stream()
+                                .filter(
+                                        review ->
+                                                moderationService.canReportReview(
+                                                        currentUser, review))
+                                .map(PlayerReview::getId)
+                                .collect(java.util.stream.Collectors.toSet());
         final String profilePath = "/users/" + targetUser.getUsername();
 
         mav.addObject("reviewSummary", summary);
         mav.addObject("profileReviews", reviewResult.getItems());
+        mav.addObject("reportableReviewIds", reportableReviewIds);
+        mav.addObject("reviewLoginRequired", currentUser == null);
         mav.addObject("reviewFilterOptions", reviewFilterOptions(targetUser, reviewFilter));
         mav.addObject("selectedReviewFilter", reviewFilter.getQueryValue());
         mav.addObject("reviewTotalPages", reviewResult.getTotalPages());

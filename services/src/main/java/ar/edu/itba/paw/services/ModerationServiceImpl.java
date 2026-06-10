@@ -53,6 +53,7 @@ public class ModerationServiceImpl implements ModerationService {
     private final PlayerReviewDataService playerReviewDataService;
     private final MailDispatchService mailDispatchService;
     private final MatchNotificationService matchNotificationService;
+    private final TournamentRegistrationService tournamentRegistrationService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -66,6 +67,7 @@ public class ModerationServiceImpl implements ModerationService {
             final PlayerReviewDataService playerReviewDataService,
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService,
+            final TournamentRegistrationService tournamentRegistrationService,
             final MessageSource messageSource,
             final Clock clock) {
         this.userBanDao = userBanDao;
@@ -76,6 +78,7 @@ public class ModerationServiceImpl implements ModerationService {
         this.playerReviewDataService = playerReviewDataService;
         this.mailDispatchService = mailDispatchService;
         this.matchNotificationService = matchNotificationService;
+        this.tournamentRegistrationService = tournamentRegistrationService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -220,6 +223,27 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean canReportReview(final User reporter, final PlayerReview review) {
+        return reporter != null
+                && review != null
+                && review.getReviewer() != null
+                && reporter.getId() != null
+                && review.getReviewer().getId() != null
+                && !reporter.getId().equals(review.getReviewer().getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasReportedTarget(
+            final User reporter, final ReportTargetType targetType, final Long targetId) {
+        return reporter != null
+                && targetType != null
+                && targetId != null
+                && moderationReportDao.existsReportForTarget(reporter, targetType, targetId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean canAppealReport(final ModerationReport report, final User reporter) {
         return report != null
                 && reporter != null
@@ -356,6 +380,7 @@ public class ModerationServiceImpl implements ModerationService {
 
     private void cancelFutureContentForUser(final User user) {
         final Instant now = Instant.now(clock);
+        tournamentRegistrationService.withdrawFromOpenRegistrations(user);
         final List<Match> matchesToCancel = matchDataService.findFutureHostedMatches(user, now);
         matchParticipantDataService.cancelFutureReservations(user, now);
         if (matchDataService.cancelFutureHostedMatches(user, now) <= 0) {

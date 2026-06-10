@@ -115,7 +115,11 @@ public class MatchDashboardController {
         final MatchDashboardQueryState.DashboardSelection selection =
                 MatchDashboardQueryState.resolve(searchForm);
         final SearchForm viewSearchForm = selection.searchForm();
-        final String searchQuery = bindingResult.hasFieldErrors("q") ? "" : viewSearchForm.getQ();
+        String searchQuery = viewSearchForm.getQ();
+        if (bindingResult.hasFieldErrors("q")) {
+            searchQuery = "";
+            viewSearchForm.setQ(searchQuery);
+        }
 
         final PaginatedResult<Match> result =
                 selection.tournament()

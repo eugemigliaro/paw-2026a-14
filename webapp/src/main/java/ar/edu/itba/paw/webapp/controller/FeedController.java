@@ -109,7 +109,11 @@ public class FeedController {
         if (hasErrorsOutsideQuery(bindingResult)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
-        final String searchQuery = bindingResult.hasFieldErrors("q") ? "" : searchForm.getQ();
+        String searchQuery = searchForm.getQ();
+        if (bindingResult.hasFieldErrors("q")) {
+            searchQuery = "";
+            searchForm.setQ(searchQuery);
+        }
 
         final ExploreLocation exploreLocation = exploreLocation(session);
         final DateRange selectedDateRange =

@@ -159,8 +159,7 @@
 													</c:choose>
 												</c:forEach>
 												<div class="filter-dropdown__actions">
-													<c:url var="clearFilterUrl" value="${clearFilterHref}" />
-													<ui:button label="${clearFilterLabel}" href="${clearFilterUrl}"
+													<ui:button label="${clearFilterLabel}" href="${clearFilterHref}"
 														variant="secondary" size="sm"
 														className="filter-dropdown__action" />
 														<ui:button label="${seeResultsLabel}" type="button"

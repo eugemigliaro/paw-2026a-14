@@ -82,11 +82,12 @@
 														<spring:message var="eventTypeMatchLabel" code="${option.labelCode}" />
 														<c:choose>
 															<c:when test="${not empty option.params}">
-																<c:url var="eventTypeMatchHref" value="${feedPath}">
+																<c:url var="eventTypeHrefFull" value="${feedPath}">
 																	<c:forEach var="p" items="${option.params}">
 																		<c:param name="${p.key}" value="${p.value}" />
 																	</c:forEach>
 																</c:url>
+																<c:set var="eventTypeMatchHref" value="${fn:substringAfter(eventTypeHrefFull, pageContext.request.contextPath)}" />
 															</c:when>
 															<c:otherwise>
 																<c:set var="eventTypeMatchHref" value="${option.href}" />
@@ -97,11 +98,12 @@
 														<spring:message var="eventTypeTournamentLabel" code="${option.labelCode}" />
 														<c:choose>
 															<c:when test="${not empty option.params}">
-																<c:url var="eventTypeTournamentHref" value="${feedPath}">
+																<c:url var="eventTypeHrefFull" value="${feedPath}">
 																	<c:forEach var="p" items="${option.params}">
 																		<c:param name="${p.key}" value="${p.value}" />
 																	</c:forEach>
 																</c:url>
+																<c:set var="eventTypeTournamentHref" value="${fn:substringAfter(eventTypeHrefFull, pageContext.request.contextPath)}" />
 															</c:when>
 															<c:otherwise>
 																<c:set var="eventTypeTournamentHref" value="${option.href}" />
@@ -148,7 +150,7 @@
 													<c:when test="${optionStatus.first}">
 														<c:choose>
 															<c:when test="${not empty option.params}">
-																<c:url var="clearFilterHref" value="${feedFormAction}">
+																<c:url var="clearFilterHref" value="${feedPath}">
 																	<c:forEach var="p" items="${option.params}">
 																		<c:param name="${p.key}" value="${p.value}" />
 																	</c:forEach>
@@ -162,7 +164,7 @@
 													<c:otherwise>
 														<c:choose>
 															<c:when test="${not empty option.params}">
-																<c:url var="optionHref" value="${feedFormAction}">
+																<c:url var="optionHref" value="${feedPath}">
 																	<c:forEach var="p" items="${option.params}">
 																		<c:param name="${p.key}" value="${p.value}" />
 																	</c:forEach>
@@ -179,8 +181,7 @@
 												</c:choose>
 											</c:forEach>
 											<div class="filter-dropdown__actions">
-												<c:url var="clearFilterUrl" value="${clearFilterHref}" />
-												<ui:button label="${clearFilterLabel}" href="${clearFilterUrl}"
+													<ui:button label="${clearFilterLabel}" href="${clearFilterHref}"
 													variant="secondary" size="sm" className="filter-dropdown__action" />
 													<ui:button label="${seeResultsLabel}" type="button"
 													variant="primary" size="sm"

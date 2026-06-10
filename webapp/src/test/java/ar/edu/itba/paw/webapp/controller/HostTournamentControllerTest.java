@@ -251,28 +251,11 @@ class HostTournamentControllerTest {
     }
 
     @Test
-    void postCloseRegistrationByNonHostReturnsForbidden() throws Exception {
-        // 1. Arrange
-        AuthenticationUtils.authenticateUser(
-                UserUtils.getUser(9L), "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(
-                        tournamentRegistrationService.closeRegistration(
-                                Mockito.eq(77L), Mockito.any(User.class)))
-                .thenThrow(new TournamentForbiddenActionException());
-
-        // 2. Exercise + 3. Assert
-        mockMvc.perform(post("/host/tournaments/77/close-registration"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
     void postCloseRegistrationUnderCapacityRedirectsWithError() throws Exception {
         // 1. Arrange
         AuthenticationUtils.authenticateUser(
                 UserUtils.getUser(7L), "{bcrypt}hash", UserRole.USER, true);
-        Mockito.when(
-                        tournamentRegistrationService.closeRegistration(
-                                Mockito.eq(77L), Mockito.any(User.class)))
+        Mockito.when(tournamentRegistrationService.closeRegistration(77L))
                 .thenThrow(new TournamentRegistrationUnderCapacityException());
 
         // 2. Exercise + 3. Assert

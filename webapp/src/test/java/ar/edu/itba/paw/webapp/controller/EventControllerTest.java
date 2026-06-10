@@ -19,6 +19,7 @@ import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSe
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.MatchActionCapabilities;
 import ar.edu.itba.paw.services.MatchInteractionState;
@@ -26,6 +27,7 @@ import ar.edu.itba.paw.services.MatchManagementPermissions;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
@@ -65,6 +67,7 @@ class EventControllerTest {
     private MatchReservationService matchReservationService;
     private MatchParticipationService matchParticipationService;
     private PlayerReviewService playerReviewService;
+    private ModerationService moderationService;
 
     private MatchException reservationFailure;
     private MatchException reservationCancellationFailure;
@@ -609,6 +612,7 @@ class EventControllerTest {
                                     ? Set.of(3L)
                                     : Set.of();
                         });
+        moderationService = Mockito.mock(ModerationService.class);
 
         final MessageSource messageSource = messageSource();
 
@@ -625,6 +629,7 @@ class EventControllerTest {
                                         matchReservationService,
                                         matchParticipationService,
                                         playerReviewService,
+                                        moderationService,
                                         messageSource,
                                         fixedClock,
                                         true,
@@ -656,6 +661,9 @@ class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("reservationRequestPath"))
+                .andExpect(model().attribute("reportMatchVisible", false))
+                .andExpect(model().attribute("reportMatchCanSubmit", false))
+                .andExpect(model().attribute("reportMatchAlreadySubmitted", false))
                 .andExpect(model().attribute("reservationRequiresLogin", true))
                 .andExpect(
                         model().attribute(
@@ -707,6 +715,9 @@ class EventControllerTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reportMatchVisible", true))
+                .andExpect(model().attribute("reportMatchCanSubmit", true))
+                .andExpect(model().attribute("reportMatchAlreadySubmitted", false))
                 .andExpect(model().attribute("reservationRequiresLogin", false))
                 .andExpect(
                         model().attribute(
@@ -725,6 +736,23 @@ class EventControllerTest {
                                                         3L,
                                                         "/users/"
                                                                 + "user3?reviewForm=open#reviews"))));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteForAlreadyReportedMatchDisablesReportAction() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
+        Mockito.when(
+                        moderationService.hasReportedTarget(
+                                Mockito.any(User.class),
+                                Mockito.eq(ReportTargetType.MATCH),
+                                Mockito.eq(42L)))
+                .thenReturn(true);
+
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("reportMatchVisible", true))
+                .andExpect(model().attribute("reportMatchAlreadySubmitted", true))
+                .andExpect(model().attribute("reportMatchCanSubmit", false));
     }
 
     @Test
@@ -993,6 +1021,9 @@ class EventControllerTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("reportMatchVisible", false))
+                .andExpect(model().attribute("reportMatchCanSubmit", false))
+                .andExpect(model().attribute("reportMatchAlreadySubmitted", false))
                 .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))

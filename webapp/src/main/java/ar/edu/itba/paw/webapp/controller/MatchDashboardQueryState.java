@@ -68,7 +68,7 @@ final class MatchDashboardQueryState {
 
     private static Boolean includeHosted(final List<EventCategory> selectedCategories) {
         if (selectedCategories.isEmpty()) {
-            return Boolean.FALSE;
+            return Boolean.TRUE;
         }
         return selectedCategories.contains(EventCategory.HOSTED) ? Boolean.TRUE : Boolean.FALSE;
     }
@@ -79,7 +79,8 @@ final class MatchDashboardQueryState {
             return List.of(
                     ParticipantStatus.JOINED,
                     ParticipantStatus.CHECKED_IN,
-                    ParticipantStatus.INVITED);
+                    ParticipantStatus.INVITED,
+                    ParticipantStatus.PENDING_APPROVAL);
         }
 
         final List<ParticipantStatus> participantStatuses = new ArrayList<>();

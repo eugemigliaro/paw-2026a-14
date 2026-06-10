@@ -382,6 +382,7 @@ class MatchDashboardControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("events/list"))
                 .andExpect(model().attributeExists("events"))
+                .andExpect(model().attribute("selectedCategories", List.of()))
                 .andExpect(model().attribute("pageTitleCode", "page.title.matches"))
                 .andExpect(model().attribute("listTitleCode", "matches.title"));
     }
@@ -533,7 +534,8 @@ class MatchDashboardControllerTest {
     }
 
     @Test
-    void getMatchesRouteDoesNotIncludePendingCategoryByDefault() throws Exception {
+    void getMatchesRouteIncludesPendingCategoryByDefaultWhenNoCategoryIsSelected()
+            throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
         currentUserHasSeriesJoinRequest = true;
 
@@ -548,7 +550,7 @@ class MatchDashboardControllerTest {
                 events.stream()
                         .filter(Match.class::isInstance)
                         .map(Match.class::cast)
-                        .noneMatch(event -> "Approval Future Padel".equals(event.getTitle())));
+                        .anyMatch(event -> "Approval Future Padel".equals(event.getTitle())));
     }
 
     @Test

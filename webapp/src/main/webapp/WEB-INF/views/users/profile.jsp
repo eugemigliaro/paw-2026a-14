@@ -18,22 +18,6 @@
 			<main class="page-shell public-profile-shell">
 				<section class="panel public-profile-panel">
 
-					<c:if test="${not empty profileEditHref or reportUserCanSubmit}">
-						<div class="public-profile-topbar">
-							<div class="public-profile-actions">
-								<c:if test="${not empty profileEditHref}">
-									<c:url var="profileEditAction" value="${profileEditHref}" />
-									<spring:message var="profileEditLabel" code="profile.public.edit" />
-									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
-								</c:if>
-								<c:if test="${reportUserCanSubmit}">
-									<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
-									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
-									<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
-								</c:if>
-							</div>
-						</div>
-					</c:if>
 					<div class="public-profile-hero">
 						<div class="public-profile-avatar-panel">
 							<div class="public-profile-avatar-panel__content">
@@ -103,6 +87,30 @@
 								</c:if>
 							</div>
 						</div>
+						<c:if test="${not empty profileEditHref or reportUserCanSubmit}">
+							<div class="public-profile-actions public-profile-actions--hero">
+								<c:if test="${not empty profileEditHref}">
+									<c:url var="profileEditAction" value="${profileEditHref}" />
+									<spring:message var="profileEditLabel" code="profile.public.edit" />
+									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+								</c:if>
+								<c:if test="${reportUserCanSubmit}">
+									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
+									<c:choose>
+										<c:when test="${reportUserAlreadySubmitted}">
+											<spring:message var="reportUserAlreadySubmittedTitle" code="moderation.report.user.alreadySubmitted" />
+											<span class="btn btn--danger btn--md is-disabled report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${reportUserAlreadySubmittedTitle}" aria-label="${reportUserAlreadySubmittedTitle}">
+												<c:out value="${reportUserLabel}" />
+											</span>
+										</c:when>
+										<c:otherwise>
+											<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
+											<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
+										</c:otherwise>
+									</c:choose>
+								</c:if>
+							</div>
+						</c:if>
 					</div>
 
 				</section>
@@ -376,7 +384,7 @@
 						</section>
 					</c:if>
 
-					<c:if test="${not empty reviewFilterOptions}">
+						<c:if test="${not reviewLoginRequired and not empty reviewFilterOptions}">
 						<spring:message var="reviewFilterAria" code="profile.reviews.filter.aria" />
 						<nav class="public-profile-review-filter" aria-label="${reviewFilterAria}">
 							<span class="public-profile-review-filter__label"><spring:message code="profile.reviews.filter.label" /></span>
@@ -456,11 +464,21 @@
 						</nav>
 					</c:if>
 
-					<c:choose>
-						<c:when test="${empty profileReviews}">
-							<p class="public-profile-reviews__empty">
-								<spring:message code="profile.reviews.emptyState" />
-							</p>
+						<c:choose>
+							<c:when test="${reviewLoginRequired}">
+								<p class="public-profile-review-locked">
+									<span class="public-profile-review-locked__icon" aria-hidden="true">
+										<icon:padlock fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false" />
+									</span>
+									<span class="public-profile-review-locked__text">
+										<spring:message code="profile.reviews.loginRequired" />
+									</span>
+								</p>
+							</c:when>
+							<c:when test="${empty profileReviews}">
+								<p class="public-profile-reviews__empty">
+									<spring:message code="profile.reviews.emptyState" />
+								</p>
 						</c:when>
 						<c:otherwise>
 							<ul class="public-profile-review-list">
@@ -497,14 +515,14 @@
 												</span>
 											</c:if>
 										</div>
-										<c:if test="${not empty review.comment}">
-											<p class="public-profile-review-list__comment"><c:out value="${review.comment}" /></p>
-										</c:if>
-										<c:if test="${not empty pageContext.request.userPrincipal}">
-											<div class="public-profile-actions">
-												<c:url var="reportReviewHref" value="/reports/reviews/${review.id}" />
-												<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
-												<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
+											<c:if test="${not empty review.comment}">
+												<p class="public-profile-review-list__comment"><c:out value="${review.comment}" /></p>
+											</c:if>
+											<c:if test="${reportableReviewIds.contains(review.id)}">
+												<div class="public-profile-actions">
+													<c:url var="reportReviewHref" value="/reports/reviews/${review.id}" />
+													<spring:message var="reportReviewLabel" code="moderation.report.review.submit" />
+													<ui:button label="${reportReviewLabel}" href="${reportReviewHref}" variant="danger" />
 											</div>
 										</c:if>
 									</li>

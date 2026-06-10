@@ -14,6 +14,18 @@ public interface TournamentRegistrationService {
 
     void leaveSolo(long tournamentId, User user);
 
+    TournamentTeam createTeam(long tournamentId, User user, String name);
+
+    TournamentTeamMember joinTeam(long tournamentId, long teamId, User user);
+
+    void leaveTeam(long tournamentId, User user);
+
+    List<TournamentTeam> listJoinableTeams(long tournamentId);
+
+    long countTeams(long tournamentId);
+
+    void withdrawFromOpenRegistrations(User user);
+
     boolean isSoloPoolFull(long tournamentId);
 
     Optional<TournamentSoloEntry> findSoloEntry(long tournamentId, User user);
@@ -27,7 +39,7 @@ public interface TournamentRegistrationService {
     TournamentRegistrationState getRegistrationState(
             Tournament tournament, User user, boolean canCloseRegistration);
 
-    TournamentRegistrationReadiness getRegistrationReadiness(long tournamentId, User actingUser);
+    TournamentRegistrationReadiness getRegistrationReadiness(long tournamentId);
 
-    Tournament closeRegistration(long tournamentId, User actingUser);
+    Tournament closeRegistration(long tournamentId);
 }

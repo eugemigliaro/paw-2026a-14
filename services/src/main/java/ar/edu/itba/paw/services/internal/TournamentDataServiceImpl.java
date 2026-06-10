@@ -74,6 +74,11 @@ public class TournamentDataServiceImpl implements TournamentDataService {
     }
 
     @Override
+    public void lockForRegistration(final long tournamentId) {
+        tournamentDao.lockForRegistration(tournamentId);
+    }
+
+    @Override
     public Optional<Tournament> findPublicById(final long tournamentId) {
         return tournamentDao.findPublicById(tournamentId);
     }
