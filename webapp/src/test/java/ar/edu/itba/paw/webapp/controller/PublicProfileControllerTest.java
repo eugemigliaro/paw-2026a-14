@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.PlayerReviewSummary;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
@@ -350,6 +351,38 @@ class PublicProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attributeDoesNotExist("profileEditHref"));
+    }
+
+    @Test
+    void getOtherPublicProfileRouteExposesAlreadyReportedState() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
+        stubSecondPlayer();
+        stubReviewServiceForHostAndSecondPlayer();
+        final User targetUser =
+                new User(
+                        3L,
+                        "second@test.com",
+                        "second-player",
+                        "Second",
+                        "Player",
+                        null,
+                        null,
+                        null);
+        Mockito.when(
+                        moderationService.canReportUser(
+                                Mockito.any(User.class), Mockito.eq(targetUser)))
+                .thenReturn(true);
+        Mockito.when(
+                        moderationService.hasReportedTarget(
+                                Mockito.any(User.class),
+                                Mockito.eq(ReportTargetType.USER),
+                                Mockito.eq(3L)))
+                .thenReturn(true);
+
+        mockMvc.perform(get("/users/second-player"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("reportUserCanSubmit", true))
+                .andExpect(model().attribute("reportUserAlreadySubmitted", true));
     }
 
     @Test

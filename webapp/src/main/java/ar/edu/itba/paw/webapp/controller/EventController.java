@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
+import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
@@ -39,6 +40,7 @@ public class EventController {
             final MatchReservationService matchReservationService,
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
+            final ModerationService moderationService,
             final MessageSource messageSource,
             final Clock clock,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
@@ -53,6 +55,7 @@ public class EventController {
                         matchService,
                         matchParticipationService,
                         playerReviewService,
+                        moderationService,
                         messageSource,
                         clock,
                         mapPickerEnabled,

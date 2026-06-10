@@ -44,6 +44,8 @@ public interface ModerationService {
 
     boolean canReportUser(User reporter, User targetUser);
 
+    boolean hasReportedTarget(User reporter, ReportTargetType targetType, Long targetId);
+
     boolean canAppealReport(ModerationReport report, User reporter);
 
     ModerationReport markReportUnderReview(Long reportId, User adminUser);

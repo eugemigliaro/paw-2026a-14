@@ -298,6 +298,20 @@ public class ModerationServiceImplTest {
     }
 
     @Test
+    public void hasReportedTarget_returnsTrue_whenReportExistsForTarget() {
+        Mockito.when(
+                        moderationReportDao.existsReportForTarget(
+                                UserUtils.getUser(50L), ReportTargetType.MATCH, 88L))
+                .thenReturn(true);
+
+        final boolean result =
+                moderationService.hasReportedTarget(
+                        UserUtils.getUser(50L), ReportTargetType.MATCH, 88L);
+
+        Assertions.assertTrue(result);
+    }
+
+    @Test
     public void reportContent_throwsModerationException_whenActiveReportLimitReached() {
         Mockito.when(moderationReportDao.countActiveReportsByReporter(UserUtils.getUser(50L)))
                 .thenReturn(3);

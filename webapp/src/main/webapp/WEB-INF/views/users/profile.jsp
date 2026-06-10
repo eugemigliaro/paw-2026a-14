@@ -95,9 +95,19 @@
 									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
 								</c:if>
 								<c:if test="${reportUserCanSubmit}">
-									<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
 									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
-									<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
+									<c:choose>
+										<c:when test="${reportUserAlreadySubmitted}">
+											<spring:message var="reportUserAlreadySubmittedTitle" code="moderation.report.user.alreadySubmitted" />
+											<span class="btn btn--danger btn--md is-disabled report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${reportUserAlreadySubmittedTitle}" aria-label="${reportUserAlreadySubmittedTitle}">
+												<c:out value="${reportUserLabel}" />
+											</span>
+										</c:when>
+										<c:otherwise>
+											<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
+											<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
+										</c:otherwise>
+									</c:choose>
 								</c:if>
 							</div>
 						</c:if>

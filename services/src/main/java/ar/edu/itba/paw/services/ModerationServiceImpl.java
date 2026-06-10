@@ -220,6 +220,16 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean hasReportedTarget(
+            final User reporter, final ReportTargetType targetType, final Long targetId) {
+        return reporter != null
+                && targetType != null
+                && targetId != null
+                && moderationReportDao.existsReportForTarget(reporter, targetType, targetId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean canAppealReport(final ModerationReport report, final User reporter) {
         return report != null
                 && reporter != null

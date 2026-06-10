@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserSportRating;
 import ar.edu.itba.paw.models.exceptions.playerReview.PlayerReviewException;
 import ar.edu.itba.paw.models.query.PlayerReviewFilter;
+import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.UserService;
@@ -82,6 +83,11 @@ public class PublicProfileController {
         addReviewModel(mav, targetUser, user, reviewForm, reviewFilter, reviewPage);
         final boolean reportUserCanSubmit = moderationService.canReportUser(user, targetUser);
         mav.addObject("reportUserCanSubmit", reportUserCanSubmit);
+        mav.addObject(
+                "reportUserAlreadySubmitted",
+                reportUserCanSubmit
+                        && moderationService.hasReportedTarget(
+                                user, ReportTargetType.USER, targetUser.getId()));
         final Optional<UserBan> activeBan = moderationService.findActiveBan(targetUser);
         mav.addObject("profileBanned", activeBan.isPresent());
         activeBan.ifPresent(
