@@ -177,6 +177,30 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldFindOnlyNotStartedTournamentsHostedByHost() {
+        final Tournament registration = createTournament(TournamentStatus.REGISTRATION);
+        final Tournament bracketSetup = createTournament(TournamentStatus.BRACKET_SETUP);
+        createTournament(TournamentStatus.IN_PROGRESS);
+        createTournament(TournamentStatus.COMPLETED);
+        createTournament(TournamentStatus.CANCELLED);
+        createTournament(player, "Other Host Cup", TournamentStatus.REGISTRATION);
+        final Tournament deleted = createTournament(TournamentStatus.REGISTRATION);
+        deleted.setDeleted(true);
+        tournamentDao.update(deleted);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> result = tournamentDao.findNotStartedHostedByHost(host);
+
+        Assertions.assertEquals(
+                java.util.Set.of(registration.getId(), bracketSetup.getId()),
+                result.stream()
+                        .map(Tournament::getId)
+                        .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
     public void shouldExcludeCancelledTournamentsFromDashboard() {
         final Tournament active = createTournament(TournamentStatus.REGISTRATION);
         createTournament(TournamentStatus.CANCELLED);

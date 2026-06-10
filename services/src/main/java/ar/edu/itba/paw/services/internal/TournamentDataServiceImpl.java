@@ -74,6 +74,11 @@ public class TournamentDataServiceImpl implements TournamentDataService {
     }
 
     @Override
+    public List<Tournament> findNotStartedHostedByHost(final User host) {
+        return tournamentDao.findNotStartedHostedByHost(host);
+    }
+
+    @Override
     public void lockForRegistration(final long tournamentId) {
         tournamentDao.lockForRegistration(tournamentId);
     }
