@@ -25,7 +25,8 @@
                     </c:forEach>
                     <c:choose>
                         <c:when test="${not empty prevHref}">
-                            <a href="${prevHref}" class="feed-pagination__control"> 
+                            <c:url var="resolvedPrevHref" value="${prevHref}" />
+                            <a href="${resolvedPrevHref}" class="feed-pagination__control"> 
                                 <c:out value="${previousLabel}" />
                             </a>
                         </c:when>
@@ -57,7 +58,8 @@
                         <c:otherwise>
                             <c:choose>
                                 <c:when test="${not empty item.href}">
-                                    <a href="${item.href}" class="feed-pagination__page">
+                                    <c:url var="resolvedItemHref" value="${item.href}" />
+                                    <a href="${resolvedItemHref}" class="feed-pagination__page">
                                         <c:out value="${item.label}" />
                                     </a>
                                 </c:when>
@@ -82,7 +84,8 @@
                     </c:forEach>
                     <c:choose>
                         <c:when test="${not empty nextHref}">
-                            <a href="${nextHref}" class="feed-pagination__control">
+                            <c:url var="resolvedNextHref" value="${nextHref}" />
+                            <a href="${resolvedNextHref}" class="feed-pagination__control">
                                 <c:out value="${nextLabel}" />
                             </a>
                         </c:when>
