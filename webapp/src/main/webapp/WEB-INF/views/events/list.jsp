@@ -25,6 +25,9 @@
 					<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 					<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 					<spring:message var="priceRangeError" code="filter.price.rangeError" />
+					<spring:message var="eventTypeMatchLabel" code="matches.tab.matches" text="Matches" />
+					<spring:message var="eventTypeTournamentMatchLabel" code="matches.tab.tournamentGames" text="Tournament Games" />
+					<spring:message var="eventTypeFilterTitle" code="feed.aria.eventTypeFilter" text="Toggle between matches and tournament games" />
 
 				<main class="page-shell page-shell--matches-list">
 
@@ -62,6 +65,15 @@
 										<input type="hidden" name="visibility"
 											value="<c:out value='${selectedVisibilityItem}' />" />
 									</c:forEach>
+									<c:forEach var="selectedTmStatus"
+										items="${searchForm.tmStatus}">
+										<input type="hidden" name="tmStatus"
+											value="<c:out value='${selectedTmStatus}' />" />
+									</c:forEach>
+									<c:if test="${not empty searchForm.involvement and searchForm.involvement ne 'ALL'}">
+										<input type="hidden" name="involvement"
+											value="<c:out value='${searchForm.involvement}' />" />
+									</c:if>
 									<c:if test="${searchForm.type.getValue() ne 'tournament'}">
 										<input type="hidden" name="startDate"
 											value="<c:out value='${searchForm.startDate}' />" />
@@ -77,6 +89,7 @@
 									<c:if test="${searchForm.filterName eq 'PAST'}">
 										<input type="hidden" name="filter" value="${searchForm.filterName}" />
 									</c:if>
+									<input type="hidden" name="type" value="<c:out value='${searchForm.type.dbValue}' />" />
 									<input type="hidden" name="page" id="eventsSearchForm_page" value="${pageNumber}" />
 									<div class="filters-bar__search-row">
 										<form:input path="q" cssClass="filters-bar__search-input" placeholder="${searchPlaceholder}" />
@@ -88,8 +101,26 @@
 								</form:form>
 							</div>
 
-							<!-- Toggle -->
-							<ui:eventsFilterToggle currentFilter="${searchForm.filterName}" />
+							<!-- Toggle group -->
+							<div class="horizontal-filters-bar horizontal-toggle-bar">
+								<c:if test="${selectedType ne 'tournament'}">
+								<ui:eventsFilterToggle
+									className="feed-event-type-toggle"
+									ariaLabel="${eventTypeFilterTitle}"
+									currentValue="${eventType.dbValue}"
+									leftValue="match"
+									rightValue="tournament_match"
+									leftLabel="${eventTypeMatchLabel}"
+									rightLabel="${eventTypeTournamentMatchLabel}"
+									leftHref="/matches"
+									rightHref="/matches?type=tournament_match"
+									iconOnly="${true}"
+									leftIcon="ball"
+									rightIcon="trophy"
+									forceLeftOnEmpty="${true}" />
+								</c:if>
+								<ui:eventsFilterToggle currentFilter="${searchForm.filterName}" />
+							</div>
 						</div>
 					</div>
 
@@ -187,7 +218,7 @@
 										</div>
 									</c:forEach>
 
-								<c:if test="${selectedType ne 'tournament'}">
+								<c:if test="${selectedType ne 'tournament' and eventType.dbValue ne 'tournament_match'}">
 								<div class="filter-dropdown" data-filter-name="Date">
 									<button type="button" class="filter-dropdown__toggle">
 										<span class="filter-dropdown__icon">
@@ -223,6 +254,15 @@
 												<input type="hidden" name="visibility"
 													value="<c:out value='${selectedVisibilityItem}' />" />
 											</c:forEach>
+											<c:forEach var="selectedTmStatus"
+												items="${searchForm.tmStatus}">
+												<input type="hidden" name="tmStatus"
+													value="<c:out value='${selectedTmStatus}' />" />
+											</c:forEach>
+											<c:if test="${not empty searchForm.involvement and searchForm.involvement ne 'ALL'}">
+												<input type="hidden" name="involvement"
+													value="<c:out value='${searchForm.involvement}' />" />
+											</c:if>
 											<input type="hidden" name="minPrice"
 												value="<c:out value='${searchForm.minPrice}' />" />
 											<input type="hidden" name="maxPrice"
@@ -230,6 +270,7 @@
 											<c:if test="${searchForm.filterName eq 'PAST'}">
 												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
+											<input type="hidden" name="type" value="<c:out value='${searchForm.type.dbValue}' />" />
 
 											<div class="field filter-rail__field">
 												<label class="field__label" for="list-start-date">
@@ -267,6 +308,12 @@
 													<c:forEach var="selectedVisibilityItem" items="${searchForm.visibility}">
 														<c:param name="visibility" value="${selectedVisibilityItem}" />
 													</c:forEach>
+													<c:forEach var="selectedTmStatus" items="${searchForm.tmStatus}">
+														<c:param name="tmStatus" value="${selectedTmStatus}" />
+													</c:forEach>
+													<c:if test="${not empty searchForm.involvement and searchForm.involvement ne 'ALL'}">
+														<c:param name="involvement" value="${searchForm.involvement}" />
+													</c:if>
 													<c:param name="minPrice" value="${searchForm.minPrice}" />
 													<c:param name="maxPrice" value="${searchForm.maxPrice}" />
 													<c:if test="${searchForm.filterName eq 'PAST'}">
@@ -307,6 +354,7 @@
 									</div>
 								</c:if>
 
+								<c:if test="${eventType.dbValue ne 'tournament_match'}">
 								<div class="filter-dropdown" data-filter-name="Price">
 									<button type="button" class="filter-dropdown__toggle">
 										<span class="filter-dropdown__icon">
@@ -342,6 +390,15 @@
 												<input type="hidden" name="visibility"
 													value="<c:out value='${selectedVisibilityItem}' />" />
 											</c:forEach>
+											<c:forEach var="selectedTmStatus"
+												items="${searchForm.tmStatus}">
+												<input type="hidden" name="tmStatus"
+													value="<c:out value='${selectedTmStatus}' />" />
+											</c:forEach>
+											<c:if test="${not empty searchForm.involvement and searchForm.involvement ne 'ALL'}">
+												<input type="hidden" name="involvement"
+													value="<c:out value='${searchForm.involvement}' />" />
+											</c:if>
 											<c:if test="${searchForm.type.getValue() ne 'tournament'}">
 												<input type="hidden" name="startDate"
 													value="<c:out value='${searchForm.startDate}' />" />
@@ -351,6 +408,7 @@
 											<c:if test="${searchForm.filterName eq 'PAST'}">
 												<input type="hidden" name="filter" value="${searchForm.filterName}" />
 											</c:if>
+											<input type="hidden" name="type" value="<c:out value='${searchForm.type.dbValue}' />" />
 
 											<div
 												class="field filter-rail__field filter-rail__price-field">
@@ -403,6 +461,12 @@
 													<c:forEach var="selectedVisibilityItem" items="${searchForm.visibility}">
 														<c:param name="visibility" value="${selectedVisibilityItem}" />
 													</c:forEach>
+													<c:forEach var="selectedTmStatus" items="${searchForm.tmStatus}">
+														<c:param name="tmStatus" value="${selectedTmStatus}" />
+													</c:forEach>
+													<c:if test="${not empty searchForm.involvement and searchForm.involvement ne 'ALL'}">
+														<c:param name="involvement" value="${searchForm.involvement}" />
+													</c:if>
 													<c:if test="${searchForm.type.getValue() ne 'tournament'}">
 														<c:param name="startDate" value="${searchForm.startDate}" />
 														<c:param name="endDate" value="${searchForm.endDate}" />
@@ -441,6 +505,7 @@
 											</div>
 										</c:if>
 									</div>
+								</c:if>
 
 								<c:url var="clearSearchHref" value="${listControls.cleanSearchAction}">
 									<c:param name="filter" value="${searchForm.filterName}" />
@@ -477,24 +542,38 @@
 
 								<c:otherwise>
 									<div class="event-grid">
-										<c:forEach var="event" items="${events}">
-											<c:choose>
-												<c:when test="${eventType.dbValue == 'tournament'}">
-													<ui:eventCard
-														tournament="${event}"
-														badgeCode="${eventBadgeCodes[event.id]}"
-														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
-														headingLevel="h2" />
-												</c:when>
-												<c:otherwise>
-													<ui:eventCard
+										<c:choose>
+											<c:when test="${eventType.dbValue eq 'tournament_match'}">
+												<c:forEach var="event" items="${events}">
+													<ui:tournamentMatchCard
 														match="${event}"
 														badgeCode="${eventBadgeCodes[event.id]}"
 														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+														teamDisplayNumbers="${tournamentTeamDisplayNumbers}"
 														headingLevel="h2" />
-												</c:otherwise>
-											</c:choose>
-										</c:forEach>
+												</c:forEach>
+											</c:when>
+											<c:otherwise>
+												<c:forEach var="event" items="${events}">
+													<c:choose>
+														<c:when test="${eventType.dbValue == 'tournament'}">
+															<ui:eventCard
+																tournament="${event}"
+																badgeCode="${eventBadgeCodes[event.id]}"
+																relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+																headingLevel="h2" />
+														</c:when>
+														<c:otherwise>
+															<ui:eventCard
+																match="${event}"
+																badgeCode="${eventBadgeCodes[event.id]}"
+																relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
+																headingLevel="h2" />
+														</c:otherwise>
+													</c:choose>
+												</c:forEach>
+											</c:otherwise>
+										</c:choose>
 									</div>
 								</c:otherwise>
 

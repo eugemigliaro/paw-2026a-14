@@ -177,6 +177,30 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldFindOnlyNotStartedTournamentsHostedByHost() {
+        final Tournament registration = createTournament(TournamentStatus.REGISTRATION);
+        final Tournament bracketSetup = createTournament(TournamentStatus.BRACKET_SETUP);
+        createTournament(TournamentStatus.IN_PROGRESS);
+        createTournament(TournamentStatus.COMPLETED);
+        createTournament(TournamentStatus.CANCELLED);
+        createTournament(player, "Other Host Cup", TournamentStatus.REGISTRATION);
+        final Tournament deleted = createTournament(TournamentStatus.REGISTRATION);
+        deleted.setDeleted(true);
+        tournamentDao.update(deleted);
+
+        em.flush();
+        em.clear();
+
+        final List<Tournament> result = tournamentDao.findNotStartedHostedByHost(host);
+
+        Assertions.assertEquals(
+                java.util.Set.of(registration.getId(), bracketSetup.getId()),
+                result.stream()
+                        .map(Tournament::getId)
+                        .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
     public void shouldExcludeCancelledTournamentsFromDashboard() {
         final Tournament active = createTournament(TournamentStatus.REGISTRATION);
         createTournament(TournamentStatus.CANCELLED);
@@ -1003,6 +1027,30 @@ public class TournamentJpaDaoTest {
                 startsAt.minusSeconds(7 * 24 * 60 * 60),
                 startsAt.minusSeconds(24 * 60 * 60),
                 status);
+    }
+
+    @Test
+    public void shouldFindBracketTeamsByMultipleTournaments() {
+        final Tournament t1 = createTournament(TournamentStatus.BRACKET_SETUP);
+        final Tournament t2 = createTournament(host, "Another Cup", TournamentStatus.BRACKET_SETUP);
+
+        final TournamentTeam teamT1_1 =
+                tournamentTeamDao.create(t1, "Team 1-1", TournamentTeamOrigin.SOLO_POOL, 1);
+        final TournamentTeam teamT1_2 =
+                tournamentTeamDao.create(t1, "Team 1-2", TournamentTeamOrigin.SOLO_POOL, 2);
+        final TournamentTeam teamT2_1 =
+                tournamentTeamDao.create(t2, "Team 2-1", TournamentTeamOrigin.SOLO_POOL, 1);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentTeam> teams =
+                tournamentTeamDao.findByTournaments(List.of(t1.getId(), t2.getId()));
+
+        Assertions.assertEquals(3, teams.size());
+        Assertions.assertEquals(teamT1_1.getId(), teams.get(0).getId());
+        Assertions.assertEquals(teamT1_2.getId(), teams.get(1).getId());
+        Assertions.assertEquals(teamT2_1.getId(), teams.get(2).getId());
     }
 
     private void insertUser(final long id, final String username, final String email) {

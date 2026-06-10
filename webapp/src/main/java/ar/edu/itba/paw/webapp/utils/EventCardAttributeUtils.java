@@ -2,10 +2,13 @@ package ar.edu.itba.paw.webapp.utils;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
 import java.text.NumberFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +40,23 @@ public final class EventCardAttributeUtils {
         final Map<Long, String> codes = new LinkedHashMap<>();
         for (final Tournament tournament : tournaments) {
             codes.put(tournament.getId(), "tournament.card.badge");
+        }
+        return codes;
+    }
+
+    public static Map<Long, String> tournamentMatchBadgeCodes(final List<TournamentMatch> matches) {
+        final Map<Long, String> codes = new LinkedHashMap<>();
+        final Instant now = Instant.now();
+        for (final TournamentMatch match : matches) {
+            final String suffix;
+            if (match.getStatus() == TournamentMatchStatus.SCHEDULED
+                    && match.getScheduledStartsAt() != null
+                    && match.getScheduledStartsAt().isBefore(now)) {
+                suffix = "awaiting_result";
+            } else {
+                suffix = match.getStatus().getDbValue();
+            }
+            codes.put(match.getId(), "tournament.match.status." + suffix);
         }
         return codes;
     }
@@ -81,6 +101,22 @@ public final class EventCardAttributeUtils {
             final List<String> matchCodes =
                     matchRelationshipBadgeCodes(
                             match, currentUser, matchParticipationService, matchReservationService);
+            if (!matchCodes.isEmpty()) {
+                codes.put(match.getId(), matchCodes);
+            }
+        }
+        return codes;
+    }
+
+    public static Map<Long, List<String>> tournamentMatchRelationshipBadgeCodes(
+            final List<TournamentMatch> matches,
+            final User currentUser,
+            final Set<Long> participatingTournamentIds) {
+        final Map<Long, List<String>> codes = new LinkedHashMap<>();
+        for (final TournamentMatch match : matches) {
+            final List<String> matchCodes =
+                    tournamentMatchRelationshipBadgeCodes(
+                            match, currentUser, participatingTournamentIds);
             if (!matchCodes.isEmpty()) {
                 codes.put(match.getId(), matchCodes);
             }
@@ -136,6 +172,30 @@ public final class EventCardAttributeUtils {
         } else if (matchParticipationService.hasInvitation(match.getId(), currentUser)) {
             codes.add("invited");
         } else if (matchReservationService.hasActiveReservation(match.getId(), currentUser)) {
+            codes.add("going");
+        }
+        return List.copyOf(codes);
+    }
+
+    private static List<String> tournamentMatchRelationshipBadgeCodes(
+            final TournamentMatch match,
+            final User currentUser,
+            final Set<Long> participatingTournamentIds) {
+        if (currentUser == null || match == null || currentUser.getId() == null) {
+            return List.of();
+        }
+        final Tournament tournament = match.getTournament();
+        if (tournament == null) {
+            return List.of();
+        }
+        final List<String> codes = new ArrayList<>();
+        if (tournament.getHost() != null
+                && currentUser.getId().equals(tournament.getHost().getId())) {
+            codes.add("my_event");
+        }
+        if (participatingTournamentIds != null
+                && tournament.getId() != null
+                && participatingTournamentIds.contains(tournament.getId())) {
             codes.add("going");
         }
         return List.copyOf(codes);

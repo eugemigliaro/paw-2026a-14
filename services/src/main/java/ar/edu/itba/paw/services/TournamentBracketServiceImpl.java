@@ -513,10 +513,6 @@ public class TournamentBracketServiceImpl implements TournamentBracketService {
                                                         membersByTeam.getOrDefault(
                                                                 team.getId(), List.of()),
                                                         tournament.getSport()))
-                                .thenComparing(
-                                        team ->
-                                                Optional.ofNullable(team.getSeedPosition())
-                                                        .orElse(Integer.MAX_VALUE))
                                 .thenComparing(TournamentTeam::getId))
                 .collect(
                         Collectors.collectingAndThen(

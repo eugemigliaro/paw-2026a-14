@@ -42,6 +42,9 @@ public class TournamentJpaDao implements TournamentDao {
                     TournamentStatus.BRACKET_SETUP,
                     TournamentStatus.IN_PROGRESS);
 
+    private static final List<TournamentStatus> NOT_STARTED_STATUSES =
+            List.of(TournamentStatus.REGISTRATION, TournamentStatus.BRACKET_SETUP);
+
     @PersistenceContext private EntityManager em;
 
     @Override
@@ -98,6 +101,19 @@ public class TournamentJpaDao implements TournamentDao {
     @Override
     public Optional<Tournament> findById(final long tournamentId) {
         return Optional.ofNullable(em.find(Tournament.class, tournamentId));
+    }
+
+    @Override
+    public List<Tournament> findNotStartedHostedByHost(final User host) {
+        return em.createQuery(
+                        "FROM Tournament t"
+                                + " WHERE t.host.id = :hostId"
+                                + " AND t.deleted = FALSE"
+                                + " AND t.status IN :statuses",
+                        Tournament.class)
+                .setParameter("hostId", host.getId())
+                .setParameter("statuses", NOT_STARTED_STATUSES)
+                .getResultList();
     }
 
     @Override

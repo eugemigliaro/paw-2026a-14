@@ -3,18 +3,23 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.InvolvementScope;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
+import ar.edu.itba.paw.persistence.TournamentMatchDao;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -48,6 +53,8 @@ public class TournamentServiceImplTest {
     @Mock private TournamentMailService tournamentMailService;
     @Mock private ImageService imageService;
     @Mock private SecurityService securityService;
+    @Mock private TournamentTeamDataService tournamentTeamDataService;
+    @Mock private TournamentMatchDao tournamentMatchDao;
 
     private TournamentServiceImpl tournamentService;
 
@@ -60,6 +67,8 @@ public class TournamentServiceImplTest {
                         tournamentMailService,
                         imageService,
                         securityService,
+                        tournamentTeamDataService,
+                        tournamentMatchDao,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         SecurityContextHolder.clearContext();
     }
@@ -1109,6 +1118,273 @@ public class TournamentServiceImplTest {
                 registrationOpensAt,
                 registrationClosesAt,
                 status,
+                FIXED_NOW,
+                FIXED_NOW);
+    }
+
+    @Test
+    public void findDashboardTournamentMatchesReturnsResultsForUpcoming() {
+        final User user = UserUtils.getUser(1L);
+        final TournamentMatch match = tournamentMatch(1L, FIXED_NOW.plusSeconds(86400));
+        Mockito.when(
+                        tournamentMatchDao.countByUserParticipant(
+                                user, true, null, List.of(), List.of(), InvolvementScope.ALL))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                true,
+                                null,
+                                List.of(),
+                                List.of(),
+                                InvolvementScope.ALL,
+                                EventSort.SOONEST,
+                                0,
+                                12))
+                .thenReturn(List.of(match));
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        true,
+                        null,
+                        List.of(),
+                        List.of(),
+                        InvolvementScope.ALL,
+                        EventSort.SOONEST,
+                        1,
+                        12);
+
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals(match.getId(), result.getItems().get(0).getId());
+        Assertions.assertEquals(1, result.getPage());
+    }
+
+    @Test
+    public void findDashboardTournamentMatchesReturnsEmptyWhenNoMatches() {
+        final User user = UserUtils.getUser(1L);
+        Mockito.when(
+                        tournamentMatchDao.countByUserParticipant(
+                                user, true, null, List.of(), List.of(), InvolvementScope.ALL))
+                .thenReturn(0);
+        Mockito.when(
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                true,
+                                null,
+                                List.of(),
+                                List.of(),
+                                InvolvementScope.ALL,
+                                EventSort.SOONEST,
+                                0,
+                                12))
+                .thenReturn(List.of());
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        true,
+                        null,
+                        List.of(),
+                        List.of(),
+                        InvolvementScope.ALL,
+                        EventSort.SOONEST,
+                        1,
+                        12);
+
+        Assertions.assertEquals(0, result.getTotalCount());
+        Assertions.assertTrue(result.getItems().isEmpty());
+        Assertions.assertEquals(1, result.getPage());
+    }
+
+    @Test
+    public void findDashboardTournamentMatchesPassesUpcomingFalseToDao() {
+        final User user = UserUtils.getUser(1L);
+        Mockito.when(
+                        tournamentMatchDao.countByUserParticipant(
+                                user, false, null, List.of(), List.of(), InvolvementScope.ALL))
+                .thenReturn(0);
+        Mockito.when(
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                false,
+                                null,
+                                List.of(),
+                                List.of(),
+                                InvolvementScope.ALL,
+                                EventSort.SOONEST,
+                                0,
+                                12))
+                .thenReturn(List.of());
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        false,
+                        null,
+                        List.of(),
+                        List.of(),
+                        InvolvementScope.ALL,
+                        EventSort.SOONEST,
+                        1,
+                        12);
+
+        Assertions.assertEquals(0, result.getTotalCount());
+    }
+
+    @Test
+    public void findDashboardTournamentMatchesPassesUpcomingNullToDao() {
+        final User user = UserUtils.getUser(1L);
+        Mockito.when(
+                        tournamentMatchDao.countByUserParticipant(
+                                user, null, null, List.of(), List.of(), InvolvementScope.ALL))
+                .thenReturn(0);
+        Mockito.when(
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                null,
+                                null,
+                                List.of(),
+                                List.of(),
+                                InvolvementScope.ALL,
+                                EventSort.SOONEST,
+                                0,
+                                12))
+                .thenReturn(List.of());
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        InvolvementScope.ALL,
+                        EventSort.SOONEST,
+                        1,
+                        12);
+
+        Assertions.assertEquals(0, result.getTotalCount());
+    }
+
+    @Test
+    public void findDashboardTournamentMatchesClampsPageToFirstPageWhenRequestedPageExceedsTotal() {
+        final User user = UserUtils.getUser(1L);
+        Mockito.when(
+                        tournamentMatchDao.countByUserParticipant(
+                                user, true, null, List.of(), List.of(), InvolvementScope.ALL))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                true,
+                                null,
+                                List.of(),
+                                List.of(),
+                                InvolvementScope.ALL,
+                                EventSort.SOONEST,
+                                0,
+                                12))
+                .thenReturn(List.of(tournamentMatch(1L, FIXED_NOW.plusSeconds(86400))));
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        true,
+                        null,
+                        List.of(),
+                        List.of(),
+                        InvolvementScope.ALL,
+                        EventSort.SOONEST,
+                        99,
+                        12);
+
+        Assertions.assertEquals(1, result.getPage());
+        Assertions.assertEquals(1, result.getTotalCount());
+        Assertions.assertEquals(1, result.getItems().size());
+    }
+
+    @Test
+    public void findDashboardTournamentMatchesUsesDefaultPageSizeWhenPageSizeIsZero() {
+        final User user = UserUtils.getUser(1L);
+        Mockito.when(
+                        tournamentMatchDao.countByUserParticipant(
+                                user, true, null, List.of(), List.of(), InvolvementScope.ALL))
+                .thenReturn(1);
+        Mockito.when(
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                true,
+                                null,
+                                List.of(),
+                                List.of(),
+                                InvolvementScope.ALL,
+                                EventSort.SOONEST,
+                                0,
+                                12))
+                .thenReturn(List.of(tournamentMatch(1L, FIXED_NOW.plusSeconds(86400))));
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        true,
+                        null,
+                        List.of(),
+                        List.of(),
+                        InvolvementScope.ALL,
+                        EventSort.SOONEST,
+                        1,
+                        0);
+
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals(12, result.getPageSize());
+    }
+
+    @Test
+    public void findBracketTeamsMultipleTournamentsDelegateToDataService() {
+        final List<Long> ids = List.of(1L, 2L);
+        final List<TournamentTeam> expectedTeams =
+                List.of(
+                        new TournamentTeam(
+                                100L,
+                                null,
+                                "Team A",
+                                TournamentTeamOrigin.SOLO_POOL,
+                                1,
+                                FIXED_NOW));
+        Mockito.when(tournamentTeamDataService.findByTournaments(ids)).thenReturn(expectedTeams);
+
+        final List<TournamentTeam> result = tournamentService.findBracketTeams(ids);
+
+        Assertions.assertSame(expectedTeams, result);
+    }
+
+    private TournamentMatch tournamentMatch(final long id, final Instant scheduledStartsAt) {
+        final User host = UserUtils.getUser(1L);
+        final Tournament tournament = tournament(id, host, TournamentStatus.IN_PROGRESS);
+        final TournamentTeam teamA =
+                new TournamentTeam(
+                        100L, tournament, "Team A", TournamentTeamOrigin.SOLO_POOL, 1, FIXED_NOW);
+        final TournamentTeam teamB =
+                new TournamentTeam(
+                        101L, tournament, "Team B", TournamentTeamOrigin.SOLO_POOL, 2, FIXED_NOW);
+        return new TournamentMatch(
+                id,
+                tournament,
+                1,
+                0,
+                teamA,
+                teamB,
+                null,
+                scheduledStartsAt,
+                scheduledStartsAt != null ? scheduledStartsAt.plusSeconds(3600) : null,
+                "Club Street",
+                null,
+                null,
+                TournamentMatchStatus.SCHEDULED,
+                null,
+                null,
                 FIXED_NOW,
                 FIXED_NOW);
     }

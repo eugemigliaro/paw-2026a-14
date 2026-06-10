@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import ar.edu.itba.paw.persistence.TournamentTeamDao;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -74,6 +75,11 @@ public class TournamentTeamDataServiceImpl implements TournamentTeamDataService 
     @Override
     public List<TournamentTeam> findByTournament(final long tournamentId) {
         return tournamentTeamDao.findByTournament(tournamentId);
+    }
+
+    @Override
+    public List<TournamentTeam> findByTournaments(final Collection<Long> tournamentIds) {
+        return tournamentTeamDao.findByTournaments(tournamentIds);
     }
 
     @Override

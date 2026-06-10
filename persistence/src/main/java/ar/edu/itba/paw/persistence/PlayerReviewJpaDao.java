@@ -30,25 +30,24 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
             final User reviewed,
             final PlayerReviewReaction reaction,
             final String comment) {
-        lockUsersForPair(reviewer.getId(), reviewed.getId());
-
         final Instant now = Instant.now();
         final Optional<PlayerReview> existing =
                 findEntityByPairIncludingDeleted(
                         reviewer.getId(), reviewed.getId(), LockModeType.PESSIMISTIC_WRITE);
 
+        final PlayerReview review;
         if (existing.isPresent()) {
-            applyUpsertValues(existing.get(), reaction, comment, now);
+            review = existing.get();
+            applyUpsertValues(review, reaction, comment, now);
         } else {
-            final PlayerReview review =
+            review =
                     new PlayerReview(
                             null, reviewer, reviewed, reaction, comment, now, now, false, null,
                             null, null);
             em.persist(review);
         }
 
-        return findByPair(reviewer, reviewed)
-                .orElseThrow(() -> new IllegalStateException("Player review was not persisted"));
+        return review;
     }
 
     @Override
@@ -209,9 +208,9 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
             return false;
         }
 
-        final Long matchCount =
+        final List<Long> matchResults =
                 em.createQuery(
-                                "SELECT COUNT(reviewer.id)"
+                                "SELECT 1L"
                                         + " FROM MatchParticipant reviewer"
                                         + " JOIN MatchParticipant reviewed"
                                         + " ON reviewed.match.id = reviewer.match.id"
@@ -231,14 +230,15 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                                 List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
                         .setParameter("completedStatus", EventStatus.COMPLETED)
                         .setParameter("openStatus", EventStatus.OPEN)
-                        .getSingleResult();
-        if (matchCount != null && matchCount > 0) {
+                        .setMaxResults(1)
+                        .getResultList();
+        if (!matchResults.isEmpty()) {
             return true;
         }
 
-        final Long tournamentCount =
+        final List<Long> tournamentResults =
                 em.createQuery(
-                                "SELECT COUNT(tm.id)"
+                                "SELECT 1L"
                                         + " FROM TournamentMatch tm"
                                         + " WHERE tm.status = :doneStatus"
                                         + " AND EXISTS (SELECT 1 FROM TournamentTeamMember rm"
@@ -251,8 +251,9 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
                         .setParameter("reviewerUserId", reviewer.getId())
                         .setParameter("reviewedUserId", reviewed.getId())
                         .setParameter("doneStatus", TournamentMatchStatus.DONE)
-                        .getSingleResult();
-        return tournamentCount != null && tournamentCount > 0;
+                        .setMaxResults(1)
+                        .getResultList();
+        return !tournamentResults.isEmpty();
     }
 
     @Override
@@ -335,27 +336,5 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
 
         final List<PlayerReview> reviews = query.getResultList();
         return reviews.stream().findFirst();
-    }
-
-    private void lockUsersForPair(final Long reviewerUserId, final Long reviewedUserId) {
-        if (reviewerUserId == null || reviewedUserId == null) {
-            return;
-        }
-
-        final Long firstUserId = reviewerUserId <= reviewedUserId ? reviewerUserId : reviewedUserId;
-        final Long secondUserId =
-                reviewerUserId <= reviewedUserId ? reviewedUserId : reviewerUserId;
-
-        em.createQuery("SELECT u.id FROM UserAccount u WHERE u.id = :userId", Long.class)
-                .setParameter("userId", firstUserId)
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                .getResultList();
-
-        if (!firstUserId.equals(secondUserId)) {
-            em.createQuery("SELECT u.id FROM UserAccount u WHERE u.id = :userId", Long.class)
-                    .setParameter("userId", secondUserId)
-                    .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                    .getResultList();
-        }
     }
 }

@@ -38,6 +38,8 @@ public interface TournamentDataService {
 
     Optional<Tournament> findById(long tournamentId);
 
+    List<Tournament> findNotStartedHostedByHost(User host);
+
     void lockForRegistration(long tournamentId);
 
     Optional<Tournament> findPublicById(long tournamentId);

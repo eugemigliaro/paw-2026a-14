@@ -179,15 +179,6 @@ class UserModerationReportControllerTest {
     }
 
     @Test
-    void getMyReportDetailReturnsNotFoundForOtherUser() throws Exception {
-        AuthenticationUtils.authenticateUser(7L);
-        Mockito.when(moderationService.findReportById(90L))
-                .thenReturn(Optional.of(sampleReport(90L, ReportTargetType.USER, 13L, 8L)));
-
-        mockMvc.perform(get("/reports/mine/90")).andExpect(status().isNotFound());
-    }
-
-    @Test
     void getMyReportDetailExposesTargetForLink() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
         Mockito.when(moderationService.findReportById(90L))

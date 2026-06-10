@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -15,11 +16,13 @@ import ar.edu.itba.paw.models.types.ReportReason;
 import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
+import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import java.time.Clock;
@@ -54,6 +57,8 @@ public class ModerationServiceImpl implements ModerationService {
     private final MailDispatchService mailDispatchService;
     private final MatchNotificationService matchNotificationService;
     private final TournamentRegistrationService tournamentRegistrationService;
+    private final TournamentDataService tournamentDataService;
+    private final TournamentMailService tournamentMailService;
     private final MessageSource messageSource;
     private final Clock clock;
 
@@ -68,6 +73,8 @@ public class ModerationServiceImpl implements ModerationService {
             final MailDispatchService mailDispatchService,
             final MatchNotificationService matchNotificationService,
             final TournamentRegistrationService tournamentRegistrationService,
+            final TournamentDataService tournamentDataService,
+            final TournamentMailService tournamentMailService,
             final MessageSource messageSource,
             final Clock clock) {
         this.userBanDao = userBanDao;
@@ -79,6 +86,8 @@ public class ModerationServiceImpl implements ModerationService {
         this.mailDispatchService = mailDispatchService;
         this.matchNotificationService = matchNotificationService;
         this.tournamentRegistrationService = tournamentRegistrationService;
+        this.tournamentDataService = tournamentDataService;
+        this.tournamentMailService = tournamentMailService;
         this.messageSource = messageSource;
         this.clock = clock;
     }
@@ -378,9 +387,10 @@ public class ModerationServiceImpl implements ModerationService {
         }
     }
 
-    private void cancelFutureContentForUser(final User user) {
+    private void cancelFutureContentForUser(final User user, final User adminUser) {
         final Instant now = Instant.now(clock);
         tournamentRegistrationService.withdrawFromOpenRegistrations(user);
+        cancelNotStartedHostedTournaments(user, adminUser, now);
         final List<Match> matchesToCancel = matchDataService.findFutureHostedMatches(user, now);
         matchParticipantDataService.cancelFutureReservations(user, now);
         if (matchDataService.cancelFutureHostedMatches(user, now) <= 0) {
@@ -389,6 +399,23 @@ public class ModerationServiceImpl implements ModerationService {
         for (final Match matchToCancel : matchesToCancel) {
             matchToCancel.setStatus(EventStatus.CANCELLED);
             matchNotificationService.notifyMatchCancelled(matchToCancel);
+        }
+    }
+
+    private void cancelNotStartedHostedTournaments(
+            final User user, final User adminUser, final Instant now) {
+        final String reason =
+                messageSource.getMessage(
+                        "tournament.cancel.reason.hostBanned",
+                        null,
+                        UserLanguages.toLocale(adminUser.getPreferredLanguage()));
+        for (final Tournament tournament : tournamentDataService.findNotStartedHostedByHost(user)) {
+            tournament.setStatus(TournamentStatus.CANCELLED);
+            tournament.setCancelledAt(now);
+            tournament.setCancelReason(reason);
+            tournament.setUpdatedAt(now);
+            tournamentDataService.update(tournament);
+            tournamentMailService.sendTournamentCancelledEmail(tournament);
         }
     }
 
@@ -510,7 +537,7 @@ public class ModerationServiceImpl implements ModerationService {
                     userDataService
                             .findById(report.getTargetId())
                             .orElseThrow(() -> new UserNotFoundException());
-            banUser(report, bannedUntil, user, resolutionDetails);
+            banUser(report, bannedUntil, user, resolutionDetails, adminUser);
         }
     }
 
@@ -594,9 +621,10 @@ public class ModerationServiceImpl implements ModerationService {
             final ModerationReport report,
             final Instant bannedUntil,
             final User user,
-            final String banReason) {
+            final String banReason,
+            final User adminUser) {
         final UserBan ban = userBanDao.createBan(report, bannedUntil);
-        cancelFutureContentForUser(user);
+        cancelFutureContentForUser(user, adminUser);
         sendBanEmail(report.getId(), user, bannedUntil, banReason);
         return ban;
     }

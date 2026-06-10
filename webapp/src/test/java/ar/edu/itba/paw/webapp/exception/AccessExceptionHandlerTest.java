@@ -39,7 +39,9 @@ class AccessExceptionHandlerTest {
         final MessageSource messageSource = Mockito.mock(MessageSource.class);
         mockMvc =
                 MockMvcBuilders.standaloneSetup(new ThrowingController())
-                        .setControllerAdvice(new AccessExceptionHandler(messageSource))
+                        .setControllerAdvice(
+                                new AccessExceptionHandler(messageSource),
+                                new GeneralExceptionHandler(messageSource))
                         .build();
     }
 

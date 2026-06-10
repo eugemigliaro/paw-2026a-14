@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -207,6 +208,71 @@ public class TournamentRegistrationServiceImplTest {
         Assertions.assertEquals(TournamentSoloEntryStatus.LEFT, entryB.getStatus());
         Assertions.assertEquals(FIXED_NOW, entryA.getLeftAt());
         Assertions.assertNull(entryA.getAssignedTeam());
+    }
+
+    @Test
+    public void withdrawFromOpenRegistrationsRemovesUserFromRegistrationTeamAndDeletesEmptyTeam() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(2L);
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
+        final TournamentTeam team =
+                new TournamentTeam(
+                        50L,
+                        tournament,
+                        "Falcons",
+                        TournamentTeamOrigin.TEAM_DRAFT,
+                        null,
+                        FIXED_NOW);
+        final RecordingTeamDataService teamData = new RecordingTeamDataService();
+        teamData.tournamentsByMember = List.of(tournament);
+        teamData.userTeam = Optional.of(team);
+        teamData.membersAfterRemoval = 0L;
+        final TournamentRegistrationServiceImpl service =
+                new TournamentRegistrationServiceImpl(
+                        tournamentDataService,
+                        tournamentSoloEntryDao,
+                        teamData,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+        Mockito.when(tournamentSoloEntryDao.findInPoolEntriesByUser(user)).thenReturn(List.of());
+
+        // 2. Exercise
+        service.withdrawFromOpenRegistrations(user);
+
+        // 3. Assert
+        Assertions.assertEquals(List.of(team), teamData.deletedTeams);
+    }
+
+    @Test
+    public void withdrawFromOpenRegistrationsLeavesTeamsOnceBracketSetupStarts() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(2L);
+        final Tournament tournament =
+                tournament(11L, UserUtils.getUser(1L), 4, 1, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam team =
+                new TournamentTeam(
+                        50L,
+                        tournament,
+                        "Falcons",
+                        TournamentTeamOrigin.TEAM_DRAFT,
+                        null,
+                        FIXED_NOW);
+        final RecordingTeamDataService teamData = new RecordingTeamDataService();
+        teamData.tournamentsByMember = List.of(tournament);
+        teamData.userTeam = Optional.of(team);
+        teamData.membersAfterRemoval = 0L;
+        final TournamentRegistrationServiceImpl service =
+                new TournamentRegistrationServiceImpl(
+                        tournamentDataService,
+                        tournamentSoloEntryDao,
+                        teamData,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+        Mockito.when(tournamentSoloEntryDao.findInPoolEntriesByUser(user)).thenReturn(List.of());
+
+        // 2. Exercise
+        service.withdrawFromOpenRegistrations(user);
+
+        // 3. Assert
+        Assertions.assertTrue(teamData.deletedTeams.isEmpty());
     }
 
     @Test
@@ -945,6 +1011,7 @@ public class TournamentRegistrationServiceImplTest {
         private Optional<TournamentTeam> userTeam = Optional.empty();
         private long membersAfterRemoval = 0L;
         private final List<TournamentTeam> deletedTeams = new ArrayList<>();
+        private List<Tournament> tournamentsByMember = new ArrayList<>();
 
         @Override
         public Optional<TournamentTeam> findUserTeam(final long tournamentId, final long userId) {
@@ -1024,6 +1091,11 @@ public class TournamentRegistrationServiceImplTest {
 
         @Override
         public List<Tournament> findTournamentsByMember(final User user) {
+            return tournamentsByMember;
+        }
+
+        @Override
+        public List<TournamentTeam> findByTournaments(Collection<Long> teamIds) {
             throw new UnsupportedOperationException();
         }
 

@@ -160,6 +160,16 @@ public class SecurityConfig {
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
                                                 mvc.pattern(
+                                                        HttpMethod.POST, "/tournaments/*/teams"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/tournaments/*/teams/*/join"),
+                                                mvc.pattern(
+                                                        HttpMethod.POST,
+                                                        "/tournaments/*/teams/leave"))
+                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                        .requestMatchers(
+                                                mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/users/{username}/reviews"))
                                         .access(

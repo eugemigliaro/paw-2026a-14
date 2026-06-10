@@ -18,6 +18,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToTournamentMatchStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import java.util.List;
@@ -77,17 +78,20 @@ public class WebConfig implements WebMvcConfigurer {
     private final String databaseUrl;
     private final String databaseUsername;
     private final String databasePassword;
+    private final boolean flywayOutOfOrder;
     private final ObjectProvider<UserService> userServiceProvider;
 
     public WebConfig(
             final ObjectProvider<UserService> userServiceProvider,
             @Value("${db.url}") final String databaseUrl,
             @Value("${db.username}") final String databaseUsername,
-            @Value("${db.password}") final String databasePassword) {
+            @Value("${db.password}") final String databasePassword,
+            @Value("${flyway.outOfOrder:false}") final boolean flywayOutOfOrder) {
         this.userServiceProvider = userServiceProvider;
         this.databaseUrl = requireNonBlank(databaseUrl, "db.url");
         this.databaseUsername = requireNonBlank(databaseUsername, "db.username");
         this.databasePassword = requireNonBlank(databasePassword, "db.password");
+        this.flywayOutOfOrder = flywayOutOfOrder;
     }
 
     @Bean
@@ -184,6 +188,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(true)
+                .outOfOrder(flywayOutOfOrder)
                 .load();
     }
 
@@ -213,6 +218,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToRecurrenceEndModeConverter());
         registry.addConverter(new StringToEventFilterConverter());
         registry.addConverter(new StringToEventCategoryConverter());
+        registry.addConverter(new StringToTournamentMatchStatusConverter());
     }
 
     @Override

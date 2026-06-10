@@ -32,10 +32,22 @@ public class ErrorPageController {
         return ErrorPageViews.build(messageSource, "400", locale);
     }
 
+    @GetMapping("/errors/405")
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public ModelAndView showMethodNotAllowedPage(final Locale locale) {
+        return ErrorPageViews.build(messageSource, "405", locale);
+    }
+
     @GetMapping("/errors/403")
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ModelAndView showForbiddenPage(final Locale locale) {
         return ErrorPageViews.build(messageSource, "403", locale);
+    }
+
+    @GetMapping("/errors/409")
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ModelAndView showConflictPage(final Locale locale) {
+        return ErrorPageViews.build(messageSource, "409", locale);
     }
 
     @GetMapping("/errors/500")
