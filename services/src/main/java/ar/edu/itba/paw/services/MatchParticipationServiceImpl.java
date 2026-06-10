@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.MatchClosedException;
@@ -332,9 +333,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     }
 
     @Override
-    public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
+    public PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
+            final User host, final int page, final int pageSize) {
         nonNullUser(host);
-        return matchParticipantDataService.findPendingRequestsForHost(host);
+        return matchParticipantDataService.findPendingRequestsForHost(host, page, pageSize);
     }
 
     @Override
