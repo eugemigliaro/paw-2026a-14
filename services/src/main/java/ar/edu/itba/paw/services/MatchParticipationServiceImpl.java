@@ -27,6 +27,7 @@ import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSe
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyInvitedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.exceptions.user.UserNotFoundException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -97,7 +98,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoin(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
 
         if (isHost(match, user.getId())) {
@@ -141,7 +142,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoinSeries(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
 
         if (isHost(match, user.getId())) {
@@ -350,7 +351,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     public List<Match> findPendingRequestMatches(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
         return matchParticipantDataService.findPendingRequestMatches(user);
     }
@@ -763,7 +764,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     private static void nonNullUser(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 
