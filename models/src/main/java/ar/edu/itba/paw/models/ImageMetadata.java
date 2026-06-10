@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models;
 
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -67,5 +68,25 @@ public class ImageMetadata {
                 + ", contentLength="
                 + contentLength
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof ImageMetadata)) {
+            return false;
+        }
+
+        ImageMetadata that = (ImageMetadata) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

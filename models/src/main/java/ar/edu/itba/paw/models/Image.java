@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -73,5 +74,25 @@ public class Image {
 
     public OffsetDateTime getCreatedAtDateTime() {
         return PlatformTime.toOffsetDateTime(createdAt);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof Image)) {
+            return false;
+        }
+
+        Image that = (Image) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
