@@ -656,6 +656,7 @@ class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("reservationRequestPath"))
+                .andExpect(model().attribute("reportMatchCanSubmit", false))
                 .andExpect(model().attribute("reservationRequiresLogin", true))
                 .andExpect(
                         model().attribute(
@@ -707,6 +708,7 @@ class EventControllerTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("reportMatchCanSubmit", true))
                 .andExpect(model().attribute("reservationRequiresLogin", false))
                 .andExpect(
                         model().attribute(
@@ -993,6 +995,7 @@ class EventControllerTest {
         mockMvc.perform(get("/matches/42"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(model().attribute("reportMatchCanSubmit", false))
                 .andExpect(model().attributeExists("matchActionCapabilities"))
                 .andExpect(model().attribute("seriesReservationEnabled", false))
                 .andExpect(model().attribute("seriesJoinRequestEnabled", false))

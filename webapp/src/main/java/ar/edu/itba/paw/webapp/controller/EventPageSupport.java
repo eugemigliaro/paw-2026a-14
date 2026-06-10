@@ -181,6 +181,7 @@ final class EventPageSupport {
         mav.addObject("isConfirmedParticipant", interactionState.isConfirmedParticipant());
         mav.addObject("isApprovalRequired", isApprovalRequired);
         mav.addObject("isInviteOnly", isInviteOnly);
+        mav.addObject("reportMatchCanSubmit", canReportMatch(currentUser, match, isHost));
         mav.addObject("reservationRequiresLogin", interactionState.isReservationRequiresLogin());
         addRealEventPageAttributes(
                 mav, match, confirmedParticipants, seriesOccurrences, currentUser);
@@ -312,6 +313,11 @@ final class EventPageSupport {
         mav.addObject("hostInviteEmail", hostInviteEmail);
         mav.addObject("hostSeriesInviteAvailable", match.isRecurringOccurrence());
         return mav;
+    }
+
+    private static boolean canReportMatch(
+            final User currentUser, final Match match, final boolean isHost) {
+        return currentUser != null && match != null && !isHost;
     }
 
     private void addRealEventPageAttributes(

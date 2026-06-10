@@ -18,22 +18,6 @@
 			<main class="page-shell public-profile-shell">
 				<section class="panel public-profile-panel">
 
-					<c:if test="${not empty profileEditHref or reportUserCanSubmit}">
-						<div class="public-profile-topbar">
-							<div class="public-profile-actions">
-								<c:if test="${not empty profileEditHref}">
-									<c:url var="profileEditAction" value="${profileEditHref}" />
-									<spring:message var="profileEditLabel" code="profile.public.edit" />
-									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
-								</c:if>
-								<c:if test="${reportUserCanSubmit}">
-									<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
-									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
-									<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
-								</c:if>
-							</div>
-						</div>
-					</c:if>
 					<div class="public-profile-hero">
 						<div class="public-profile-avatar-panel">
 							<div class="public-profile-avatar-panel__content">
@@ -103,6 +87,20 @@
 								</c:if>
 							</div>
 						</div>
+						<c:if test="${not empty profileEditHref or reportUserCanSubmit}">
+							<div class="public-profile-actions public-profile-actions--hero">
+								<c:if test="${not empty profileEditHref}">
+									<c:url var="profileEditAction" value="${profileEditHref}" />
+									<spring:message var="profileEditLabel" code="profile.public.edit" />
+									<ui:button label="${profileEditLabel}" href="${profileEditAction}" variant="secondary" />
+								</c:if>
+								<c:if test="${reportUserCanSubmit}">
+									<c:url var="reportUserHref" value="/reports/users/${targetUser.username}" />
+									<spring:message var="reportUserLabel" code="moderation.report.user.submit" />
+									<ui:button label="${reportUserLabel}" href="${reportUserHref}" variant="danger" />
+								</c:if>
+							</div>
+						</c:if>
 					</div>
 
 				</section>
