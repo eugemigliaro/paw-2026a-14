@@ -577,7 +577,7 @@ class EventControllerTest {
                             final User host = invocation.getArgument(1);
                             if ((matchId == 52L || matchId == 57L)
                                     && host != null
-                                    && host.getId() == 7L) {
+                                    && (host.getId() == 7L || isAdminViewer(host))) {
                                 return List.of(UserUtils.getUser(9L));
                             }
                             return List.of();
@@ -1114,6 +1114,25 @@ class EventControllerTest {
     }
 
     @Test
+    void getStartedApprovalRequiredMatchDetailsRouteForAdminShowsPendingRequests()
+            throws Exception {
+        AuthenticationUtils.authenticateAdmin(99L, "ignored");
+
+        mockMvc.perform(get("/matches/57"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostViewer", false))
+                .andExpect(model().attribute("hostCanManage", true))
+                .andExpect(
+                        model().attribute(
+                                        "matchActionCapabilities",
+                                        Matchers.hasProperty(
+                                                "canManageParticipants", Matchers.is(false))))
+                .andExpect(model().attribute("hostPendingRequestCount", 1))
+                .andExpect(model().attribute("hostPendingRequestsOpen", true))
+                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
+    }
+
+    @Test
     void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1318,6 +1337,7 @@ class EventControllerTest {
                 viewer != null
                         && match.getHost() != null
                         && viewer.getId().equals(match.getHost().getId());
+        final boolean manager = host || isAdminViewer(viewer);
         final boolean activeParticipant =
                 viewer != null
                         && currentUserHasReservation
@@ -1331,13 +1351,13 @@ class EventControllerTest {
                                 || Long.valueOf(50L).equals(match.getId()));
         final boolean visible =
                 match.getStatus() == EventStatus.DRAFT
-                        ? host
+                        ? manager
                         : match.getVisibility() == EventVisibility.PRIVATE
                                         || match.getStatus() == EventStatus.CANCELLED
-                                ? host || activeParticipant || seriesParticipant || invited
+                                ? manager || activeParticipant || seriesParticipant || invited
                                 : match.getVisibility() == EventVisibility.PUBLIC;
         final boolean editable =
-                host
+                manager
                         && match.getStatus() != EventStatus.COMPLETED
                         && match.getStatus() != EventStatus.CANCELLED
                         && match.getStartsAt().isAfter(FIXED_NOW);
@@ -1377,15 +1397,20 @@ class EventControllerTest {
                 viewer != null
                         && match.getHost() != null
                         && viewer.getId().equals(match.getHost().getId());
+        final boolean manager = host || isAdminViewer(viewer);
         final MatchActionCapabilities capabilities = actionCapabilities(match, viewer);
         return new MatchManagementPermissions(
                 host,
-                host,
+                manager,
                 capabilities.isCanManageParticipants(),
                 capabilities.isCanEdit(),
                 capabilities.isCanCancel(),
                 capabilities.isCanEditSeries(),
                 capabilities.isCanCancelSeries());
+    }
+
+    private boolean isAdminViewer(final User viewer) {
+        return viewer != null && Long.valueOf(99L).equals(viewer.getId());
     }
 
     private MatchInteractionState interactionState(

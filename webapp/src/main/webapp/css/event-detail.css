@@ -653,7 +653,7 @@
 	transform: none;
 }
 
-.host-action-card__button span:last-child {
+.host-action-card__button > span:last-child {
 	color: #4d5d59;
 	font-size: 0.63rem;
 	font-weight: 800;
@@ -684,6 +684,39 @@
 .host-action-card__icon svg {
 	height: 100%;
 	width: 100%;
+}
+
+.host-action-card__icon--stack {
+	height: 1.46rem;
+	position: relative;
+	width: 1.78rem;
+}
+
+.host-action-card__icon-layer {
+	display: inline-flex;
+	height: 1.1rem;
+	position: absolute;
+	width: 1.1rem;
+}
+
+.host-action-card__icon-layer--back {
+	opacity: 0.72;
+	right: 0;
+	top: 0;
+}
+
+.host-action-card__icon-layer--front {
+	bottom: 0;
+	left: 0;
+}
+
+.host-action-card__icon-layer svg {
+	height: 100%;
+	width: 100%;
+}
+
+.host-action-card__button--danger .host-action-card__icon-layer--back {
+	color: #d41919;
 }
 
 .host-invite-form {

@@ -157,9 +157,10 @@ final class EventPageSupport {
         final MatchManagementPermissions managementPermissions =
                 matchService.getMatchManagementPermissions(match, currentUser);
         final boolean isHost = managementPermissions.isHostViewer();
+        final boolean hostCanManage = managementPermissions.canManage();
         final boolean hostCanManageParticipants = managementPermissions.canManageParticipants();
         final List<User> pendingHostRequests =
-                isHost && isApprovalRequired
+                hostCanManage && isApprovalRequired
                         ? matchParticipationService.findPendingRequests(eventId, currentUser)
                         : List.of();
         final List<User> pendingHostInvites =
@@ -293,7 +294,7 @@ final class EventPageSupport {
 
         mav.addObject("hostViewer", isHost);
         mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("hostCanManage", managementPermissions.canManage());
+        mav.addObject("hostCanManage", hostCanManage);
         mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
         mav.addObject("hostCanEdit", managementPermissions.canEdit());
         mav.addObject("hostCanCancel", managementPermissions.canCancel());

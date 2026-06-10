@@ -71,7 +71,7 @@
 							</div>
 						</section>
 
-						<c:if test="${hostViewer && isApprovalRequired}">
+						<c:if test="${hostCanManage && isApprovalRequired}">
 							<section
 								class="detail-section detail-section--host-collapsible"
 								aria-labelledby="pending-requests-title"
@@ -395,16 +395,26 @@
 												<c:choose>
 													<c:when test="${matchActionCapabilities.canEditSeries}">
 														<a class="host-action-card__button" href="${hostSeriesEditHref}">
-															<span class="host-action-card__icon" aria-hidden="true">
-																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+															<span class="host-action-card__icon host-action-card__icon--stack" aria-hidden="true">
+																<span class="host-action-card__icon-layer host-action-card__icon-layer--back">
+																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+																</span>
+																<span class="host-action-card__icon-layer host-action-card__icon-layer--front">
+																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+																</span>
 															</span>
 															<span><c:out value="${hostEditSeriesLabel}" /></span>
 														</a>
 													</c:when>
 													<c:otherwise>
 														<span class="host-action-card__button is-disabled" aria-disabled="true">
-															<span class="host-action-card__icon" aria-hidden="true">
-																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+															<span class="host-action-card__icon host-action-card__icon--stack" aria-hidden="true">
+																<span class="host-action-card__icon-layer host-action-card__icon-layer--back">
+																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+																</span>
+																<span class="host-action-card__icon-layer host-action-card__icon-layer--front">
+																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+																</span>
 															</span>
 															<span><c:out value="${hostEditSeriesLabel}" /></span>
 														</span>
@@ -422,8 +432,13 @@
 												<form method="post" action="${hostSeriesCancelAction}" data-submit-guard="true" data-submit-loading-label="${hostCancellingLabel}" class="host-action-card__form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not matchActionCapabilities.canCancelSeries}">disabled="disabled" aria-disabled="true"</c:if>>
-														<span class="host-action-card__icon" aria-hidden="true">
-															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+														<span class="host-action-card__icon host-action-card__icon--stack" aria-hidden="true">
+															<span class="host-action-card__icon-layer host-action-card__icon-layer--back">
+																<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+															</span>
+															<span class="host-action-card__icon-layer host-action-card__icon-layer--front">
+																<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+															</span>
 														</span>
 														<span><c:out value="${hostCancelSeriesLabel}" /></span>
 													</button>
