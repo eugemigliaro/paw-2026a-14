@@ -3,21 +3,28 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
+import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.tournament.*;
 import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
 import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.InvolvementScope;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
+import ar.edu.itba.paw.persistence.TournamentMatchDao;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
+import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.utils.DistanceUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,6 +43,8 @@ public class TournamentServiceImpl implements TournamentService {
     private final TournamentMailService tournamentMailService;
     private final ImageService imageService;
     private final SecurityService securityService;
+    private final TournamentTeamDataService tournamentTeamDataService;
+    private final TournamentMatchDao tournamentMatchDao;
     private final Clock clock;
 
     public TournamentServiceImpl(
@@ -44,12 +53,16 @@ public class TournamentServiceImpl implements TournamentService {
             final TournamentMailService tournamentMailService,
             final ImageService imageService,
             final SecurityService securityService,
+            final TournamentTeamDataService tournamentTeamDataService,
+            final TournamentMatchDao tournamentMatchDao,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
         this.tournamentRegistrationService = tournamentRegistrationService;
         this.tournamentMailService = tournamentMailService;
         this.imageService = imageService;
         this.securityService = securityService;
+        this.tournamentTeamDataService = tournamentTeamDataService;
+        this.tournamentMatchDao = tournamentMatchDao;
         this.clock = clock;
     }
 
@@ -231,6 +244,47 @@ public class TournamentServiceImpl implements TournamentService {
                                 longitude,
                                 offset,
                                 safePageSize));
+    }
+
+    @Override
+    public PaginatedResult<TournamentMatch> findDashboardTournamentMatches(
+            final User user,
+            final Boolean upcoming,
+            final String query,
+            final List<Sport> sports,
+            final List<TournamentMatchStatus> statuses,
+            final InvolvementScope involvement,
+            final EventSort sort,
+            final int page,
+            final int pageSize) {
+        return paginateMatches(
+                page,
+                pageSize,
+                DEFAULT_PAGE_SIZE,
+                safePageSize ->
+                        tournamentMatchDao.countByUserParticipant(
+                                user, upcoming, query, sports, statuses, involvement),
+                (offset, safePageSize) ->
+                        tournamentMatchDao.findByUserParticipant(
+                                user,
+                                upcoming,
+                                query,
+                                sports,
+                                statuses,
+                                involvement,
+                                sort,
+                                offset,
+                                safePageSize));
+    }
+
+    @Override
+    public List<TournamentTeam> findBracketTeams(final long tournamentId) {
+        return tournamentTeamDataService.findByTournament(tournamentId);
+    }
+
+    @Override
+    public List<TournamentTeam> findBracketTeams(final Collection<Long> tournamentIds) {
+        return tournamentTeamDataService.findByTournaments(tournamentIds);
     }
 
     @Override
@@ -646,6 +700,24 @@ public class TournamentServiceImpl implements TournamentService {
         return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
     }
 
+    private PaginatedResult<TournamentMatch> paginateMatches(
+            final int page,
+            final int pageSize,
+            final int defaultPageSize,
+            final MatchCountSupplier countSupplier,
+            final MatchSliceSupplier sliceSupplier) {
+        final int safePage = page > 0 ? page : 1;
+        final int safePageSize = pageSize > 0 ? pageSize : defaultPageSize;
+
+        final int totalCount = countSupplier.count(safePageSize);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int clampedPage = Math.min(safePage, totalPages);
+        final int offset = (clampedPage - 1) * safePageSize;
+        final List<TournamentMatch> items = sliceSupplier.items(offset, safePageSize);
+
+        return new PaginatedResult<>(items, totalCount, clampedPage, safePageSize);
+    }
+
     @FunctionalInterface
     private interface CountSupplier {
         int count(int safePageSize);
@@ -654,6 +726,16 @@ public class TournamentServiceImpl implements TournamentService {
     @FunctionalInterface
     private interface SliceSupplier {
         List<Tournament> items(int offset, int safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface MatchCountSupplier {
+        int count(int safePageSize);
+    }
+
+    @FunctionalInterface
+    private interface MatchSliceSupplier {
+        List<TournamentMatch> items(int offset, int safePageSize);
     }
 
     private record DateRange(Instant start, Instant endExclusive) {

@@ -3,7 +3,9 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -71,6 +73,9 @@ public class MatchDashboardController {
             @AuthenticatedUser final User user,
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult) {
+        if (EventType.TOURNAMENT_MATCHES == searchForm.getType()) {
+            return showTournamentMatchPage(user, searchForm, bindingResult);
+        }
         return showDashboardPage(
                 user,
                 searchForm,
@@ -96,6 +101,49 @@ public class MatchDashboardController {
                 "tournaments.title");
     }
 
+    private ModelAndView showTournamentMatchPage(
+            final User user, final SearchForm searchForm, final BindingResult bindingResult) {
+        searchForm.setType(EventType.TOURNAMENT_MATCHES);
+        searchForm.normalizeDefaults();
+        if (hasErrorsOutsideQuery(bindingResult)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        String searchQuery = searchForm.getQ();
+        if (bindingResult.hasFieldErrors("q")) {
+            searchQuery = "";
+            searchForm.setQ(searchQuery);
+        }
+
+        final boolean upcoming =
+                searchForm.getFilter() == null || searchForm.getFilter() == EventFilter.UPCOMING;
+
+        final PaginatedResult<TournamentMatch> result =
+                tournamentService.findDashboardTournamentMatches(
+                        user,
+                        upcoming,
+                        searchQuery,
+                        searchForm.getSport(),
+                        searchForm.getTmStatus(),
+                        searchForm.getInvolvement(),
+                        searchForm.getSort(),
+                        searchForm.getPage(),
+                        PAGE_SIZE);
+
+        final ModelAndView mav =
+                MatchDashboardPageSupport.buildTournamentMatchListPage(
+                        user,
+                        "events/list",
+                        MATCHES_PATH,
+                        searchForm,
+                        upcoming,
+                        result,
+                        tournamentService);
+        if (bindingResult.hasFieldErrors("q")) {
+            mav.addObject("searchForm", searchForm);
+        }
+        return mav;
+    }
+
     private ModelAndView showDashboardPage(
             final User user,
             final SearchForm searchForm,
@@ -105,10 +153,6 @@ public class MatchDashboardController {
             final String pageTitleCode,
             final String listTitleCode) {
         searchForm.setType(routeType);
-        // A malformed free-text query should not produce an error page: render the
-        // listing with the inline validation message and ignore the invalid query
-        // for the search itself. Structural binding problems (page, dates, prices)
-        // remain a controlled 400.
         if (hasErrorsOutsideQuery(bindingResult)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
@@ -172,9 +216,6 @@ public class MatchDashboardController {
                         matchReservationService,
                         tournamentService);
         if (bindingResult.hasFieldErrors("q")) {
-            // Expose the bound form (whose BindingResult carries the query error) so the
-            // listing re-renders with the inline validation message instead of the
-            // normalized copy, which would drop the error.
             mav.addObject("searchForm", searchForm);
         }
         return mav;

@@ -126,6 +126,20 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
+    public List<TournamentTeam> findByTournaments(final java.util.Collection<Long> tournamentIds) {
+        if (tournamentIds == null || tournamentIds.isEmpty()) {
+            return List.of();
+        }
+        return em.createQuery(
+                        "FROM TournamentTeam tt"
+                                + " WHERE tt.tournament.id IN :tournamentIds"
+                                + " ORDER BY tt.tournament.id ASC, COALESCE(tt.seedPosition, 32767) ASC, tt.id ASC",
+                        TournamentTeam.class)
+                .setParameter("tournamentIds", tournamentIds)
+                .getResultList();
+    }
+
+    @Override
     public List<TournamentTeam> findByTournamentUnordered(final long tournamentId) {
         return em.createQuery(
                         "FROM TournamentTeam tt"

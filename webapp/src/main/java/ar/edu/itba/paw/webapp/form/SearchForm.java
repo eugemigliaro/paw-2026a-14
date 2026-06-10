@@ -3,10 +3,12 @@ package ar.edu.itba.paw.webapp.form;
 import ar.edu.itba.paw.models.query.EventCategory;
 import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.InvolvementScope;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.webapp.validation.ValidSearchForm;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,6 +47,8 @@ public class SearchForm {
     private List<EventStatus> status = new ArrayList<>();
     private List<EventCategory> category = new ArrayList<>();
     private List<EventVisibility> visibility = new ArrayList<>();
+    private List<TournamentMatchStatus> tmStatus = new ArrayList<>();
+    private InvolvementScope involvement = InvolvementScope.ALL;
     private Double latitude;
     private Double longitude;
 
@@ -149,6 +153,22 @@ public class SearchForm {
 
     public void setVisibility(final List<EventVisibility> visibility) {
         this.visibility = copyEnumValues(visibility);
+    }
+
+    public List<TournamentMatchStatus> getTmStatus() {
+        return tmStatus;
+    }
+
+    public void setTmStatus(final List<TournamentMatchStatus> tmStatus) {
+        this.tmStatus = copyEnumValues(tmStatus);
+    }
+
+    public InvolvementScope getInvolvement() {
+        return involvement;
+    }
+
+    public void setInvolvement(final InvolvementScope involvement) {
+        this.involvement = involvement;
     }
 
     public Double getLatitude() {
