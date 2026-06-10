@@ -593,3 +593,130 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+.tournament-teams {
+	display: grid;
+	gap: 1.5rem;
+	/* The .panel wrapper gives no interior padding, so the heading and team
+	cards would otherwise sit flush against the section edge. */
+	padding: 1.5rem;
+}
+
+.tournament-teams__columns {
+	align-items: start;
+	display: grid;
+	gap: 2rem;
+	/* Teams take the wide, flexible column; the thinner solo pool sits beside
+	them with a capped width so the team cards stay as wide as possible. */
+	grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+}
+
+/* Each column stacks its own heading above its content so "Teams" and
+"Solo pool" read as peers at the same level. */
+.tournament-teams__column {
+	align-content: start;
+	display: grid;
+	gap: 1rem;
+}
+
+.tournament-teams__grid {
+	display: grid;
+	gap: 1rem;
+	/* Stack teams one over the other so each card's height is purely its own
+	content; a row of side-by-side cards forces equal heights and leaves the
+	shorter roster with empty space. */
+	grid-template-columns: minmax(0, 1fr);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.tournament-teams__card {
+	/* A white surface lets the gray player chips inside read as nested content,
+	so each team clearly stands apart as its own card. */
+	background: var(--color-surface, #fff);
+	border: 1px solid rgba(0, 100, 90, 0.14);
+	border-radius: 18px;
+	box-shadow: 0 14px 30px -26px rgba(16, 44, 40, 0.45);
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1.25rem;
+}
+
+.tournament-teams__card--mine {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+
+.tournament-teams__card-head {
+	align-items: baseline;
+	display: flex;
+	gap: 0.5rem;
+	justify-content: space-between;
+}
+
+.tournament-teams__name {
+	font-size: 1rem;
+	font-weight: 800;
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.tournament-teams__count {
+	color: var(--text-secondary);
+	flex: none;
+	font-size: 0.85rem;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+}
+
+.tournament-teams__members {
+	/* A roster inside a team card stacks in one column; the inherited
+	two-column participant grid leaves a half-empty row when a team isn't full. */
+	gap: 0;
+	grid-template-columns: minmax(0, 1fr);
+	margin: 0;
+}
+
+/* Players read as a plain vertical list inside the team card; keeping their
+default chip styling would nest a card inside a card. */
+.tournament-teams__members .participant-list__item {
+	background: none;
+	border: none;
+	border-bottom: 1px solid rgba(0, 100, 90, 0.08);
+	border-radius: 0;
+	box-shadow: none;
+	padding: 0.6rem 0.1rem;
+}
+
+.tournament-teams__members .participant-list__item:last-child {
+	border-bottom: none;
+}
+
+.tournament-teams__members .participant-list__item:hover {
+	box-shadow: none;
+	transform: none;
+}
+
+.tournament-teams__action {
+	margin-top: auto;
+}
+
+.tournament-teams__badge {
+	align-items: center;
+	background: rgba(0, 100, 90, 0.1);
+	border-radius: 12px;
+	color: var(--color-primary);
+	display: flex;
+	font-size: 0.85rem;
+	font-weight: 700;
+	justify-content: center;
+	padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 720px) {
+	.tournament-teams__columns {
+		grid-template-columns: 1fr;
+	}
+}

@@ -83,6 +83,101 @@
 								</div>
 							</dl>
 						</section>
+
+						<c:if test="${tournament.status.dbValue eq 'registration' and (not empty tournamentTeamRosters or not empty tournamentActiveSoloEntries)}">
+							<section class="detail-section tournament-teams" aria-labelledby="tournament-teams-title">
+								<div class="tournament-teams__columns">
+								<c:if test="${not empty tournamentTeamRosters}">
+									<div class="tournament-teams__column">
+										<div class="section-head section-head--detail-compact">
+											<div>
+												<h2 id="tournament-teams-title" class="detail-section__title">
+													<spring:message code="tournament.teams.title" />
+												</h2>
+											</div>
+										</div>
+											<ul class="tournament-teams__grid">
+											<c:forEach var="roster" items="${tournamentTeamRosters}">
+											<li class="tournament-teams__card ${roster.team.id eq tournamentUserTeamId ? 'tournament-teams__card--mine' : ''}">
+												<div class="tournament-teams__card-head">
+													<h3 class="tournament-teams__name">
+														<c:choose>
+															<c:when test="${not empty roster.team.name}">
+																<c:out value="${roster.team.name}" />
+															</c:when>
+															<c:otherwise>
+																<spring:message code="tournament.team.solo.name" arguments="${tournamentTeamDisplayNumbers[roster.team.id]}" />
+															</c:otherwise>
+														</c:choose>
+													</h3>
+													<span class="tournament-teams__count">
+														<spring:message code="tournament.teams.memberCount" arguments="${roster.memberCount},${tournament.teamSize}" />
+													</span>
+												</div>
+												<ul class="participant-list tournament-teams__members">
+													<c:forEach var="member" items="${roster.members}">
+														<li class="participant-list__item">
+															<c:url var="memberAvatarSrc" value="${userProfileImageUrls[member.user.id]}" />
+															<img class="participant-list__avatar" src="${memberAvatarSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+															<div class="participant-list__copy">
+																<c:url var="memberProfileHref" value="/users/${member.user.username}" />
+																<a class="participant-list__name" href="${memberProfileHref}"><c:out value="${member.user.username}" /></a>
+															</div>
+														</li>
+													</c:forEach>
+												</ul>
+												<div class="tournament-teams__action">
+													<c:choose>
+														<c:when test="${roster.team.id eq tournamentUserTeamId}">
+															<span class="tournament-teams__badge"><spring:message code="tournament.teams.yourTeam" /></span>
+														</c:when>
+														<c:when test="${roster.full}">
+															<spring:message var="teamFullLabel" code="tournament.teams.full" />
+															<ui:button label="${teamFullLabel}" type="button" fullWidth="${true}" variant="secondary" disabled="${true}" />
+														</c:when>
+														<c:when test="${tournamentCapabilities.canJoinTeam}">
+															<c:url var="teamJoinAction" value="/tournaments/${tournament.id}/teams/${roster.team.id}/join" />
+															<spring:message var="joinTeamLabel" code="tournament.teams.join" />
+															<spring:message var="joiningTeamLabel" code="tournament.teams.joining" />
+															<form method="post" action="${teamJoinAction}" data-submit-guard="true" data-submit-loading-label="${joiningTeamLabel}" class="tournament-teams__join-form">
+																<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+																<ui:button label="${joinTeamLabel}" type="submit" fullWidth="${true}" />
+															</form>
+														</c:when>
+													</c:choose>
+												</div>
+											</li>
+										</c:forEach>
+										</ul>
+									</div>
+								</c:if>
+
+								<c:if test="${not empty tournamentActiveSoloEntries}">
+									<div class="tournament-teams__column">
+										<div class="section-head section-head--detail-compact">
+											<div>
+												<h2 class="detail-section__title"><spring:message code="tournament.teams.soloPool.title" /></h2>
+											</div>
+										</div>
+										<div class="tournament-teams__card">
+											<ul class="participant-list tournament-teams__members tournament-teams__solo-list">
+											<c:forEach var="entry" items="${tournamentActiveSoloEntries}">
+												<li class="participant-list__item">
+													<c:url var="soloAvatarSrc" value="${userProfileImageUrls[entry.user.id]}" />
+													<img class="participant-list__avatar" src="${soloAvatarSrc}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+													<div class="participant-list__copy">
+														<c:url var="soloProfileHref" value="/users/${entry.user.username}" />
+														<a class="participant-list__name" href="${soloProfileHref}"><c:out value="${entry.user.username}" /></a>
+													</div>
+												</li>
+											</c:forEach>
+											</ul>
+										</div>
+									</div>
+								</c:if>
+								</div>
+							</section>
+						</c:if>
 					</div>
 
 					<aside class="detail-top__sidebar">
@@ -185,77 +280,70 @@
 								</p>
 							</c:if>
 
-							<c:choose>
-								<c:when test="${tournamentCapabilities.canJoinSolo}">
-									<c:url var="soloJoinAction" value="${soloJoinPath}" />
-									<spring:message var="soloJoinLabel" code="tournament.registration.joinSolo" />
-									<spring:message var="joiningSoloLabel" code="tournament.registration.joiningSolo" />
-									<form method="post" action="${soloJoinAction}" data-submit-guard="true" data-submit-loading-label="${joiningSoloLabel}" class="booking-panel__request-form">
-										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<ui:button label="${soloJoinLabel}" type="submit" fullWidth="${true}" />
-									</form>
-									<p class="booking-panel__note"><spring:message code="tournament.registration.soloNote" /></p>
-								</c:when>
-								<c:when test="${tournamentCapabilities.canLeaveSolo}">
-									<c:url var="soloLeaveAction" value="${soloLeavePath}" />
-									<spring:message var="soloLeaveLabel" code="tournament.registration.leaveSolo" />
-									<spring:message var="leavingSoloLabel" code="tournament.registration.leavingSolo" />
-									<form method="post" action="${soloLeaveAction}" data-submit-guard="true" data-submit-loading-label="${leavingSoloLabel}" class="booking-panel__request-form">
-										<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-										<ui:button label="${soloLeaveLabel}" type="submit" fullWidth="${true}" variant="secondary" />
-									</form>
-								</c:when>
-								<c:when test="${tournamentCapabilities.requiresLoginToJoin}">
-									<c:url var="loginHref" value="/login" />
-									<spring:message var="signInLabel" code="tournament.registration.signIn" />
-									<ui:button label="${signInLabel}" href="${loginHref}" fullWidth="${true}" />
-									<p class="booking-panel__note"><spring:message code="tournament.registration.signInNote" /></p>
-								</c:when>
-								<c:when test="${tournamentCapabilities.registrationNotStarted}">
-									<spring:message var="registrationTurnedOffLabel" code="tournament.registration.turnedOff" />
-									<spring:message var="registrationNotStartedNote" code="tournament.registration.turnedOffNote" />
-									<ui:button label="${registrationTurnedOffLabel}" type="button" fullWidth="${true}" disabled="${true}" />
-									<p class="booking-panel__note"><c:out value="${registrationNotStartedNote}" /></p>
-								</c:when>
-								<c:otherwise>
-									<spring:message var="registrationUnavailableLabel" code="tournament.registration.unavailable" />
-									<ui:button label="${registrationUnavailableLabel}" type="button" fullWidth="${true}" disabled="${true}" />
-									<p class="booking-panel__note"><spring:message code="tournament.registration.unavailableNote" /></p>
-								</c:otherwise>
-							</c:choose>
+							<c:set var="hasTournamentEntryAction" value="${tournamentCapabilities.canJoinSolo or tournamentCapabilities.canCreateTeam or tournamentCapabilities.canLeaveSolo or tournamentCapabilities.canLeaveTeam}" />
+							<c:if test="${tournamentCapabilities.canJoinSolo}">
+								<c:url var="soloJoinAction" value="${soloJoinPath}" />
+								<spring:message var="soloJoinLabel" code="tournament.registration.joinSolo" />
+								<spring:message var="joiningSoloLabel" code="tournament.registration.joiningSolo" />
+								<form method="post" action="${soloJoinAction}" data-submit-guard="true" data-submit-loading-label="${joiningSoloLabel}" class="booking-panel__request-form">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:button label="${soloJoinLabel}" type="submit" fullWidth="${true}" />
+								</form>
+								<p class="booking-panel__note"><spring:message code="tournament.registration.soloNote" /></p>
+							</c:if>
+							<c:if test="${tournamentCapabilities.canCreateTeam}">
+								<c:url var="teamCreateAction" value="${teamCreatePath}" />
+								<spring:message var="teamNameLabel" code="tournament.registration.teamNameLabel" />
+								<spring:message var="teamNamePlaceholder" code="tournament.registration.teamNamePlaceholder" />
+								<spring:message var="createTeamLabel" code="tournament.registration.createTeam" />
+								<spring:message var="creatingTeamLabel" code="tournament.registration.creatingTeam" />
+								<form method="post" action="${teamCreateAction}" data-submit-guard="true" data-submit-loading-label="${creatingTeamLabel}" class="booking-panel__request-form">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:textInput label="${teamNameLabel}" name="name" maxLength="32" required="${true}" placeholder="${teamNamePlaceholder}" />
+									<ui:button label="${createTeamLabel}" type="submit" fullWidth="${true}" />
+								</form>
+								<p class="booking-panel__note"><spring:message code="tournament.registration.createTeamNote" /></p>
+							</c:if>
+							<c:if test="${tournamentCapabilities.canLeaveSolo}">
+								<c:url var="soloLeaveAction" value="${soloLeavePath}" />
+								<spring:message var="soloLeaveLabel" code="tournament.registration.leaveSolo" />
+								<spring:message var="leavingSoloLabel" code="tournament.registration.leavingSolo" />
+								<form method="post" action="${soloLeaveAction}" data-submit-guard="true" data-submit-loading-label="${leavingSoloLabel}" class="booking-panel__request-form">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:button label="${soloLeaveLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+								</form>
+							</c:if>
+							<c:if test="${tournamentCapabilities.canLeaveTeam}">
+								<c:url var="teamLeaveAction" value="${teamLeavePath}" />
+								<spring:message var="leaveTeamLabel" code="tournament.registration.leaveTeam" />
+								<spring:message var="leavingTeamLabel" code="tournament.registration.leavingTeam" />
+								<form method="post" action="${teamLeaveAction}" data-submit-guard="true" data-submit-loading-label="${leavingTeamLabel}" class="booking-panel__request-form">
+									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+									<ui:button label="${leaveTeamLabel}" type="submit" fullWidth="${true}" variant="secondary" />
+								</form>
+							</c:if>
+							<c:if test="${not hasTournamentEntryAction}">
+								<c:choose>
+									<c:when test="${tournamentCapabilities.requiresLoginToJoin}">
+										<c:url var="loginHref" value="/login" />
+										<spring:message var="signInLabel" code="tournament.registration.signIn" />
+										<ui:button label="${signInLabel}" href="${loginHref}" fullWidth="${true}" />
+										<p class="booking-panel__note"><spring:message code="tournament.registration.signInNote" /></p>
+									</c:when>
+									<c:when test="${tournamentCapabilities.registrationNotStarted}">
+										<spring:message var="registrationTurnedOffLabel" code="tournament.registration.turnedOff" />
+										<spring:message var="registrationNotStartedNote" code="tournament.registration.turnedOffNote" />
+										<ui:button label="${registrationTurnedOffLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+										<p class="booking-panel__note"><c:out value="${registrationNotStartedNote}" /></p>
+									</c:when>
+									<c:otherwise>
+										<spring:message var="registrationUnavailableLabel" code="tournament.registration.unavailable" />
+										<ui:button label="${registrationUnavailableLabel}" type="button" fullWidth="${true}" disabled="${true}" />
+										<p class="booking-panel__note"><spring:message code="tournament.registration.unavailableNote" /></p>
+									</c:otherwise>
+								</c:choose>
+							</c:if>
 						</article>
-
-						<c:if test="${tournament.status.dbValue eq 'registration' and (not empty tournamentTeamMembers or not empty tournamentActiveSoloEntries)}">
-							<article class="panel event-info-panel">
-								<p class="detail-label player-actions-panel__title">
-									<spring:message code="tournament.participants.title" />
-								</p>
-								<ul class="event-info-panel__list">
-									<c:forEach var="member" items="${tournamentTeamMembers}">
-										<li class="booking-panel__detail-row event-info-panel__row">
-											<span><c:out value="${member.user.username}" /></span>
-											<span>
-												<c:choose>
-													<c:when test="${not empty member.team.name}">
-														<c:out value="${member.team.name}" />
-													</c:when>
-													<c:otherwise>
-														<spring:message code="tournament.team.solo.name" arguments="${tournamentTeamDisplayNumbers[member.team.id]}" />
-													</c:otherwise>
-												</c:choose>
-											</span>
-										</li>
-									</c:forEach>
-									<c:forEach var="entry" items="${tournamentActiveSoloEntries}">
-										<li class="booking-panel__detail-row event-info-panel__row">
-											<span><c:out value="${entry.user.username}" /></span>
-											<span><spring:message code="tournament.participants.soloPool" /></span>
-										</li>
-									</c:forEach>
-								</ul>
-							</article>
-						</c:if>
-
 						<article class="panel event-info-panel">
 							<dl class="event-info-panel__list">
 								<div class="booking-panel__detail-row event-info-panel__row">

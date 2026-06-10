@@ -38,6 +38,8 @@ public interface TournamentDao {
 
     Optional<Tournament> findById(long tournamentId);
 
+    void lockForRegistration(long tournamentId);
+
     Optional<Tournament> findPublicById(long tournamentId);
 
     List<Tournament> findPublicRegistrationOrLive(int offset, int limit);

@@ -571,6 +571,17 @@ class SecurityConfigTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void postCloseRegistrationRouteForNonHostReturnsForbidden() throws Exception {
+        Mockito.when(securityService.canCloseRegistration(77L)).thenReturn(false);
+
+        mockMvc.perform(
+                        post("/host/tournaments/77/close-registration")
+                                .with(authenticatedUser())
+                                .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
     private static RequestPostProcessor authenticatedUser() {
         return authentication(authenticationFor(UserRole.USER, "ROLE_USER"));
     }

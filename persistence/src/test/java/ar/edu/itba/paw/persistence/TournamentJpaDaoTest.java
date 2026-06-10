@@ -677,6 +677,33 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldFindOnlyInPoolSoloEntriesForUserAcrossTournaments() {
+        final Tournament first = createTournament(host, "First Cup", TournamentStatus.REGISTRATION);
+        final Tournament second =
+                createTournament(host, "Second Cup", TournamentStatus.REGISTRATION);
+        final Tournament leftTournament =
+                createTournament(host, "Left Cup", TournamentStatus.REGISTRATION);
+        final TournamentSoloEntry firstEntry =
+                tournamentSoloEntryDao.create(first, player, TournamentSoloEntryStatus.IN_POOL);
+        final TournamentSoloEntry secondEntry =
+                tournamentSoloEntryDao.create(second, player, TournamentSoloEntryStatus.IN_POOL);
+        tournamentSoloEntryDao.create(leftTournament, player, TournamentSoloEntryStatus.LEFT);
+        tournamentSoloEntryDao.create(first, secondPlayer, TournamentSoloEntryStatus.IN_POOL);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentSoloEntry> entries =
+                tournamentSoloEntryDao.findInPoolEntriesByUser(player);
+
+        Assertions.assertEquals(
+                java.util.Set.of(firstEntry.getId(), secondEntry.getId()),
+                entries.stream()
+                        .map(TournamentSoloEntry::getId)
+                        .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
     public void shouldRejectDuplicateSoloEntryForUser() {
         final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
         tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.IN_POOL);
@@ -749,6 +776,150 @@ public class TournamentJpaDaoTest {
                 tournament, 1, 0, null, null, TournamentMatchStatus.PENDING, null, null);
 
         Assertions.assertThrows(PersistenceException.class, () -> em.flush());
+    }
+
+    @Test
+    public void shouldRemoveTeamMemberWithoutDeletingTeam() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        final TournamentTeam team =
+                tournamentTeamDao.create(
+                        tournament, "Falcons", TournamentTeamOrigin.TEAM_DRAFT, null);
+        tournamentTeamDao.addMember(team, player, false);
+        tournamentTeamDao.addMember(team, secondPlayer, false);
+
+        em.flush();
+        em.clear();
+
+        final TournamentTeam persistedTeam = tournamentTeamDao.findById(team.getId()).orElseThrow();
+        tournamentTeamDao.removeMember(persistedTeam, player);
+
+        em.flush();
+        em.clear();
+
+        Assertions.assertEquals(1, tournamentTeamDao.countMembers(team.getId()));
+        Assertions.assertTrue(
+                tournamentTeamDao.findUserTeam(tournament.getId(), player.getId()).isEmpty());
+        Assertions.assertTrue(
+                tournamentTeamDao
+                        .findUserTeam(tournament.getId(), secondPlayer.getId())
+                        .isPresent());
+    }
+
+    @Test
+    public void shouldDeleteTeamAndItsMembers() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        final TournamentTeam team =
+                tournamentTeamDao.create(
+                        tournament, "Falcons", TournamentTeamOrigin.TEAM_DRAFT, null);
+        tournamentTeamDao.addMember(team, player, false);
+
+        em.flush();
+        em.clear();
+
+        final TournamentTeam persistedTeam = tournamentTeamDao.findById(team.getId()).orElseThrow();
+        tournamentTeamDao.delete(persistedTeam);
+
+        em.flush();
+        em.clear();
+
+        Assertions.assertTrue(tournamentTeamDao.findById(team.getId()).isEmpty());
+        Assertions.assertEquals(0, tournamentTeamDao.countMembers(team.getId()));
+        Assertions.assertTrue(
+                tournamentTeamDao.findUserTeam(tournament.getId(), player.getId()).isEmpty());
+    }
+
+    @Test
+    public void shouldCountMembersByTournamentAcrossTeams() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        final TournamentTeam first =
+                tournamentTeamDao.create(
+                        tournament, "Falcons", TournamentTeamOrigin.TEAM_DRAFT, null);
+        final TournamentTeam second =
+                tournamentTeamDao.create(
+                        tournament, "Hawks", TournamentTeamOrigin.TEAM_DRAFT, null);
+        tournamentTeamDao.addMember(first, player, false);
+        tournamentTeamDao.addMember(first, secondPlayer, false);
+        tournamentTeamDao.addMember(second, host, false);
+
+        em.flush();
+        em.clear();
+
+        Assertions.assertEquals(3, tournamentTeamDao.countMembersByTournament(tournament.getId()));
+    }
+
+    @Test
+    public void shouldFindJoinableTeamsExcludingFullOnes() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        final TournamentTeam full =
+                tournamentTeamDao.create(tournament, "Full", TournamentTeamOrigin.TEAM_DRAFT, null);
+        final TournamentTeam open =
+                tournamentTeamDao.create(tournament, "Open", TournamentTeamOrigin.TEAM_DRAFT, null);
+        tournamentTeamDao.addMember(full, player, false);
+        tournamentTeamDao.addMember(full, secondPlayer, false);
+        tournamentTeamDao.addMember(open, host, false);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentTeam> joinable =
+                tournamentTeamDao.findJoinableByTournament(tournament.getId(), 2);
+
+        Assertions.assertEquals(
+                List.of(open.getId()), joinable.stream().map(TournamentTeam::getId).toList());
+    }
+
+    @Test
+    public void shouldReportWhetherTeamNameExistsInTournament() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        tournamentTeamDao.create(tournament, "Falcons", TournamentTeamOrigin.TEAM_DRAFT, null);
+
+        em.flush();
+        em.clear();
+
+        Assertions.assertTrue(
+                tournamentTeamDao.existsByTournamentAndName(tournament.getId(), "Falcons"));
+        Assertions.assertFalse(
+                tournamentTeamDao.existsByTournamentAndName(tournament.getId(), "Hawks"));
+    }
+
+    @Test
+    public void shouldFindSoloEntriesByStatus() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.UNASSIGNED);
+        tournamentSoloEntryDao.create(tournament, secondPlayer, TournamentSoloEntryStatus.IN_POOL);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentSoloEntry> unassigned =
+                tournamentSoloEntryDao.findByTournamentAndStatus(
+                        tournament.getId(), TournamentSoloEntryStatus.UNASSIGNED);
+
+        Assertions.assertEquals(1, unassigned.size());
+        Assertions.assertEquals(player.getId(), unassigned.get(0).getUser().getId());
+        Assertions.assertEquals(
+                TournamentSoloEntryStatus.UNASSIGNED, unassigned.get(0).getStatus());
+    }
+
+    @Test
+    public void shouldFindRegisteredSoloEntriesExcludingLeft() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.IN_POOL);
+        final TournamentSoloEntry left =
+                tournamentSoloEntryDao.create(
+                        tournament, secondPlayer, TournamentSoloEntryStatus.IN_POOL);
+        left.setStatus(TournamentSoloEntryStatus.LEFT);
+        tournamentSoloEntryDao.update(left);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentSoloEntry> registered =
+                tournamentSoloEntryDao.findRegisteredByTournament(tournament.getId());
+
+        Assertions.assertEquals(
+                List.of(player.getId()),
+                registered.stream().map(entry -> entry.getUser().getId()).toList());
     }
 
     private Tournament createTournament(final TournamentStatus status) {

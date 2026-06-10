@@ -58,6 +58,19 @@ public class TournamentSoloEntryJpaDao implements TournamentSoloEntryDao {
     }
 
     @Override
+    public List<TournamentSoloEntry> findInPoolEntriesByUser(final User user) {
+        return em.createQuery(
+                        "FROM TournamentSoloEntry tse"
+                                + " WHERE tse.user.id = :userId"
+                                + " AND tse.status = :status"
+                                + " AND tse.tournament.deleted = FALSE",
+                        TournamentSoloEntry.class)
+                .setParameter("userId", user.getId())
+                .setParameter("status", TournamentSoloEntryStatus.IN_POOL)
+                .getResultList();
+    }
+
+    @Override
     public List<TournamentSoloEntry> findActiveByTournament(final long tournamentId) {
         return em.createQuery(
                         "FROM TournamentSoloEntry tse"
@@ -67,6 +80,35 @@ public class TournamentSoloEntryJpaDao implements TournamentSoloEntryDao {
                         TournamentSoloEntry.class)
                 .setParameter("tournamentId", tournamentId)
                 .setParameter("status", TournamentSoloEntryStatus.IN_POOL)
+                .getResultList();
+    }
+
+    @Override
+    public List<TournamentSoloEntry> findByTournamentAndStatus(
+            final long tournamentId, final TournamentSoloEntryStatus status) {
+        return em.createQuery(
+                        "SELECT tse FROM TournamentSoloEntry tse"
+                                + " JOIN FETCH tse.user"
+                                + " WHERE tse.tournament.id = :tournamentId"
+                                + " AND tse.status = :status"
+                                + " ORDER BY tse.joinedAt ASC, tse.id ASC",
+                        TournamentSoloEntry.class)
+                .setParameter("tournamentId", tournamentId)
+                .setParameter("status", status)
+                .getResultList();
+    }
+
+    @Override
+    public List<TournamentSoloEntry> findRegisteredByTournament(final long tournamentId) {
+        return em.createQuery(
+                        "SELECT tse FROM TournamentSoloEntry tse"
+                                + " JOIN FETCH tse.user"
+                                + " WHERE tse.tournament.id = :tournamentId"
+                                + " AND tse.status <> :left"
+                                + " ORDER BY tse.joinedAt ASC, tse.id ASC",
+                        TournamentSoloEntry.class)
+                .setParameter("tournamentId", tournamentId)
+                .setParameter("left", TournamentSoloEntryStatus.LEFT)
                 .getResultList();
     }
 
