@@ -299,7 +299,7 @@
 								<spring:message var="creatingTeamLabel" code="tournament.registration.creatingTeam" />
 								<form method="post" action="${teamCreateAction}" data-submit-guard="true" data-submit-loading-label="${creatingTeamLabel}" class="booking-panel__request-form">
 									<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-									<ui:textInput label="${teamNameLabel}" name="name" maxLength="150" required="${true}" placeholder="${teamNamePlaceholder}" />
+									<ui:textInput label="${teamNameLabel}" name="name" maxLength="32" required="${true}" placeholder="${teamNamePlaceholder}" />
 									<ui:button label="${createTeamLabel}" type="submit" fullWidth="${true}" />
 								</form>
 								<p class="booking-panel__note"><spring:message code="tournament.registration.createTeamNote" /></p>

@@ -40,6 +40,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -215,8 +216,12 @@ public class TournamentController {
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute(
-                    "tournamentErrorCode", "tournament.registration.error.teamNameRequired");
+            final FieldError nameError = bindingResult.getFieldError("name");
+            final String errorCode =
+                    nameError != null
+                            ? "CreateTournamentTeamForm.name." + nameError.getCode()
+                            : "tournament.registration.error.teamNameRequired";
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
             return new ModelAndView("redirect:/tournaments/" + tournamentId);
         }
         try {
