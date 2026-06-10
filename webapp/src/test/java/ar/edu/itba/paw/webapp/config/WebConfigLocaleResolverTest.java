@@ -20,7 +20,8 @@ class WebConfigLocaleResolverTest {
                                 userServiceProvider(),
                                 "jdbc:postgresql://localhost/paw",
                                 "paw",
-                                "paw")
+                                "paw",
+                                false)
                         .localeResolver();
         final MockHttpServletResponse firstResponse = new MockHttpServletResponse();
 

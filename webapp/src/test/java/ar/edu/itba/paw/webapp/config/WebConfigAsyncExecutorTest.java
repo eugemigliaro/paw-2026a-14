@@ -9,7 +9,7 @@ public class WebConfigAsyncExecutorTest {
 
     @Test
     public void mvcAsyncTaskExecutor_usesCallerRunsRejectionPolicy() {
-        final WebConfig webConfig = new WebConfig(null, "jdbc:hsqldb:mem:test", "sa", "sa");
+        final WebConfig webConfig = new WebConfig(null, "jdbc:hsqldb:mem:test", "sa", "sa", false);
 
         final ThreadPoolTaskExecutor executor = webConfig.mvcAsyncTaskExecutor();
 
