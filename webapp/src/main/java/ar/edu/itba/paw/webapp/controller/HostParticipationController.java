@@ -211,11 +211,16 @@ public class HostParticipationController {
             if (request.getMatch() == null || request.getMatch().getId() == null) {
                 continue;
             }
-            disabledByMatchId.put(
-                    request.getMatch().getId(),
+            final Long matchId = request.getMatch().getId();
+            if (disabledByMatchId.containsKey(matchId)) {
+                continue;
+            }
+
+            final boolean disabled =
                     !matchService
                             .actionCapabilities(request.getMatch(), user)
-                            .isCanManageParticipants());
+                            .isCanManageParticipants();
+            disabledByMatchId.put(matchId, disabled);
         }
         return disabledByMatchId;
     }
