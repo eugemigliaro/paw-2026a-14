@@ -13,9 +13,11 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventCategory;
 import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.InvolvementScope;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventType;
 import ar.edu.itba.paw.models.types.PersistableEnum;
+import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -31,6 +33,7 @@ import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -248,7 +251,7 @@ final class MatchDashboardPageSupport {
             final String involvement) {
         final String typePath =
                 UriComponentsBuilder.fromPath(path)
-                        .queryParam("type", "tournament_match")
+                        .queryParam("type", EventType.TOURNAMENT_MATCHES.getDbValue())
                         .build()
                         .encode()
                         .toUriString();
@@ -348,9 +351,9 @@ final class MatchDashboardPageSupport {
             final int page) {
         final Map<String, String> params = new LinkedHashMap<>();
         params.put("page", Integer.toString(page));
-        params.put("type", "tournament_match");
-        if ("PAST".equalsIgnoreCase(selectedFilter)) {
-            params.put("filter", "PAST");
+        params.put("type", EventType.TOURNAMENT_MATCHES.getDbValue());
+        if (EventFilter.PAST.name().equalsIgnoreCase(selectedFilter)) {
+            params.put("filter", EventFilter.PAST.name());
         }
         if (searchQuery != null && !searchQuery.isBlank()) {
             params.put("q", searchQuery);
@@ -366,7 +369,7 @@ final class MatchDashboardPageSupport {
         if (encodedTmStatuses != null) {
             params.put("tmStatus", encodedTmStatuses);
         }
-        if (involvement != null && !"ALL".equals(involvement)) {
+        if (involvement != null && !InvolvementScope.ALL.name().equals(involvement)) {
             params.put("involvement", involvement);
         }
         final UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
@@ -384,17 +387,16 @@ final class MatchDashboardPageSupport {
             final String involvement) {
         final List<FilterOptionViewModel> options = new ArrayList<>();
         final Map<String, String> anyParams = new LinkedHashMap<>();
-        anyParams.put("type", "tournament_match");
-        if ("PAST".equalsIgnoreCase(selectedFilter)) {
-            anyParams.put("filter", "PAST");
+        anyParams.put("type", EventType.TOURNAMENT_MATCHES.getDbValue());
+        if (EventFilter.PAST.name().equalsIgnoreCase(selectedFilter)) {
+            anyParams.put("filter", EventFilter.PAST.name());
         }
         addTournamentMatchFilterParams(anyParams, selectedTmStatuses, involvement);
         options.add(
                 new FilterOptionViewModel(
                         "filter.anySport", null, anyParams, null, selectedSports.isEmpty()));
-
         final List<String> sportValues =
-                List.of("football", "tennis", "basketball", "padel", "other");
+                Arrays.stream(Sport.values()).map(Sport::getDbValue).toList();
         for (final String sportValue : sportValues) {
             final Map<String, String> sportParams = new LinkedHashMap<>(anyParams);
             final List<String> toggledSports = toggleValue(selectedSports, sportValue);
@@ -423,25 +425,25 @@ final class MatchDashboardPageSupport {
             final String involvement) {
         final List<FilterOptionViewModel> options = new ArrayList<>();
         final Map<String, String> anyParams = new LinkedHashMap<>();
-        anyParams.put("type", "tournament_match");
-        if ("PAST".equalsIgnoreCase(selectedFilter)) {
-            anyParams.put("filter", "PAST");
+        anyParams.put("type", EventType.TOURNAMENT_MATCHES.getDbValue());
+        if (EventFilter.PAST.name().equalsIgnoreCase(selectedFilter)) {
+            anyParams.put("filter", EventFilter.PAST.name());
         }
         addTournamentMatchFilterParams(anyParams, List.of(), involvement);
         options.add(
                 new FilterOptionViewModel(
                         "filter.anyStatus", null, anyParams, null, selectedTmStatuses.isEmpty()));
 
-        final boolean isPast = "PAST".equalsIgnoreCase(selectedFilter);
+        final boolean isPast = EventFilter.PAST.name().equalsIgnoreCase(selectedFilter);
         final List<TournamentMatchStatus> visibleStatuses =
                 isPast
                         ? List.of(TournamentMatchStatus.DONE, TournamentMatchStatus.AWAITING_RESULT)
                         : List.of(TournamentMatchStatus.SCHEDULED, TournamentMatchStatus.DONE);
         for (final TournamentMatchStatus status : visibleStatuses) {
             final Map<String, String> statusParams = new LinkedHashMap<>();
-            statusParams.put("type", "tournament_match");
+            statusParams.put("type", EventType.TOURNAMENT_MATCHES.getDbValue());
             if (isPast) {
-                statusParams.put("filter", "PAST");
+                statusParams.put("filter", EventFilter.PAST.name());
             }
             final List<String> toggledStatuses =
                     toggleValue(selectedTmStatuses, status.getDbValue());
@@ -467,9 +469,9 @@ final class MatchDashboardPageSupport {
             final String involvement) {
         final List<FilterOptionViewModel> options = new ArrayList<>();
         final Map<String, String> allParams = new LinkedHashMap<>();
-        allParams.put("type", "tournament_match");
-        if ("PAST".equalsIgnoreCase(selectedFilter)) {
-            allParams.put("filter", "PAST");
+        allParams.put("type", EventType.TOURNAMENT_MATCHES.getDbValue());
+        if (EventFilter.PAST.name().equalsIgnoreCase(selectedFilter)) {
+            allParams.put("filter", EventFilter.PAST.name());
         }
         addTournamentMatchFilterParams(allParams, selectedTmStatuses, null);
         options.add(
@@ -478,27 +480,27 @@ final class MatchDashboardPageSupport {
                         null,
                         allParams,
                         null,
-                        "ALL".equals(involvement)));
+                        InvolvementScope.ALL.name().equals(involvement)));
 
         final Map<String, String> hostParams = new LinkedHashMap<>(allParams);
-        hostParams.put("involvement", "HOST");
+        hostParams.put("involvement", InvolvementScope.HOST.name());
         options.add(
                 new FilterOptionViewModel(
                         "matches.tournament.involvement.host",
                         null,
                         hostParams,
                         null,
-                        "HOST".equals(involvement)));
+                        InvolvementScope.HOST.name().equals(involvement)));
 
         final Map<String, String> participantParams = new LinkedHashMap<>(allParams);
-        participantParams.put("involvement", "PARTICIPANT");
+        participantParams.put("involvement", InvolvementScope.PARTICIPANT.name());
         options.add(
                 new FilterOptionViewModel(
                         "matches.tournament.involvement.participant",
                         null,
                         participantParams,
                         null,
-                        "PARTICIPANT".equals(involvement)));
+                        InvolvementScope.PARTICIPANT.name().equals(involvement)));
         return List.copyOf(options);
     }
 
@@ -510,7 +512,7 @@ final class MatchDashboardPageSupport {
         if (encodedTmStatuses != null) {
             params.put("tmStatus", encodedTmStatuses);
         }
-        if (involvement != null && !"ALL".equals(involvement)) {
+        if (involvement != null && !InvolvementScope.ALL.name().equals(involvement)) {
             params.put("involvement", involvement);
         }
     }
@@ -741,7 +743,7 @@ final class MatchDashboardPageSupport {
         if ("/events".equals(path) && selectedType == EventType.TOURNAMENT) {
             params.put("type", EventType.TOURNAMENT.getDbValue());
         }
-        if ("past".equalsIgnoreCase(selectedFilter)) {
+        if (EventFilter.PAST.name().equalsIgnoreCase(selectedFilter)) {
             params.put("filter", EventFilter.PAST.name());
         }
         addCommonQueryParams(
@@ -896,7 +898,8 @@ final class MatchDashboardPageSupport {
             final List<String> selectedSports,
             final List<String> selectedVisibility,
             final List<String> selectedCategories) {
-        return List.of(
+        final List<FilterOptionViewModel> options = new ArrayList<>();
+        options.add(
                 filterOption(
                         path,
                         selectedType,
@@ -912,87 +915,27 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         selectedCategories,
                         selectedSports.isEmpty(),
-                        "filter.anySport"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        toggleValue(selectedSports, "football"),
-                        selectedVisibility,
-                        selectedCategories,
-                        selectedSports.contains("football"),
-                        "sport.football"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        toggleValue(selectedSports, "tennis"),
-                        selectedVisibility,
-                        selectedCategories,
-                        selectedSports.contains("tennis"),
-                        "sport.tennis"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        toggleValue(selectedSports, "basketball"),
-                        selectedVisibility,
-                        selectedCategories,
-                        selectedSports.contains("basketball"),
-                        "sport.basketball"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        toggleValue(selectedSports, "padel"),
-                        selectedVisibility,
-                        selectedCategories,
-                        selectedSports.contains("padel"),
-                        "sport.padel"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        toggleValue(selectedSports, "other"),
-                        selectedVisibility,
-                        selectedCategories,
-                        selectedSports.contains("other"),
-                        "sport.other"));
+                        "filter.anySport"));
+        for (final Sport sport : Sport.values()) {
+            options.add(
+                    filterOption(
+                            path,
+                            selectedType,
+                            selectedFilter,
+                            searchQuery,
+                            sort,
+                            startDate,
+                            endDate,
+                            minPrice,
+                            maxPrice,
+                            selectedStatuses,
+                            toggleValue(selectedSports, sport.getDbValue()),
+                            selectedVisibility,
+                            selectedCategories,
+                            selectedSports.contains(sport.getDbValue()),
+                            "sport." + sport.getDbValue()));
+        }
+        return options;
     }
 
     private static List<FilterOptionViewModel> buildStatusFilterOptions(
@@ -1066,7 +1009,8 @@ final class MatchDashboardPageSupport {
             final List<String> selectedSports,
             final List<String> selectedVisibility,
             final List<String> selectedCategories) {
-        return List.of(
+        final List<FilterOptionViewModel> options = new ArrayList<>();
+        options.add(
                 filterOption(
                         path,
                         selectedType,
@@ -1082,71 +1026,27 @@ final class MatchDashboardPageSupport {
                         selectedVisibility,
                         List.of(),
                         selectedCategories.isEmpty(),
-                        "filter.anyCategory"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        toggleValue(selectedCategories, "joined"),
-                        selectedCategories.contains("joined"),
-                        "category.joined"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        toggleValue(selectedCategories, "invited"),
-                        selectedCategories.contains("invited"),
-                        "category.invited"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        toggleValue(selectedCategories, "pending"),
-                        selectedCategories.contains("pending"),
-                        "category.pending"),
-                filterOption(
-                        path,
-                        selectedType,
-                        selectedFilter,
-                        searchQuery,
-                        sort,
-                        startDate,
-                        endDate,
-                        minPrice,
-                        maxPrice,
-                        selectedStatuses,
-                        selectedSports,
-                        selectedVisibility,
-                        toggleValue(selectedCategories, "hosted"),
-                        selectedCategories.contains("hosted"),
-                        "category.hosted"));
+                        "filter.anyCategory"));
+        for (final EventCategory category : EventCategory.values()) {
+            options.add(
+                    filterOption(
+                            path,
+                            selectedType,
+                            selectedFilter,
+                            searchQuery,
+                            sort,
+                            startDate,
+                            endDate,
+                            minPrice,
+                            maxPrice,
+                            selectedStatuses,
+                            selectedSports,
+                            selectedVisibility,
+                            toggleValue(selectedCategories, category.getQueryValue()),
+                            selectedCategories.contains(category.getQueryValue()),
+                            "category." + category.getQueryValue()));
+        }
+        return options;
     }
 
     private static DateRangeBounds dateRangeBounds(final EventFilter selectedFilter) {
