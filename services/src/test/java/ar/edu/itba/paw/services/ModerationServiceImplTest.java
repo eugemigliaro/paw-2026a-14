@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PlayerReview;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
@@ -18,11 +19,14 @@ import ar.edu.itba.paw.models.types.ReportResolution;
 import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.persistence.ModerationReportDao;
 import ar.edu.itba.paw.persistence.UserBanDao;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
+import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -57,6 +61,8 @@ public class ModerationServiceImplTest {
     @Mock private MatchParticipantDataService matchParticipantDataService;
     @Mock private PlayerReviewDataService playerReviewDataService;
     @Mock private MatchNotificationService matchNotificationService;
+    @Mock private TournamentDataService tournamentDataService;
+    @Mock private TournamentMailService tournamentMailService;
 
     private RecordingMailDispatchService mailDispatchService;
     private RecordingTournamentRegistrationService tournamentRegistrationService;
@@ -66,6 +72,12 @@ public class ModerationServiceImplTest {
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
         tournamentRegistrationService = new RecordingTournamentRegistrationService();
+        Mockito.lenient()
+                .when(tournamentDataService.findNotStartedHostedByHost(Mockito.any()))
+                .thenReturn(List.of());
+        Mockito.lenient()
+                .when(tournamentDataService.update(Mockito.any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         moderationService =
                 new ModerationServiceImpl(
                         userBanDao,
@@ -77,6 +89,8 @@ public class ModerationServiceImplTest {
                         mailDispatchService,
                         matchNotificationService,
                         tournamentRegistrationService,
+                        tournamentDataService,
+                        tournamentMailService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -93,6 +107,8 @@ public class ModerationServiceImplTest {
                         mailDispatchService,
                         matchNotificationService,
                         tournamentRegistrationService,
+                        tournamentDataService,
+                        tournamentMailService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -109,6 +125,8 @@ public class ModerationServiceImplTest {
                         mailDispatchService,
                         matchNotificationService,
                         tournamentRegistrationService,
+                        tournamentDataService,
+                        tournamentMailService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -122,6 +140,12 @@ public class ModerationServiceImplTest {
         messageSource.addMessage("ban.period.permanent", Locale.getDefault(), "Permanent");
         messageSource.addMessage(
                 "moderation.action.defaultReason", Locale.getDefault(), "Moderation action reason");
+        messageSource.addMessage(
+                "tournament.cancel.reason.hostBanned", Locale.ENGLISH, "The host was banned.");
+        messageSource.addMessage(
+                "tournament.cancel.reason.hostBanned",
+                Locale.forLanguageTag("es"),
+                "El organizador fue suspendido.");
         return messageSource;
     }
 
@@ -193,6 +217,81 @@ public class ModerationServiceImplTest {
                 7);
 
         Assertions.assertEquals(List.of(bannedUser), tournamentRegistrationService.withdrawnUsers);
+    }
+
+    @Test
+    public void resolveReportWithUserBan_cancelsBannedHostsNotStartedTournaments() {
+        final ModerationReport report = sampleUserReport();
+        final User bannedUser = UserUtils.getUser(88L);
+        final User adminUser = UserUtils.getUser(99L);
+        final Tournament hostedTournament =
+                tournament(500L, bannedUser, TournamentStatus.REGISTRATION);
+        final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(7L * 24L * 3600L);
+
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+        Mockito.when(
+                        moderationReportDao.resolveReport(
+                                Mockito.eq(77L),
+                                Mockito.eq(adminUser),
+                                Mockito.eq(ReportResolution.USER_BANNED),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.eq(ReportStatus.RESOLVED)))
+                .thenReturn(true);
+        Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
+                .thenReturn(new UserBan(10L, report, expectedBannedUntil));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(bannedUser));
+        Mockito.when(tournamentDataService.findNotStartedHostedByHost(bannedUser))
+                .thenReturn(List.of(hostedTournament));
+
+        moderationService.resolveReport(
+                77L,
+                adminUser,
+                ReportResolution.USER_BANNED,
+                "Repeated abuse",
+                ReportStatus.RESOLVED,
+                7);
+
+        Assertions.assertEquals(TournamentStatus.CANCELLED, hostedTournament.getStatus());
+        Assertions.assertEquals(FIXED_NOW, hostedTournament.getCancelledAt());
+    }
+
+    @Test
+    public void resolveReportWithUserBan_localizesTournamentCancelReasonToAdminLocale() {
+        final ModerationReport report = sampleUserReport();
+        final User bannedUser = UserUtils.getUser(88L);
+        final User spanishAdmin =
+                new User(99L, "admin@test.com", "admin", "Admin", "User", null, null, "es");
+        final Tournament hostedTournament =
+                tournament(500L, bannedUser, TournamentStatus.REGISTRATION);
+        final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(7L * 24L * 3600L);
+
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+        Mockito.when(
+                        moderationReportDao.resolveReport(
+                                Mockito.eq(77L),
+                                Mockito.any(),
+                                Mockito.eq(ReportResolution.USER_BANNED),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.eq(ReportStatus.RESOLVED)))
+                .thenReturn(true);
+        Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
+                .thenReturn(new UserBan(10L, report, expectedBannedUntil));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(bannedUser));
+        Mockito.when(tournamentDataService.findNotStartedHostedByHost(bannedUser))
+                .thenReturn(List.of(hostedTournament));
+
+        moderationService.resolveReport(
+                77L,
+                spanishAdmin,
+                ReportResolution.USER_BANNED,
+                "Repeated abuse",
+                ReportStatus.RESOLVED,
+                7);
+
+        Assertions.assertEquals(
+                "El organizador fue suspendido.", hostedTournament.getCancelReason());
     }
 
     @Test
@@ -997,5 +1096,32 @@ public class ModerationServiceImplTest {
         public ar.edu.itba.paw.models.Tournament closeRegistration(final long tournamentId) {
             throw new UnsupportedOperationException();
         }
+    }
+
+    private static Tournament tournament(
+            final long id, final User host, final TournamentStatus status) {
+        return new Tournament(
+                id,
+                host,
+                Sport.FOOTBALL,
+                "Saturday Cup",
+                "Friendly tournament",
+                "Club Street 123",
+                -34.60,
+                -58.38,
+                FIXED_NOW.plusSeconds(86400),
+                FIXED_NOW.plusSeconds(90000),
+                BigDecimal.ZERO,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                4,
+                5,
+                false,
+                true,
+                FIXED_NOW.minusSeconds(3600),
+                FIXED_NOW.plusSeconds(3600),
+                status,
+                FIXED_NOW,
+                FIXED_NOW);
     }
 }

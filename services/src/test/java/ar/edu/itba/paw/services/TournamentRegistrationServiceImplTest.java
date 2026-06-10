@@ -211,6 +211,71 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void withdrawFromOpenRegistrationsRemovesUserFromRegistrationTeamAndDeletesEmptyTeam() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(2L);
+        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
+        final TournamentTeam team =
+                new TournamentTeam(
+                        50L,
+                        tournament,
+                        "Falcons",
+                        TournamentTeamOrigin.TEAM_DRAFT,
+                        null,
+                        FIXED_NOW);
+        final RecordingTeamDataService teamData = new RecordingTeamDataService();
+        teamData.tournamentsByMember = List.of(tournament);
+        teamData.userTeam = Optional.of(team);
+        teamData.membersAfterRemoval = 0L;
+        final TournamentRegistrationServiceImpl service =
+                new TournamentRegistrationServiceImpl(
+                        tournamentDataService,
+                        tournamentSoloEntryDao,
+                        teamData,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+        Mockito.when(tournamentSoloEntryDao.findInPoolEntriesByUser(user)).thenReturn(List.of());
+
+        // 2. Exercise
+        service.withdrawFromOpenRegistrations(user);
+
+        // 3. Assert
+        Assertions.assertEquals(List.of(team), teamData.deletedTeams);
+    }
+
+    @Test
+    public void withdrawFromOpenRegistrationsLeavesTeamsOnceBracketSetupStarts() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(2L);
+        final Tournament tournament =
+                tournament(11L, UserUtils.getUser(1L), 4, 1, TournamentStatus.BRACKET_SETUP);
+        final TournamentTeam team =
+                new TournamentTeam(
+                        50L,
+                        tournament,
+                        "Falcons",
+                        TournamentTeamOrigin.TEAM_DRAFT,
+                        null,
+                        FIXED_NOW);
+        final RecordingTeamDataService teamData = new RecordingTeamDataService();
+        teamData.tournamentsByMember = List.of(tournament);
+        teamData.userTeam = Optional.of(team);
+        teamData.membersAfterRemoval = 0L;
+        final TournamentRegistrationServiceImpl service =
+                new TournamentRegistrationServiceImpl(
+                        tournamentDataService,
+                        tournamentSoloEntryDao,
+                        teamData,
+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+        Mockito.when(tournamentSoloEntryDao.findInPoolEntriesByUser(user)).thenReturn(List.of());
+
+        // 2. Exercise
+        service.withdrawFromOpenRegistrations(user);
+
+        // 3. Assert
+        Assertions.assertTrue(teamData.deletedTeams.isEmpty());
+    }
+
+    @Test
     public void listTeamMembersAfterRegistrationClosesReturnsAssignedMembers() {
         // 1. Arrange
         final Tournament tournament =
@@ -946,6 +1011,7 @@ public class TournamentRegistrationServiceImplTest {
         private Optional<TournamentTeam> userTeam = Optional.empty();
         private long membersAfterRemoval = 0L;
         private final List<TournamentTeam> deletedTeams = new ArrayList<>();
+        private List<Tournament> tournamentsByMember = new ArrayList<>();
 
         @Override
         public Optional<TournamentTeam> findUserTeam(final long tournamentId, final long userId) {
@@ -1025,7 +1091,7 @@ public class TournamentRegistrationServiceImplTest {
 
         @Override
         public List<Tournament> findTournamentsByMember(final User user) {
-            throw new UnsupportedOperationException();
+            return tournamentsByMember;
         }
 
         @Override

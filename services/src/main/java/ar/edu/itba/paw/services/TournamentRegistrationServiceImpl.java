@@ -119,12 +119,26 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     public void withdrawFromOpenRegistrations(final User user) {
         validateUser(user);
         final Instant now = Instant.now(clock);
+
+        // removing if in solo entry
         for (final TournamentSoloEntry soloEntry :
                 tournamentSoloEntryDao.findInPoolEntriesByUser(user)) {
             soloEntry.setStatus(TournamentSoloEntryStatus.LEFT);
             soloEntry.setAssignedTeam(null);
             soloEntry.setLeftAt(now);
             tournamentSoloEntryDao.update(soloEntry);
+        }
+
+        // removing if in a team
+        for (final Tournament tournament :
+                tournamentTeamDataService.findTournamentsByMember(user)) {
+            if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
+                continue;
+            }
+            tournamentDataService.lockForRegistration(tournament.getId());
+            tournamentTeamDataService
+                    .findUserTeam(tournament.getId(), user.getId())
+                    .ifPresent(team -> removeFromTeam(team, user));
         }
     }
 
@@ -212,6 +226,10 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
                         .findUserTeam(tournamentId, user.getId())
                         .orElseThrow(TournamentRegistrationNotOnTeamException::new);
 
+        removeFromTeam(team, user);
+    }
+
+    private void removeFromTeam(final TournamentTeam team, final User user) {
         tournamentTeamDataService.removeMember(team, user);
         if (tournamentTeamDataService.countMembers(team.getId()) == 0) {
             tournamentTeamDataService.delete(team);
