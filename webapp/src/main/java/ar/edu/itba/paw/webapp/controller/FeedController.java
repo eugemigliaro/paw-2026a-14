@@ -96,10 +96,6 @@ public class FeedController {
             @CurrentUser final User user,
             @Valid @ModelAttribute("searchForm") final SearchForm searchForm,
             final BindingResult bindingResult,
-            @RequestParam(value = "email", required = false)
-                    final String
-                            email, // TODO: remove - I don't know what it's being used for (just url
-            // building apparently)
             final HttpSession session,
             final Locale locale) {
         // A malformed free-text query should not produce an error page: render the
@@ -170,8 +166,7 @@ public class FeedController {
                         selectedSort,
                         selectedSports,
                         selectedDateRange,
-                        selectedPriceRange,
-                        email));
+                        selectedPriceRange));
         mav.addObject("nearMeUnavailable", nearMeUnavailable);
         if (EventType.TOURNAMENT == searchForm.getType()) {
             final PaginatedResult<Tournament> result =
@@ -200,7 +195,6 @@ public class FeedController {
                     selectedPriceRange,
                     result,
                     locale,
-                    email,
                     exploreLocation);
         } else {
             final PaginatedResult<Match> result =
@@ -229,7 +223,6 @@ public class FeedController {
                     selectedPriceRange,
                     result,
                     locale,
-                    email,
                     exploreLocation);
         }
         mav.addObject("nearMeAvailable", exploreLocation != null);
@@ -286,7 +279,6 @@ public class FeedController {
             final PriceRange selectedPriceRange,
             final PaginatedResult<Match> result,
             final Locale locale,
-            final String email,
             final ExploreLocation exploreLocation) {
 
         addFeedPageAttributes(
@@ -299,8 +291,7 @@ public class FeedController {
                         selectedDateRange,
                         selectedStartDateValue,
                         selectedEndDateValue,
-                        selectedPriceRange,
-                        email),
+                        selectedPriceRange),
                 result.getItems(),
                 EventType.MATCH,
                 EventCardAttributeUtils.matchSpotsBadgeCodes(result.getItems()),
@@ -327,8 +318,7 @@ public class FeedController {
                                         selectedSports,
                                         selectedDateRange,
                                         selectedPriceRange,
-                                        page,
-                                        email)),
+                                        page)),
                 result.hasPrevious()
                         ? buildUrl(
                                 query,
@@ -337,8 +327,7 @@ public class FeedController {
                                 selectedSports,
                                 selectedDateRange,
                                 selectedPriceRange,
-                                result.getPage() - 1,
-                                email)
+                                result.getPage() - 1)
                         : null,
                 result.hasNext()
                         ? buildUrl(
@@ -348,8 +337,7 @@ public class FeedController {
                                 selectedSports,
                                 selectedDateRange,
                                 selectedPriceRange,
-                                result.getPage() + 1,
-                                email)
+                                result.getPage() + 1)
                         : null);
     }
 
@@ -366,7 +354,6 @@ public class FeedController {
             final PriceRange selectedPriceRange,
             final PaginatedResult<Tournament> result,
             final Locale locale,
-            final String email,
             final ExploreLocation exploreLocation) {
         final List<Long> tournamentIds = result.getItems().stream().map(Tournament::getId).toList();
 
@@ -380,8 +367,7 @@ public class FeedController {
                         selectedDateRange,
                         selectedStartDateValue,
                         selectedEndDateValue,
-                        selectedPriceRange,
-                        email),
+                        selectedPriceRange),
                 result.getItems(),
                 EventType.TOURNAMENT,
                 EventCardAttributeUtils.tournamentBadgeCodes(result.getItems()),
@@ -408,8 +394,7 @@ public class FeedController {
                                         selectedSports,
                                         selectedDateRange,
                                         selectedPriceRange,
-                                        page,
-                                        email)),
+                                        page)),
                 result.hasPrevious()
                         ? buildUrl(
                                 query,
@@ -418,8 +403,7 @@ public class FeedController {
                                 selectedSports,
                                 selectedDateRange,
                                 selectedPriceRange,
-                                result.getPage() - 1,
-                                email)
+                                result.getPage() - 1)
                         : null,
                 result.hasNext()
                         ? buildUrl(
@@ -429,8 +413,7 @@ public class FeedController {
                                 selectedSports,
                                 selectedDateRange,
                                 selectedPriceRange,
-                                result.getPage() + 1,
-                                email)
+                                result.getPage() + 1)
                         : null);
     }
 
@@ -468,8 +451,7 @@ public class FeedController {
             final EventSort selectedSort,
             final List<String> selectedSports,
             final DateRange selectedDateRange,
-            final PriceRange selectedPriceRange,
-            final String email) {
+            final PriceRange selectedPriceRange) {
         final List<SelectOptionViewModel> sortOptions = new ArrayList<>();
         sortOptions.add(
                 sortOption(
@@ -479,7 +461,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        email,
                         EventSort.SOONEST,
                         "feed.sort.soonest"));
         sortOptions.add(
@@ -490,7 +471,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        email,
                         EventSort.PRICE_LOW,
                         "feed.sort.price"));
         if (selectedType != EventType.TOURNAMENT) {
@@ -502,7 +482,6 @@ public class FeedController {
                             selectedSports,
                             selectedDateRange,
                             selectedPriceRange,
-                            email,
                             EventSort.SPOTS_DESC,
                             "feed.sort.spots"));
         }
@@ -514,7 +493,6 @@ public class FeedController {
                         selectedSports,
                         selectedDateRange,
                         selectedPriceRange,
-                        email,
                         EventSort.DISTANCE,
                         "feed.sort.distance"));
         return List.copyOf(sortOptions);
@@ -527,7 +505,6 @@ public class FeedController {
             final List<String> selectedSports,
             final DateRange selectedDateRange,
             final PriceRange selectedPriceRange,
-            final String email,
             final EventSort sort,
             final String labelCode) {
         return new SelectOptionViewModel(
@@ -536,7 +513,6 @@ public class FeedController {
                 buildParamsMap(
                         query,
                         1,
-                        email,
                         selectedType,
                         sort,
                         selectedSports,
@@ -553,9 +529,9 @@ public class FeedController {
             final DateRange selectedDateRange,
             final String selectedStartDateValue,
             final String selectedEndDateValue,
-            final PriceRange selectedPriceRange,
-            final String email) {
+            final PriceRange selectedPriceRange) {
         final List<FilterGroupViewModel> groups = new ArrayList<>();
+
         groups.add(
                 new FilterGroupViewModel(
                         "filter.eventType",
@@ -566,7 +542,6 @@ public class FeedController {
                                         buildParamsMap(
                                                 query,
                                                 1,
-                                                email,
                                                 EventType.MATCH,
                                                 selectedSort,
                                                 selectedSports,
@@ -580,7 +555,6 @@ public class FeedController {
                                         buildParamsMap(
                                                 query,
                                                 1,
-                                                email,
                                                 EventType.TOURNAMENT,
                                                 selectedSort,
                                                 selectedSports,
@@ -588,94 +562,46 @@ public class FeedController {
                                                 selectedPriceRange),
                                         null,
                                         selectedType == EventType.TOURNAMENT))));
-        groups.add(
-                new FilterGroupViewModel(
-                        "filter.categories",
-                        List.of(
-                                new FilterOptionViewModel(
-                                        "filter.anySport",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                List.of(),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        selectedSports.isEmpty()),
-                                new FilterOptionViewModel(
-                                        "sport.football",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.FOOTBALL),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.FOOTBALL)),
-                                new FilterOptionViewModel(
-                                        "sport.tennis",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.TENNIS),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.TENNIS)),
-                                new FilterOptionViewModel(
-                                        "sport.basketball",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.BASKETBALL),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.BASKETBALL)),
-                                new FilterOptionViewModel(
-                                        "sport.padel",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.PADEL),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.PADEL)),
-                                new FilterOptionViewModel(
-                                        "sport.other",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.OTHER),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.OTHER)))));
+
+        final List<FilterOptionViewModel> sports = new ArrayList<>();
+
+        sports.add(
+                new FilterOptionViewModel(
+                        "filter.anySport",
+                        null,
+                        buildParamsMap(
+                                query,
+                                1,
+                                selectedType,
+                                selectedSort,
+                                List.of(),
+                                selectedDateRange,
+                                selectedPriceRange),
+                        null,
+                        selectedSports.isEmpty()));
+        for (Sport sport : Sport.values()) {
+            if (sport == Sport.OTHER
+                    && (selectedType == EventType.TOURNAMENT
+                            || selectedType == EventType.TOURNAMENT_MATCHES)) {
+                continue;
+            }
+            sports.add(
+                    new FilterOptionViewModel(
+                            "sport." + sport.name().toLowerCase(),
+                            null,
+                            buildParamsMap(
+                                    query,
+                                    1,
+                                    selectedType,
+                                    selectedSort,
+                                    toggleSport(selectedSports, sport),
+                                    selectedDateRange,
+                                    selectedPriceRange),
+                            null,
+                            isSportSelected(selectedSports, sport)));
+        }
+
+        groups.add(new FilterGroupViewModel("filter.categories", sports));
         return List.copyOf(groups);
     }
 
@@ -711,7 +637,6 @@ public class FeedController {
     private static Map<String, String> buildParamsMap(
             final String query,
             final int page,
-            final String email,
             final EventType selectedType,
             final EventSort selectedSort,
             final List<String> selectedSports,
@@ -721,9 +646,6 @@ public class FeedController {
         params.put("q", query == null ? "" : query);
         params.put("sort", selectedSort.getQueryValue());
         params.put("page", Integer.toString(page));
-        if (email != null && !email.isBlank()) {
-            params.put("email", email);
-        }
         if (selectedType == EventType.TOURNAMENT) {
             params.put("type", EventType.TOURNAMENT.getDbValue());
         }
@@ -757,13 +679,11 @@ public class FeedController {
             final List<String> selectedSports,
             final DateRange selectedDateRange,
             final PriceRange selectedPriceRange,
-            final int page,
-            final String email) {
+            final int page) {
         final UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/");
         buildParamsMap(
                         query,
                         page,
-                        email,
                         selectedType,
                         selectedSort,
                         selectedSports,

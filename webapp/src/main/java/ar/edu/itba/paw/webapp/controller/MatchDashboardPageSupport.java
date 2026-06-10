@@ -396,7 +396,10 @@ final class MatchDashboardPageSupport {
                 new FilterOptionViewModel(
                         "filter.anySport", null, anyParams, null, selectedSports.isEmpty()));
         final List<String> sportValues =
-                Arrays.stream(Sport.values()).map(Sport::getDbValue).toList();
+                Arrays.stream(Sport.values())
+                        .filter(s -> s != Sport.OTHER)
+                        .map(Sport::getDbValue)
+                        .toList();
         for (final String sportValue : sportValues) {
             final Map<String, String> sportParams = new LinkedHashMap<>(anyParams);
             final List<String> toggledSports = toggleValue(selectedSports, sportValue);
@@ -792,24 +795,17 @@ final class MatchDashboardPageSupport {
             params.put("maxPrice", maxPrice.toPlainString());
         }
 
-        final String encodedStatuses =
-                encodeCsv(selectedStatuses); // TODO: is this necessary? is there a better way to do
-        // it?
-        final String encodedSports = encodeCsv(selectedSports);
-        final String encodedVisibility = encodeCsv(selectedVisibility);
-        final String encodedCategories = encodeCsv(selectedCategories);
+        putCsvParam(params, "status", selectedStatuses);
+        putCsvParam(params, "sport", selectedSports);
+        putCsvParam(params, "visibility", selectedVisibility);
+        putCsvParam(params, "category", selectedCategories);
+    }
 
-        if (encodedStatuses != null) {
-            params.put("status", encodedStatuses);
-        }
-        if (encodedSports != null) {
-            params.put("sport", encodedSports);
-        }
-        if (encodedVisibility != null) {
-            params.put("visibility", encodedVisibility);
-        }
-        if (encodedCategories != null) {
-            params.put("category", encodedCategories);
+    private static void putCsvParam(
+            final Map<String, String> params, final String name, final List<String> values) {
+        final String encoded = encodeCsv(values);
+        if (encoded != null) {
+            params.put(name, encoded);
         }
     }
 
@@ -917,6 +913,9 @@ final class MatchDashboardPageSupport {
                         selectedSports.isEmpty(),
                         "filter.anySport"));
         for (final Sport sport : Sport.values()) {
+            if (selectedType == EventType.TOURNAMENT && sport == Sport.OTHER) {
+                continue;
+            }
             options.add(
                     filterOption(
                             path,

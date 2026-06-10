@@ -1,3 +1,4 @@
+-- Mirror of prod V21. Postgres DOUBLE PRECISION becomes HSQLDB DOUBLE.
 ALTER TABLE matches
 	ADD COLUMN latitude DOUBLE;
 

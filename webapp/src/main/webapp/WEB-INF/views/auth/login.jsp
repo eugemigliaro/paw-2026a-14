@@ -36,8 +36,8 @@
 								<spring:message code="auth.login.notice.logout" />
 							</p>
 						</c:if>
-						<c:if test="${not empty loginError}">
-							<p class="auth-notice auth-notice--error"><c:out value="${loginError}" /></p>
+						<c:if test="${not empty loginErrorCode}">
+							<p class="auth-notice auth-notice--error"><spring:message code="auth.login.error.${loginErrorCode}" /></p>
 						</c:if>
 
 						<spring:message var="emailLabel" code="form.email.label" />

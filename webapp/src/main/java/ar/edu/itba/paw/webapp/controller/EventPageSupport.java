@@ -157,9 +157,10 @@ final class EventPageSupport {
         final MatchManagementPermissions managementPermissions =
                 matchService.getMatchManagementPermissions(match, currentUser);
         final boolean isHost = managementPermissions.isHostViewer();
+        final boolean hostCanManage = managementPermissions.canManage();
         final boolean hostCanManageParticipants = managementPermissions.canManageParticipants();
         final List<User> pendingHostRequests =
-                hostCanManageParticipants && isApprovalRequired
+                hostCanManage && isApprovalRequired
                         ? matchParticipationService.findPendingRequests(eventId, currentUser)
                         : List.of();
         final List<User> pendingHostInvites =
@@ -178,6 +179,7 @@ final class EventPageSupport {
         final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
         final MatchInteractionState interactionState =
                 matchService.getMatchInteractionState(match, seriesOccurrences, currentUser);
+        final HostAction resolvedHostAction = HostAction.fromCode(hostAction).orElse(null);
         final boolean suppressReservationErrors =
                 interactionState.hasPendingJoinRequest()
                         || interactionState.isSeriesJoinRequestPending();
@@ -292,7 +294,7 @@ final class EventPageSupport {
 
         mav.addObject("hostViewer", isHost);
         mav.addObject("isPrivateEvent", isPrivateEvent);
-        mav.addObject("hostCanManage", managementPermissions.canManage());
+        mav.addObject("hostCanManage", hostCanManage);
         mav.addObject("hostCanManageParticipants", hostCanManageParticipants);
         mav.addObject("hostCanEdit", managementPermissions.canEdit());
         mav.addObject("hostCanCancel", managementPermissions.canCancel());
@@ -302,7 +304,8 @@ final class EventPageSupport {
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
         mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
-        mav.addObject("hostActionCode", hostAction);
+        mav.addObject(
+                "hostActionCode", resolvedHostAction == null ? null : resolvedHostAction.getCode());
         mav.addObject("hostActionErrorNotice", hostActionError);
         mav.addObject("hostActionTarget", hostActionTarget);
         mav.addObject("hostPendingRequests", pendingHostRequests);
@@ -310,7 +313,7 @@ final class EventPageSupport {
         mav.addObject(
                 "hostPendingRequestsOpen",
                 !pendingHostRequests.isEmpty()
-                        || isRequestHostAction(hostAction)
+                        || (resolvedHostAction != null && resolvedHostAction.targetsRequests())
                         || "requests".equalsIgnoreCase(hostActionTarget));
         mav.addObject("hostPendingInvites", pendingHostInvites);
         mav.addObject("hostDeclinedInvites", declinedHostInvites);
@@ -319,7 +322,7 @@ final class EventPageSupport {
                 "hostPendingInvitesOpen",
                 !pendingHostInvites.isEmpty()
                         || !declinedHostInvites.isEmpty()
-                        || isInviteHostAction(hostAction)
+                        || (resolvedHostAction != null && resolvedHostAction.targetsInvites())
                         || "invites".equalsIgnoreCase(hostActionTarget));
         mav.addObject("hostInviteActionPath", "/host/matches/" + eventId + "/invites");
         mav.addObject("hostInviteEmail", hostInviteEmail);
@@ -576,21 +579,6 @@ final class EventPageSupport {
             return null;
         }
         return messageSource.getMessage("invite.error." + code, null, locale);
-    }
-
-    private static boolean isRequestHostAction(
-            final String
-                    hostAction) { // TODO: use an enum for host actions instead of strings ¿? If
-        // changed, change param typing in controller and add enum
-        // converter to WebConfig
-        return "requestApproved".equalsIgnoreCase(hostAction)
-                || "requestRejected".equalsIgnoreCase(hostAction);
-    }
-
-    private static boolean isInviteHostAction(
-            final String hostAction) { // TODO: same as isRequestHostAction
-        return "inviteSent".equalsIgnoreCase(hostAction)
-                || "seriesInviteSent".equalsIgnoreCase(hostAction);
     }
 
     private record EventDisplayState(String key, String tone) {}

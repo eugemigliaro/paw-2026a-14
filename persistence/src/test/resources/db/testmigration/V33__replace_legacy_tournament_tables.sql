@@ -1,10 +1,18 @@
+-- Mirror of prod V33. Drops the legacy tournament schema and rebuilds it.
+-- Prod relies on BIGSERIAL auto-creating the <table>_id_seq sequences; HSQLDB
+-- does not, so the named sequences Hibernate expects are created explicitly
+-- here. pairing_strategy is intentionally absent (added in V34, matching prod).
 DROP TABLE tournament_matches IF EXISTS CASCADE;
 DROP TABLE tournament_solo_entries IF EXISTS CASCADE;
 DROP TABLE tournament_team_members IF EXISTS CASCADE;
 DROP TABLE tournament_teams IF EXISTS CASCADE;
 DROP TABLE tournaments IF EXISTS CASCADE;
 
+CREATE SEQUENCE tournaments_id_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE tournament_teams_id_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE tournament_team_members_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE tournament_solo_entries_id_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE tournament_matches_id_seq START WITH 1 INCREMENT BY 1;
 
 CREATE TABLE tournaments (
 	id BIGINT PRIMARY KEY DEFAULT NEXT VALUE FOR tournaments_id_seq,
@@ -27,7 +35,6 @@ CREATE TABLE tournaments (
 	registration_opens_at TIMESTAMP NOT NULL,
 	registration_closes_at TIMESTAMP NOT NULL,
 	status VARCHAR(40) NOT NULL DEFAULT 'registration',
-	pairing_strategy VARCHAR(30),
 	registration_closed_at TIMESTAMP,
 	bracket_generated_at TIMESTAMP,
 	started_at TIMESTAMP,
@@ -50,9 +57,6 @@ CREATE TABLE tournaments (
 	CONSTRAINT ck_tournaments_play_window CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at),
 	CONSTRAINT ck_tournaments_status CHECK (
 		status IN ('registration', 'bracket_setup', 'in_progress', 'completed', 'cancelled')
-	),
-	CONSTRAINT ck_tournaments_pairing_strategy CHECK (
-		pairing_strategy IS NULL OR pairing_strategy IN ('manual', 'random', 'elo')
 	),
 	CONSTRAINT ck_tournaments_coordinates_pair CHECK (
 		(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)
@@ -82,6 +86,8 @@ CREATE TABLE tournament_teams (
 );
 
 CREATE INDEX idx_tournament_teams_tournament_id ON tournament_teams(tournament_id);
+-- Prod uses a partial unique index (... WHERE seed_position IS NOT NULL);
+-- HSQLDB's unique index keeps NULL seeds distinct under SQL NULL semantics.
 CREATE UNIQUE INDEX uq_tournament_teams_tournament_seed ON tournament_teams(tournament_id, seed_position);
 
 CREATE TABLE tournament_team_members (
@@ -170,5 +176,8 @@ CREATE INDEX idx_tournament_matches_team_b_id ON tournament_matches(team_b_id);
 CREATE INDEX idx_tournament_matches_winner_team_id ON tournament_matches(winner_team_id);
 CREATE INDEX idx_tournament_matches_parent_match_a_id ON tournament_matches(parent_match_a_id);
 CREATE INDEX idx_tournament_matches_parent_match_b_id ON tournament_matches(parent_match_b_id);
+
+-- Prod uses partial unique indexes (... WHERE parent_match_*_id IS NOT NULL);
+-- HSQLDB's unique index keeps NULL parents distinct under SQL NULL semantics.
 CREATE UNIQUE INDEX uq_tournament_matches_parent_a ON tournament_matches(parent_match_a_id);
 CREATE UNIQUE INDEX uq_tournament_matches_parent_b ON tournament_matches(parent_match_b_id);

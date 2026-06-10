@@ -28,6 +28,8 @@ public interface MatchParticipationService {
 
     void rejectRequest(Long matchId, User host, User targetUser);
 
+    void leaveMatch(Long matchId, User user);
+
     void removeParticipant(Long matchId, User host, User targetUser);
 
     // Queries (public approval-required events)
