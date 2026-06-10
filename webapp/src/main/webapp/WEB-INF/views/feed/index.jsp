@@ -148,7 +148,7 @@
 													<c:when test="${optionStatus.first}">
 														<c:choose>
 															<c:when test="${not empty option.params}">
-																<c:url var="clearFilterHref" value="${feedFormAction}">
+																<c:url var="clearFilterHref" value="${feedPath}">
 																	<c:forEach var="p" items="${option.params}">
 																		<c:param name="${p.key}" value="${p.value}" />
 																	</c:forEach>
@@ -162,7 +162,7 @@
 													<c:otherwise>
 														<c:choose>
 															<c:when test="${not empty option.params}">
-																<c:url var="optionHref" value="${feedFormAction}">
+																<c:url var="optionHref" value="${feedPath}">
 																	<c:forEach var="p" items="${option.params}">
 																		<c:param name="${p.key}" value="${p.value}" />
 																	</c:forEach>
