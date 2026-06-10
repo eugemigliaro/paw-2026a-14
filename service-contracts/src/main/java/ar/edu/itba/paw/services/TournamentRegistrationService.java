@@ -14,6 +14,14 @@ public interface TournamentRegistrationService {
 
     void leaveSolo(long tournamentId, User user);
 
+    TournamentTeam createTeam(long tournamentId, User user, String name);
+
+    TournamentTeamMember joinTeam(long tournamentId, long teamId, User user);
+
+    void leaveTeam(long tournamentId, User user);
+
+    List<TournamentTeam> listJoinableTeams(long tournamentId);
+
     void withdrawFromOpenRegistrations(User user);
 
     boolean isSoloPoolFull(long tournamentId);

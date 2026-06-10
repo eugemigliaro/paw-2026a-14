@@ -36,6 +36,32 @@ public class TournamentTeamDataServiceImpl implements TournamentTeamDataService 
     }
 
     @Override
+    public void removeMember(final TournamentTeam team, final User user) {
+        tournamentTeamDao.removeMember(team, user);
+    }
+
+    @Override
+    public void delete(final TournamentTeam team) {
+        tournamentTeamDao.delete(team);
+    }
+
+    @Override
+    public long countMembers(final long teamId) {
+        return tournamentTeamDao.countMembers(teamId);
+    }
+
+    @Override
+    public long countMembersByTournament(final long tournamentId) {
+        return tournamentTeamDao.countMembersByTournament(tournamentId);
+    }
+
+    @Override
+    public List<TournamentTeam> findJoinableByTournament(
+            final long tournamentId, final int teamSize) {
+        return tournamentTeamDao.findJoinableByTournament(tournamentId, teamSize);
+    }
+
+    @Override
     public Optional<TournamentTeam> findById(final long teamId) {
         return tournamentTeamDao.findById(teamId);
     }

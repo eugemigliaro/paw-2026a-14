@@ -15,6 +15,16 @@ public interface TournamentTeamDataService {
 
     TournamentTeamMember addMember(TournamentTeam team, User user, boolean captain);
 
+    void removeMember(TournamentTeam team, User user);
+
+    void delete(TournamentTeam team);
+
+    long countMembers(long teamId);
+
+    long countMembersByTournament(long tournamentId);
+
+    List<TournamentTeam> findJoinableByTournament(long tournamentId, int teamSize);
+
     Optional<TournamentTeam> findById(long teamId);
 
     List<TournamentTeam> findByTournament(long tournamentId);

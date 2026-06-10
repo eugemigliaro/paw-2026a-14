@@ -19,6 +19,9 @@ public interface TournamentSoloEntryDao {
 
     List<TournamentSoloEntry> findActiveByTournament(long tournamentId);
 
+    List<TournamentSoloEntry> findByTournamentAndStatus(
+            long tournamentId, TournamentSoloEntryStatus status);
+
     long countActiveByTournament(long tournamentId);
 
     TournamentSoloEntry update(TournamentSoloEntry soloEntry);

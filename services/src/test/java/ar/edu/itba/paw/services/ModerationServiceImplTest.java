@@ -865,6 +865,29 @@ public class ModerationServiceImplTest {
         }
 
         @Override
+        public ar.edu.itba.paw.models.TournamentTeam createTeam(
+                final long tournamentId, final User user, final String name) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ar.edu.itba.paw.models.TournamentTeamMember joinTeam(
+                final long tournamentId, final long teamId, final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void leaveTeam(final long tournamentId, final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<ar.edu.itba.paw.models.TournamentTeam> listJoinableTeams(
+                final long tournamentId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean isSoloPoolFull(final long tournamentId) {
             throw new UnsupportedOperationException();
         }
