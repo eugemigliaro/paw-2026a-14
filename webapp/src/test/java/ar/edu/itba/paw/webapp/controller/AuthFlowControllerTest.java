@@ -24,13 +24,12 @@ import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
 import ar.edu.itba.paw.webapp.security.AuthenticatedUserPrincipal;
+import ar.edu.itba.paw.webapp.utils.ValidatorTestUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,7 +67,7 @@ class AuthFlowControllerTest {
 
         final MessageSource messageSource = messageSource();
         final LocalValidatorFactoryBean validator =
-                validator(messageSource, userEmailValidator, usernameValidator);
+                ValidatorTestUtils.validator(messageSource, userEmailValidator, usernameValidator);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
@@ -355,37 +354,5 @@ class AuthFlowControllerTest {
         final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
         return localeChangeInterceptor;
-    }
-
-    private static LocalValidatorFactoryBean validator(
-            final MessageSource messageSource,
-            final UserEmailValidator userEmailValidator,
-            final UsernameValidator usernameValidator) {
-        ConstraintValidatorFactory customConstraintFactory =
-                new ConstraintValidatorFactory() {
-                    @Override
-                    public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
-                        if (key == UserEmailValidator.class) {
-                            return (T) userEmailValidator;
-                        } else if (key == UsernameValidator.class) {
-                            return (T) usernameValidator;
-                        }
-                        try {
-                            return key.getDeclaredConstructor().newInstance();
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void releaseInstance(ConstraintValidator<?, ?> instance) {}
-                }; // TODO: find a better way to inject the custom validator without having to
-        // reimplement the whole factory
-
-        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-        validator.setValidationMessageSource(messageSource);
-        validator.setConstraintValidatorFactory(customConstraintFactory);
-        validator.afterPropertiesSet();
-        return validator;
     }
 }

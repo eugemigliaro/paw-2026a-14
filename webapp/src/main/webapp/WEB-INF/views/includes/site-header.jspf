@@ -145,6 +145,8 @@
 						data-overflow-menu-panel="true">
 						<c:set var="profilePath" value="/users/${currentUsername}" />
 						<c:url var="profileHref" value="${profilePath}" />
+						<c:set var="hostRequestsPath" value="/host/requests" />
+						<c:url var="hostRequestsUrl" value="${hostRequestsPath}" />
 						<c:url var="reportsHref" value="/reports/mine" />
 						<c:url var="logoutHref" value="/logout" />
 						<a
@@ -156,6 +158,16 @@
 							</span>
 							<spring:message var="profileLabel" code="nav.profile" />
 							<span><c:out value="${profileLabel}" /></span>
+						</a>
+						<a
+							href="${hostRequestsUrl}"
+							class="site-header__settings-item ${currentPath eq hostRequestsPath ? 'site-header__settings-item--active' : ''}"
+							role="menuitem">
+							<span class="site-header__settings-item-icon" aria-hidden="true">
+								<icon:profilePlus />
+							</span>
+							<spring:message var="hostRequestsLabel" code="host.requests.all.link" />
+							<span><c:out value="${hostRequestsLabel}" /></span>
 						</a>
 						<a
 							href="${reportsHref}"

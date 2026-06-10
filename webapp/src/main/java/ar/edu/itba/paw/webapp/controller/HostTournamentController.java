@@ -14,7 +14,6 @@ import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.CreateTournamentRequest;
-import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.TournamentBracketService;
 import ar.edu.itba.paw.services.TournamentBracketView;
 import ar.edu.itba.paw.services.TournamentMatchScheduleRequest;
@@ -27,6 +26,7 @@ import ar.edu.itba.paw.webapp.form.BracketPublishScheduleForm;
 import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.utils.MultipartImageUpload;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -50,7 +50,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
@@ -61,6 +60,7 @@ public class HostTournamentController {
     private static final double DEFAULT_MAP_LATITUDE = -34.6037;
     private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
     private static final int DEFAULT_MAP_ZOOM = 14;
+    private static final String HOST_CANCELLED_REASON = "host_cancelled";
 
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
@@ -136,7 +136,7 @@ public class HostTournamentController {
                         createTournamentForm.getEndDate(),
                         createTournamentForm.getEndTime(),
                         createTournamentForm.getPricePerPlayer(),
-                        bannerUpload(createTournamentForm.getBannerImage()),
+                        MultipartImageUpload.from(createTournamentForm.getBannerImage()),
                         TournamentFormat.SINGLE_ELIMINATION,
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
@@ -191,7 +191,7 @@ public class HostTournamentController {
                         createTournamentForm.getEndDate(),
                         createTournamentForm.getEndTime(),
                         createTournamentForm.getPricePerPlayer(),
-                        bannerUpload(createTournamentForm.getBannerImage()),
+                        MultipartImageUpload.from(createTournamentForm.getBannerImage()),
                         createTournamentForm.getBracketSize(),
                         createTournamentForm.getTeamSize(),
                         createTournamentForm.getRegistrationOpensDate(),
@@ -254,8 +254,7 @@ public class HostTournamentController {
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
         try {
-            tournamentService.cancel(
-                    tournamentId, user, "Host cancelled tournament"); // TODO: reason not localized
+            tournamentService.cancel(tournamentId, user, HOST_CANCELLED_REASON);
             redirectAttributes.addFlashAttribute(
                     "tournamentNoticeCode", "tournament.host.cancel.success");
         } catch (final TournamentLifecycleException e) {
@@ -626,36 +625,6 @@ public class HostTournamentController {
             form.setEndTime(endsAt.toLocalTime());
         }
         return form;
-    }
-
-    private ImageUpload bannerUpload(
-            final MultipartFile
-                    bannerImage) { // TODO: move this to a different file. It also used in other
-        // controllers
-        if (bannerImage == null) {
-            return null;
-        }
-        return new ImageUpload() {
-            @Override
-            public String getContentType() {
-                return bannerImage.getContentType();
-            }
-
-            @Override
-            public long getContentLength() {
-                return bannerImage.getSize();
-            }
-
-            @Override
-            public String getOriginalFilename() {
-                return bannerImage.getOriginalFilename();
-            }
-
-            @Override
-            public java.io.InputStream getContentStream() throws java.io.IOException {
-                return bannerImage.getInputStream();
-            }
-        };
     }
 
     private static ModelAndView seeOther(final String targetUrl) {

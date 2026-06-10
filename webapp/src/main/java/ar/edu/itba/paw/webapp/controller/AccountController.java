@@ -2,11 +2,11 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.imageUpload.ImageUploadException;
-import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.AccountProfileForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
+import ar.edu.itba.paw.webapp.utils.MultipartImageUpload;
 import ar.edu.itba.paw.webapp.utils.SecurityControllerUtils;
 import java.io.IOException;
 import javax.validation.Valid;
@@ -16,7 +16,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -69,7 +68,7 @@ public class AccountController {
                             accountProfileForm.getName(),
                             accountProfileForm.getLastName(),
                             accountProfileForm.getPhone(),
-                            profileImageUpload(accountProfileForm.getProfileImage()));
+                            MultipartImageUpload.from(accountProfileForm.getProfileImage()));
             SecurityControllerUtils.refreshAuthentication(updatedUser);
             redirectAttributes.addFlashAttribute("accountUpdated", true);
             return new ModelAndView("redirect:/account");
@@ -101,35 +100,5 @@ public class AccountController {
         form.setLastName(user.getLastName());
         form.setPhone(user.getPhone());
         return form;
-    }
-
-    private ImageUpload profileImageUpload(
-            final MultipartFile
-                    profileImage) { // TODO: move to a different file. It's also used in other
-        // controllers.
-        if (profileImage == null) {
-            return null;
-        }
-        return new ImageUpload() {
-            @Override
-            public String getContentType() {
-                return profileImage.getContentType();
-            }
-
-            @Override
-            public long getContentLength() {
-                return profileImage.getSize();
-            }
-
-            @Override
-            public String getOriginalFilename() {
-                return profileImage.getOriginalFilename();
-            }
-
-            @Override
-            public java.io.InputStream getContentStream() throws java.io.IOException {
-                return profileImage.getInputStream();
-            }
-        };
     }
 }

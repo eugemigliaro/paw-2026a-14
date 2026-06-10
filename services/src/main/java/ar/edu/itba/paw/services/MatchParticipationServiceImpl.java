@@ -293,6 +293,12 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     @Override
     @Transactional
+    public void leaveMatch(final Long matchId, final User user) {
+        leaveMatch(requireMatch(matchId), user);
+    }
+
+    @Override
+    @Transactional
     public void removeParticipant(final Long matchId, final User host, final User targetUser) {
         final Match match = requireMatch(matchId);
         nonNullUser(host);

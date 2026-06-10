@@ -545,19 +545,14 @@ class EventControllerTest {
 
         Mockito.doAnswer(
                         invocation -> {
-                            final User host = invocation.getArgument(1);
-                            final User target = invocation.getArgument(2);
-                            if (host.equals(target)) {
-                                occurrenceReservationCancellationUsed = true;
-                                if (reservationCancellationFailure != null) {
-                                    throw reservationCancellationFailure;
-                                }
+                            occurrenceReservationCancellationUsed = true;
+                            if (reservationCancellationFailure != null) {
+                                throw reservationCancellationFailure;
                             }
                             return null;
                         })
                 .when(matchParticipationService)
-                .removeParticipant(
-                        ArgumentMatchers.anyLong(), ArgumentMatchers.any(), ArgumentMatchers.any());
+                .leaveMatch(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
 
         Mockito.when(
                         matchParticipationService.findPendingRequests(
@@ -1098,6 +1093,35 @@ class EventControllerTest {
         mockMvc.perform(get("/matches/46").flashAttr("hostAction", "seriesUpdated"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostActionCode", "seriesUpdated"));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteOpensRequestsForRequestHostAction() throws Exception {
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "requestApproved"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostActionCode", "requestApproved"))
+                .andExpect(model().attribute("hostPendingRequestsOpen", true));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteOpensInvitesForInviteHostAction() throws Exception {
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "seriesInviteSent"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostActionCode", "seriesInviteSent"))
+                .andExpect(model().attribute("hostPendingInvitesOpen", true));
+    }
+
+    @Test
+    void getRealMatchDetailsRouteIgnoresUnknownHostAction() throws Exception {
+        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "unexpected"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hostActionCode", Matchers.nullValue()));
     }
 
     @Test
