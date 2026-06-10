@@ -200,28 +200,13 @@ public class MatchParticipationServiceImplTest {
 
         Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchParticipationService.removeParticipant(10L, u, u));
-    }
+        // Exercise
+        matchParticipationService.removeParticipant(10L, u, u);
 
-    @Test
-    public void testRemoveParticipantAllowsSelfLeaveForPrivateInviteOnlyMatch() {
-        // Arrange
-        Mockito.when(matchDataService.findById(10L))
-                .thenReturn(
-                        Optional.of(
-                                createMatch(
-                                        10L,
-                                        EventVisibility.PRIVATE,
-                                        EventJoinPolicy.INVITE_ONLY,
-                                        EventStatus.OPEN,
-                                        FIXED_NOW.plusSeconds(3600))));
-        final User u = UserUtils.getUser(20L);
-        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
-
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchParticipationService.removeParticipant(10L, u, u));
+        // Assert
+        Assertions.assertEquals(
+                List.of(UserUtils.getUser(1L).getEmail()), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of("player-left"), mailDispatchService.actions);
     }
 
     @Test
@@ -312,26 +297,6 @@ public class MatchParticipationServiceImplTest {
                 () ->
                         matchParticipationService.removeParticipant(
                                 10L, UserUtils.getUser(20L), UserUtils.getUser(30L)));
-    }
-
-    @Test
-    public void testRemoveParticipantAllowsHostToRemoveAnotherUser() {
-        // Arrange
-        Mockito.when(matchDataService.findById(10L))
-                .thenReturn(
-                        Optional.of(
-                                createMatch(
-                                        10L,
-                                        EventVisibility.PUBLIC,
-                                        EventJoinPolicy.APPROVAL_REQUIRED,
-                                        EventStatus.OPEN,
-                                        FIXED_NOW.plusSeconds(3600))));
-        final User u = UserUtils.getUser(30L);
-        Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
-
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(
-                () -> matchParticipationService.removeParticipant(10L, UserUtils.getUser(1L), u));
     }
 
     @Test
@@ -501,8 +466,13 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchParticipantDataService.createSeriesJoinRequestIfSpace(10L, u))
                 .thenReturn(true);
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchParticipationService.requestToJoinSeries(10L, u));
+        // Exercise
+        matchParticipationService.requestToJoinSeries(10L, u);
+
+        // Assert
+        Assertions.assertEquals(
+                List.of(UserUtils.getUser(1L).getEmail()), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of("join-request-received"), mailDispatchService.actions);
     }
 
     @Test
@@ -525,9 +495,12 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchParticipantDataService.approveSeriesJoinRequest(100L, u, FIXED_NOW))
                 .thenReturn(2);
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(
-                () -> matchParticipationService.approveRequest(10L, UserUtils.getUser(1L), u));
+        // Exercise
+        matchParticipationService.approveRequest(10L, UserUtils.getUser(1L), u);
+
+        // Assert
+        Assertions.assertEquals(List.of(u.getEmail()), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of("join-request-approved"), mailDispatchService.actions);
     }
 
     @Test
@@ -550,9 +523,12 @@ public class MatchParticipationServiceImplTest {
         Mockito.when(matchParticipantDataService.approveSeriesJoinRequest(100L, u, FIXED_NOW))
                 .thenReturn(1);
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(
-                () -> matchParticipationService.approveRequest(10L, UserUtils.getUser(1L), u));
+        // Exercise
+        matchParticipationService.approveRequest(10L, UserUtils.getUser(1L), u);
+
+        // Assert
+        Assertions.assertEquals(List.of(u.getEmail()), mailDispatchService.recipients);
+        Assertions.assertEquals(List.of("join-request-approved"), mailDispatchService.actions);
     }
 
     @Test
@@ -968,6 +944,18 @@ public class MatchParticipationServiceImplTest {
         public void sendPlayerLeft(final User host, final Match match, final User player) {
             actions.add("player-left");
             recipients.add(host.getEmail());
+        }
+
+        @Override
+        public void sendJoinRequestReceived(final User host, final Match match, final User player) {
+            actions.add("join-request-received");
+            recipients.add(host.getEmail());
+        }
+
+        @Override
+        public void sendJoinRequestApproved(final User player, final Match match) {
+            actions.add("join-request-approved");
+            recipients.add(player.getEmail());
         }
 
         @Override

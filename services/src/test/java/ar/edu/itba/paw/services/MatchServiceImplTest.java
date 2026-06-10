@@ -55,6 +55,7 @@ public class MatchServiceImplTest {
     @Mock private ImageService imageService;
 
     private RecordingMailDispatchService mailDispatchService;
+    private RecordingMatchNotificationService recordingNotifications;
     private MatchNotificationService matchNotificationService;
     private MatchServiceImpl matchService;
 
@@ -64,10 +65,8 @@ public class MatchServiceImplTest {
     public void setUp() {
         SecurityContextHolder.clearContext();
         mailDispatchService = new RecordingMailDispatchService();
-        matchNotificationService =
-                Mockito.spy(
-                        new MatchNotificationServiceImpl(
-                                matchParticipantDataService, mailDispatchService));
+        recordingNotifications = new RecordingMatchNotificationService();
+        matchNotificationService = recordingNotifications;
         matchService =
                 new MatchServiceImpl(
                         matchDataService,
@@ -77,7 +76,6 @@ public class MatchServiceImplTest {
                         securityService,
                         new RecurringMatchAsyncService(matchDataService),
                         clock);
-        matchService = Mockito.spy(matchService);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Mockito.lenient()
@@ -102,6 +100,11 @@ public class MatchServiceImplTest {
                         securityService,
                         new RecurringMatchAsyncService(matchDataService),
                         clock);
+    }
+
+    private void useRealMatchNotificationService() {
+        useMatchNotificationService(
+                new MatchNotificationServiceImpl(matchParticipantDataService, mailDispatchService));
     }
 
     @Test
@@ -2451,11 +2454,14 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(recordingNotifications.actions.isEmpty());
     }
 
     @Test
     public void testUpdateMatchWithoutConfirmedParticipantsSendsNoMail() {
+        // The no-mail outcome must come from the real notification service filtering an
+        // empty participant list, not from the recording fake never dispatching mail.
+        useRealMatchNotificationService();
         final Match existingMatch = createTestMatch(25L, "Old Title", "football");
         final Match updatedMatch =
                 new Match(
@@ -2532,6 +2538,9 @@ public class MatchServiceImplTest {
 
     @Test
     public void testCancelMatchWithoutConfirmedParticipantsSendsNoMail() {
+        // The no-mail outcome must come from the real notification service filtering an
+        // empty participant list, not from the recording fake never dispatching mail.
+        useRealMatchNotificationService();
         final Match existingMatch = createTestMatch(26L, "Test Match", "football");
         final Match cancelledMatch =
                 new Match(
@@ -2595,7 +2604,7 @@ public class MatchServiceImplTest {
                                         EventStatus.OPEN,
                                         null)));
 
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(recordingNotifications.actions.isEmpty());
     }
 
     @Test
@@ -2606,7 +2615,7 @@ public class MatchServiceImplTest {
                 MatchNotFoundException.class,
                 () -> matchService.cancelMatch(28L, UserUtils.getUser(1L)));
 
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(recordingNotifications.actions.isEmpty());
     }
 
     private static class RecordingMailDispatchService implements MailDispatchService {
@@ -2638,87 +2647,6 @@ public class MatchServiceImplTest {
                 final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
             actions.add("recurring-matches-cancelled");
             recipients.add(recipient.getEmail());
-        }
-    }
-
-    private static class RecordingMatchNotificationService implements MatchNotificationService {
-
-        private final List<String> actions = new ArrayList<>();
-        private final List<List<User>> affectedUserGroups = new ArrayList<>();
-        private final List<User> approvedUsers = new ArrayList<>();
-
-        @Override
-        public void notifyMatchUpdated(final Match match) {
-            actions.add("match-updated");
-        }
-
-        @Override
-        public void notifyMatchCancelled(final Match match) {
-            actions.add("match-cancelled");
-        }
-
-        @Override
-        public void notifyRecurringMatchesUpdated(final List<Match> matches) {
-            actions.add("recurring-matches-updated");
-        }
-
-        @Override
-        public void notifyRecurringMatchesCancelled(final List<Match> matches) {
-            actions.add("recurring-matches-cancelled");
-        }
-
-        @Override
-        public void notifyHostPlayerJoined(final Match match, final User player) {
-            actions.add("host-player-joined");
-        }
-
-        @Override
-        public void notifyHostJoinRequestReceived(final Match match, final User player) {
-            actions.add("host-join-request-received");
-        }
-
-        @Override
-        public void notifyPlayerRequestApproved(final Match match, final User player) {
-            actions.add("request-approved");
-            approvedUsers.add(player);
-        }
-
-        @Override
-        public void notifyPlayerRequestRejected(final Match match, final User player) {
-            actions.add("request-rejected");
-        }
-
-        @Override
-        public void notifyPendingRequestClosedByPrivacyChange(
-                final Match match, final List<User> players) {
-            actions.add("pending-request-closed");
-            affectedUserGroups.add(players);
-        }
-
-        @Override
-        public void notifyInvitationOpenedToPublic(final Match match, final List<User> players) {
-            actions.add("invitation-opened-to-public");
-            affectedUserGroups.add(players);
-        }
-
-        @Override
-        public void notifyHostInviteAccepted(final Match match, final User player) {
-            actions.add("host-invite-accepted");
-        }
-
-        @Override
-        public void notifyHostInviteDeclined(final Match match, final User player) {
-            actions.add("host-invite-declined");
-        }
-
-        @Override
-        public void notifyHostPlayerLeft(final Match match, final User player) {
-            actions.add("host-player-left");
-        }
-
-        @Override
-        public void notifyPlayerRemovedByHost(final Match match, final User player) {
-            actions.add("player-removed-by-host");
         }
     }
 

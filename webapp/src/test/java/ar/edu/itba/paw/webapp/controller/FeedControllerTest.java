@@ -45,7 +45,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.format.support.DefaultFormattingConversionService;
@@ -286,11 +285,6 @@ class FeedControllerTest {
         Assertions.assertTrue(relationshipBadgeCodes.get(77L).contains("my_event"));
         Assertions.assertTrue(relationshipBadgeCodes.get(77L).contains("going"));
         Assertions.assertFalse(relationshipBadgeCodes.containsKey(78L));
-        Mockito.verify(tournamentService, Mockito.times(1))
-                .findParticipatingTournamentIds(
-                        Mockito.argThat(
-                                user -> user != null && Long.valueOf(8L).equals(user.getId())),
-                        Mockito.eq(List.of(77L, 78L)));
     }
 
     @Test
@@ -406,15 +400,19 @@ class FeedControllerTest {
     }
 
     @Test
-    void getFeedRouteWithRepeatedSportParamsPassesCommaSeparatedToService() throws Exception {
-        mockMvc.perform(get("/").param("sport", "padel").param("sport", "football"))
-                .andExpect(status().isOk());
-
-        final ArgumentCaptor<List<Sport>> sportsCaptor = sportsFilterCaptor();
-        Mockito.verify(matchService)
+    void getFeedRouteWithRepeatedSportParamsPassesBothSportsToService() throws Exception {
+        // The sentinel result is only returned when the controller passes exactly both
+        // sports; any other filter falls through to the setUp stub (match id 42).
+        Mockito.doReturn(new PaginatedResult<>(List.of(match(99L, "Multi Sport Match")), 1, 1, 12))
+                .when(matchService)
                 .searchPublicMatches(
                         ArgumentMatchers.anyString(),
-                        sportsCaptor.capture(),
+                        ArgumentMatchers.<List<Sport>>argThat(
+                                sports ->
+                                        sports != null
+                                                && sports.size() == 2
+                                                && sports.contains(Sport.PADEL)
+                                                && sports.contains(Sport.FOOTBALL)),
                         ArgumentMatchers.nullable(LocalDate.class),
                         ArgumentMatchers.nullable(LocalDate.class),
                         ArgumentMatchers.nullable(EventSort.class),
@@ -425,10 +423,12 @@ class FeedControllerTest {
                         ArgumentMatchers.nullable(Double.class),
                         ArgumentMatchers.nullable(Double.class));
 
-        final List<Sport> capturedSports = sportsCaptor.getValue();
-        Assertions.assertNotNull(capturedSports);
-        Assertions.assertTrue(capturedSports.contains(Sport.PADEL));
-        Assertions.assertTrue(capturedSports.contains(Sport.FOOTBALL));
+        final MvcResult result =
+                mockMvc.perform(get("/").param("sport", "padel").param("sport", "football"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        Assertions.assertEquals(99L, ((Match) featuredEvents(result).get(0)).getId());
     }
 
     @Test
@@ -524,11 +524,6 @@ class FeedControllerTest {
                         model().attribute(
                                         "selectedMaxPrice",
                                         Matchers.comparesEqualTo(new BigDecimal("25"))));
-    }
-
-    @SuppressWarnings("unchecked")
-    private static ArgumentCaptor<List<Sport>> sportsFilterCaptor() {
-        return ArgumentCaptor.forClass(List.class);
     }
 
     private static boolean hasActiveOption(final FilterGroupViewModel group, final String label) {

@@ -329,6 +329,38 @@ public class MatchJpaDaoTest {
     }
 
     @Test
+    public void testFindPublicEventsSearchEscapesLikeWildcards() {
+        createOpenPublicMatch(
+                "Plain Padel", "Plain session", Sport.PADEL, 10, ZonedDateTime.now().plusDays(1));
+        createOpenPublicMatch(
+                "100% Padel", "Percent session", Sport.PADEL, 10, ZonedDateTime.now().plusDays(1));
+        createOpenPublicMatch(
+                "Pad_l Night",
+                "Underscore session",
+                Sport.PADEL,
+                10,
+                ZonedDateTime.now().plusDays(1));
+        createOpenPublicMatch(
+                "Back\\slash Court",
+                "Backslash session",
+                Sport.PADEL,
+                10,
+                ZonedDateTime.now().plusDays(1));
+        em.flush();
+        em.clear();
+
+        Assertions.assertEquals(
+                List.of("100% Padel"),
+                findPublicMatchesByQuery("%").stream().map(Match::getTitle).toList());
+        Assertions.assertEquals(
+                List.of("Pad_l Night"),
+                findPublicMatchesByQuery("_").stream().map(Match::getTitle).toList());
+        Assertions.assertEquals(
+                List.of("Back\\slash Court"),
+                findPublicMatchesByQuery("\\").stream().map(Match::getTitle).toList());
+    }
+
+    @Test
     public void testFindPublicEventsIncludesApprovalRequiredVisibility() {
         matchDao.createMatch(
                 host,
