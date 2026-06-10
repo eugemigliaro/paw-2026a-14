@@ -396,7 +396,10 @@ final class MatchDashboardPageSupport {
                 new FilterOptionViewModel(
                         "filter.anySport", null, anyParams, null, selectedSports.isEmpty()));
         final List<String> sportValues =
-                Arrays.stream(Sport.values()).map(Sport::getDbValue).toList();
+                Arrays.stream(Sport.values())
+                        .filter(s -> s != Sport.OTHER)
+                        .map(Sport::getDbValue)
+                        .toList();
         for (final String sportValue : sportValues) {
             final Map<String, String> sportParams = new LinkedHashMap<>(anyParams);
             final List<String> toggledSports = toggleValue(selectedSports, sportValue);
@@ -917,6 +920,9 @@ final class MatchDashboardPageSupport {
                         selectedSports.isEmpty(),
                         "filter.anySport"));
         for (final Sport sport : Sport.values()) {
+            if (selectedType == EventType.TOURNAMENT && sport == Sport.OTHER) {
+                continue;
+            }
             options.add(
                     filterOption(
                             path,

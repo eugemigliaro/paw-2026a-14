@@ -556,6 +556,7 @@ public class FeedController {
             final PriceRange selectedPriceRange,
             final String email) {
         final List<FilterGroupViewModel> groups = new ArrayList<>();
+
         groups.add(
                 new FilterGroupViewModel(
                         "filter.eventType",
@@ -588,94 +589,48 @@ public class FeedController {
                                                 selectedPriceRange),
                                         null,
                                         selectedType == EventType.TOURNAMENT))));
-        groups.add(
-                new FilterGroupViewModel(
-                        "filter.categories",
-                        List.of(
-                                new FilterOptionViewModel(
-                                        "filter.anySport",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                List.of(),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        selectedSports.isEmpty()),
-                                new FilterOptionViewModel(
-                                        "sport.football",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.FOOTBALL),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.FOOTBALL)),
-                                new FilterOptionViewModel(
-                                        "sport.tennis",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.TENNIS),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.TENNIS)),
-                                new FilterOptionViewModel(
-                                        "sport.basketball",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.BASKETBALL),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.BASKETBALL)),
-                                new FilterOptionViewModel(
-                                        "sport.padel",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.PADEL),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.PADEL)),
-                                new FilterOptionViewModel(
-                                        "sport.other",
-                                        null,
-                                        buildParamsMap(
-                                                query,
-                                                1,
-                                                email,
-                                                selectedType,
-                                                selectedSort,
-                                                toggleSport(selectedSports, Sport.OTHER),
-                                                selectedDateRange,
-                                                selectedPriceRange),
-                                        null,
-                                        isSportSelected(selectedSports, Sport.OTHER)))));
+
+        final List<FilterOptionViewModel> sports = new ArrayList<>();
+
+        sports.add(
+                new FilterOptionViewModel(
+                        "filter.anySport",
+                        null,
+                        buildParamsMap(
+                                query,
+                                1,
+                                email,
+                                selectedType,
+                                selectedSort,
+                                List.of(),
+                                selectedDateRange,
+                                selectedPriceRange),
+                        null,
+                        selectedSports.isEmpty()));
+        for (Sport sport : Sport.values()) {
+            if (sport == Sport.OTHER
+                    && (selectedType == EventType.TOURNAMENT
+                            || selectedType == EventType.TOURNAMENT_MATCHES)) {
+                continue;
+            }
+            sports.add(
+                    new FilterOptionViewModel(
+                            "sport." + sport.name().toLowerCase(),
+                            null,
+                            buildParamsMap(
+                                    query,
+                                    1,
+                                    email,
+                                    selectedType,
+                                    selectedSort,
+                                    toggleSport(selectedSports, sport),
+                                    selectedDateRange,
+                                    selectedPriceRange),
+                            null,
+                            isSportSelected(selectedSports, sport)));
+        }
+
+        groups.add(new FilterGroupViewModel("filter.categories", sports));
         return List.copyOf(groups);
     }
 
