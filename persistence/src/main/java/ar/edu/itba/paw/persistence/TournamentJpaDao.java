@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
@@ -97,6 +98,16 @@ public class TournamentJpaDao implements TournamentDao {
     @Override
     public Optional<Tournament> findById(final long tournamentId) {
         return Optional.ofNullable(em.find(Tournament.class, tournamentId));
+    }
+
+    @Override
+    public void lockForRegistration(final long tournamentId) {
+        final Tournament tournament = em.find(Tournament.class, tournamentId);
+        if (tournament != null) {
+            // Reload under the row lock so callers re-read committed state (e.g. a concurrent
+            // cancel) rather than the copy cached before the lock was taken.
+            em.refresh(tournament, LockModeType.PESSIMISTIC_WRITE);
+        }
     }
 
     @Override

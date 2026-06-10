@@ -3,7 +3,7 @@
         return select.value !== (select.dataset.initialValue || "");
     }
 
-    function syncGenerateButtonState(select, button) {
+    function syncGenerateButtonState(select, button, tooltip) {
         if (!select || !button) {
             return;
         }
@@ -12,6 +12,16 @@
         button.disabled = dirty;
         button.setAttribute("aria-disabled", dirty ? "true" : "false");
         button.classList.toggle("is-disabled", dirty);
+
+        if (tooltip) {
+            tooltip.classList.toggle("report-tooltip", dirty);
+            tooltip.setAttribute("aria-disabled", dirty ? "true" : "false");
+            if (dirty) {
+                tooltip.setAttribute("tabindex", "0");
+            } else {
+                tooltip.removeAttribute("tabindex");
+            }
+        }
     }
 
     function syncUpdateButtonState(select, button) {
@@ -29,19 +39,20 @@
         var select = document.getElementById("pairing-strategy");
         var updateButton = document.getElementById("update-strategy-button");
         var generateButton = document.getElementById("generate-bracket-button");
+        var generateTooltip = document.getElementById("generate-bracket-button-tooltip");
 
         if (select && updateButton && generateButton) {
             syncUpdateButtonState(select, updateButton);
-            syncGenerateButtonState(select, generateButton);
+            syncGenerateButtonState(select, generateButton, generateTooltip);
 
             select.addEventListener("change", function () {
                 syncUpdateButtonState(select, updateButton);
-                syncGenerateButtonState(select, generateButton);
+                syncGenerateButtonState(select, generateButton, generateTooltip);
             });
 
             select.addEventListener("input", function () {
                 syncUpdateButtonState(select, updateButton);
-                syncGenerateButtonState(select, generateButton);
+                syncGenerateButtonState(select, generateButton, generateTooltip);
             });
         }
     }

@@ -425,7 +425,7 @@ public class TournamentServiceImplTest {
                         TournamentStatus.REGISTRATION,
                         FIXED_NOW.minusSeconds(3600),
                         FIXED_NOW.plusSeconds(3600));
-        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L))
                 .thenReturn(new TournamentRegistrationReadiness(0, 2, 2, false));
 
         // 2. Exercise
@@ -493,6 +493,64 @@ public class TournamentServiceImplTest {
     }
 
     @Test
+    public void viewerCapabilitiesAllowEligibleUserToCreateAndJoinTeam() {
+        // 1. Arrange
+        final User player = UserUtils.getUser(2L);
+        final Tournament tournament = tournamentAllowingTeamDraft(10L, UserUtils.getUser(1L), 8);
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, player);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanCreateTeam());
+        Assertions.assertTrue(result.isCanJoinTeam());
+        Assertions.assertFalse(result.isCanLeaveTeam());
+    }
+
+    @Test
+    public void viewerCapabilitiesBlockCreateTeamWhenTeamCapReached() {
+        // 1. Arrange
+        final User player = UserUtils.getUser(2L);
+        final Tournament tournament = tournamentAllowingTeamDraft(10L, UserUtils.getUser(1L), 8);
+        Mockito.when(tournamentRegistrationService.countTeams(10L)).thenReturn(8L);
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, player);
+
+        // 3. Assert
+        Assertions.assertFalse(result.isCanCreateTeam());
+        Assertions.assertTrue(result.isCanJoinTeam());
+    }
+
+    @Test
+    public void viewerCapabilitiesAllowTeamMemberToLeaveTeam() {
+        // 1. Arrange
+        final User player = UserUtils.getUser(2L);
+        final Tournament tournament = tournamentAllowingTeamDraft(10L, UserUtils.getUser(1L), 8);
+        Mockito.when(tournamentRegistrationService.findUserTeam(10L, player))
+                .thenReturn(
+                        Optional.of(
+                                new TournamentTeam(
+                                        30L,
+                                        tournament,
+                                        "Alpha",
+                                        TournamentTeamOrigin.TEAM_DRAFT,
+                                        null,
+                                        FIXED_NOW)));
+
+        // 2. Exercise
+        final TournamentViewerCapabilities result =
+                tournamentService.viewerCapabilities(tournament, player);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isCanLeaveTeam());
+        Assertions.assertFalse(result.isCanJoinTeam());
+        Assertions.assertFalse(result.isCanCreateTeam());
+    }
+
+    @Test
     public void viewerCapabilitiesBlockCloseRegistrationWhenCapacityIsUnsafe() {
         // 1. Arrange
         final User host = UserUtils.getUser(1L);
@@ -503,7 +561,7 @@ public class TournamentServiceImplTest {
                         TournamentStatus.REGISTRATION,
                         FIXED_NOW.minusSeconds(3600),
                         FIXED_NOW.plusSeconds(3600));
-        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L))
                 .thenReturn(new TournamentRegistrationReadiness(1, 0, 1, true));
 
         // 2. Exercise
@@ -970,6 +1028,33 @@ public class TournamentServiceImplTest {
             final long id, final User host, final TournamentStatus status) {
         return tournamentWithRegistrationWindow(
                 id, host, status, futureRegistrationOpen(), futureRegistrationClose());
+    }
+
+    private static Tournament tournamentAllowingTeamDraft(
+            final long id, final User host, final int bracketSize) {
+        return new Tournament(
+                id,
+                host,
+                Sport.FOOTBALL,
+                "Saturday Cup",
+                "Friendly tournament",
+                "Club Street 123",
+                -34.60,
+                -58.38,
+                FIXED_NOW.plusSeconds(86400),
+                FIXED_NOW.plusSeconds(90000),
+                BigDecimal.ZERO,
+                null,
+                TournamentFormat.SINGLE_ELIMINATION,
+                bracketSize,
+                5,
+                false,
+                true,
+                FIXED_NOW.minusSeconds(3600),
+                FIXED_NOW.plusSeconds(3600),
+                TournamentStatus.REGISTRATION,
+                FIXED_NOW,
+                FIXED_NOW);
     }
 
     private static Tournament tournamentWithRegistrationWindow(

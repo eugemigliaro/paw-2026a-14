@@ -371,8 +371,8 @@ public class TournamentServiceImpl implements TournamentService {
             final Tournament tournament, final User viewer) {
         if (tournament == null) {
             return new TournamentViewerCapabilities(
-                    false, false, false, false, false, false, false, false, false, false, true,
-                    false);
+                    false, false, false, false, false, false, false, false, false, false, false,
+                    false, false, true, false);
         }
 
         final Instant now = Instant.now(clock);
@@ -404,24 +404,44 @@ public class TournamentServiceImpl implements TournamentService {
                         .orElse(null);
         final boolean userHasTeam =
                 tournamentRegistrationService.findUserTeam(tournament.getId(), viewer).isPresent();
+        final boolean capacityFull =
+                authenticatedViewer
+                        && registrationOpen
+                        && (tournament.isAllowSoloSignup() || tournament.isAllowTeamDraft())
+                        && tournamentRegistrationService.isSoloPoolFull(tournament.getId());
+        final boolean notBusyElsewhere =
+                !userHasTeam
+                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
+                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
         final boolean canJoinSolo =
                 authenticatedViewer
                         && registrationOpen
                         && tournament.isAllowSoloSignup()
-                        && !tournamentRegistrationService.isSoloPoolFull(tournament.getId())
-                        && !userHasTeam
-                        && soloStatus != TournamentSoloEntryStatus.IN_POOL
-                        && soloStatus != TournamentSoloEntryStatus.ASSIGNED;
+                        && !capacityFull
+                        && notBusyElsewhere;
         final boolean canLeaveSolo =
                 authenticatedViewer
                         && registrationOpen
                         && soloStatus == TournamentSoloEntryStatus.IN_POOL;
+        final boolean canJoinTeam =
+                authenticatedViewer
+                        && registrationOpen
+                        && tournament.isAllowTeamDraft()
+                        && !capacityFull
+                        && notBusyElsewhere;
+        final boolean canCreateTeam =
+                canJoinTeam
+                        && tournamentRegistrationService.countTeams(tournament.getId())
+                                < tournament.getBracketSize();
+        final boolean canLeaveTeam = authenticatedViewer && registrationOpen && userHasTeam;
         final boolean requiresLoginToJoin =
-                !authenticatedViewer && registrationOpen && tournament.isAllowSoloSignup();
+                !authenticatedViewer
+                        && registrationOpen
+                        && (tournament.isAllowSoloSignup() || tournament.isAllowTeamDraft());
         final boolean closeRegistrationBlockedByCapacity =
                 canCloseRegistration
                         && tournamentRegistrationService
-                                .getRegistrationReadiness(tournament.getId(), viewer)
+                                .getRegistrationReadiness(tournament.getId())
                                 .isCancellationRisk();
         final boolean closeRegistrationDisabled =
                 !registrationOpen || closeRegistrationBlockedByCapacity;
@@ -429,6 +449,9 @@ public class TournamentServiceImpl implements TournamentService {
         return new TournamentViewerCapabilities(
                 canJoinSolo,
                 canLeaveSolo,
+                canCreateTeam,
+                canJoinTeam,
+                canLeaveTeam,
                 requiresLoginToJoin,
                 registrationNotStarted,
                 canCloseRegistration,

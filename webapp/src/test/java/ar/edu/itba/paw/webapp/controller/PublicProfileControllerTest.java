@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -386,6 +387,58 @@ class PublicProfileControllerTest {
     }
 
     @Test
+    void getOtherPublicProfileRouteExposesOtherUsersReviewsAsReportable() throws Exception {
+        AuthenticationUtils.authenticateUser(10L, "viewer@test.com", "viewer");
+        stubSecondPlayer();
+        stubReviewServiceForHostAndSecondPlayer();
+        stubCanReportReviewByReviewerId();
+
+        final MvcResult result =
+                mockMvc.perform(get("/users/second-player"))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attribute("reviewLoginRequired", false))
+                        .andReturn();
+
+        final Set<?> reportableReviewIds =
+                (Set<?>) result.getModelAndView().getModel().get("reportableReviewIds");
+        Assertions.assertEquals(Set.of(1L), reportableReviewIds);
+    }
+
+    @Test
+    void getOtherPublicProfileRouteDoesNotExposeViewerReviewAsReportable() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host_player");
+        stubSecondPlayer();
+        stubReviewServiceForHostAndSecondPlayer();
+        stubCanReportReviewByReviewerId();
+
+        final MvcResult result =
+                mockMvc.perform(get("/users/second-player"))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attribute("reviewLoginRequired", false))
+                        .andReturn();
+
+        final Set<?> reportableReviewIds =
+                (Set<?>) result.getModelAndView().getModel().get("reportableReviewIds");
+        Assertions.assertTrue(reportableReviewIds.isEmpty());
+    }
+
+    @Test
+    void getPublicProfileRouteRequiresLoginToShowReviews() throws Exception {
+        stubSecondPlayer();
+        stubReviewServiceForHostAndSecondPlayer();
+
+        final MvcResult result =
+                mockMvc.perform(get("/users/second-player"))
+                        .andExpect(status().isOk())
+                        .andExpect(model().attribute("reviewLoginRequired", true))
+                        .andReturn();
+
+        final Set<?> reportableReviewIds =
+                (Set<?>) result.getModelAndView().getModel().get("reportableReviewIds");
+        Assertions.assertTrue(reportableReviewIds.isEmpty());
+    }
+
+    @Test
     void getPublicProfileRouteWithSpanishLocaleLocalizesPageCopy() throws Exception {
         stubHostPlayer(null);
         stubReviewServiceForHostAndSecondPlayer();
@@ -516,6 +569,23 @@ class PublicProfileControllerTest {
                                     && rd != null
                                     && r.getId().equals(9L)
                                     && rd.getId().equals(3L);
+                        });
+    }
+
+    private void stubCanReportReviewByReviewerId() {
+        Mockito.when(
+                        moderationService.canReportReview(
+                                Mockito.any(User.class), Mockito.any(PlayerReview.class)))
+                .thenAnswer(
+                        invocation -> {
+                            final User reporter = invocation.getArgument(0);
+                            final PlayerReview review = invocation.getArgument(1);
+                            return reporter != null
+                                    && review != null
+                                    && review.getReviewer() != null
+                                    && reporter.getId() != null
+                                    && review.getReviewer().getId() != null
+                                    && !reporter.getId().equals(review.getReviewer().getId());
                         });
     }
 

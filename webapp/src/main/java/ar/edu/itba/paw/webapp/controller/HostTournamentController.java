@@ -207,12 +207,11 @@ public class HostTournamentController {
 
     @PostMapping("/host/tournaments/{tournamentId:\\d+}/close-registration")
     public ModelAndView closeRegistration(
-            @AuthenticatedUser final User user,
             @PathVariable("tournamentId") final Long tournamentId,
             final RedirectAttributes redirectAttributes) {
         try {
             final Tournament tournament =
-                    tournamentRegistrationService.closeRegistration(tournamentId, user);
+                    tournamentRegistrationService.closeRegistration(tournamentId);
             if (TournamentStatus.BRACKET_SETUP == tournament.getStatus()) {
                 redirectAttributes.addFlashAttribute(
                         "tournamentNoticeCode", "tournament.host.close.success.bracketSetup");

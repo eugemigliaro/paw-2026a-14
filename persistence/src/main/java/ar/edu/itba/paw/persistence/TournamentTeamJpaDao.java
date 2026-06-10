@@ -42,6 +42,74 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
+    public void removeMember(final TournamentTeam team, final User user) {
+        em.createQuery(
+                        "DELETE FROM TournamentTeamMember ttm"
+                                + " WHERE ttm.team.id = :teamId"
+                                + " AND ttm.user.id = :userId")
+                .setParameter("teamId", team.getId())
+                .setParameter("userId", user.getId())
+                .executeUpdate();
+    }
+
+    @Override
+    public void delete(final TournamentTeam team) {
+        em.createQuery("DELETE FROM TournamentTeamMember ttm WHERE ttm.team.id = :teamId")
+                .setParameter("teamId", team.getId())
+                .executeUpdate();
+        em.remove(em.contains(team) ? team : em.merge(team));
+    }
+
+    @Override
+    public long countMembers(final long teamId) {
+        return em.createQuery(
+                        "SELECT COUNT(ttm) FROM TournamentTeamMember ttm"
+                                + " WHERE ttm.team.id = :teamId",
+                        Long.class)
+                .setParameter("teamId", teamId)
+                .getSingleResult();
+    }
+
+    @Override
+    public long countMembersByTournament(final long tournamentId) {
+        return em.createQuery(
+                        "SELECT COUNT(ttm) FROM TournamentTeamMember ttm"
+                                + " WHERE ttm.team.tournament.id = :tournamentId",
+                        Long.class)
+                .setParameter("tournamentId", tournamentId)
+                .getSingleResult();
+    }
+
+    @Override
+    public List<TournamentTeam> findJoinableByTournament(
+            final long tournamentId, final int teamSize) {
+        return em.createQuery(
+                        "SELECT tt FROM TournamentTeam tt"
+                                + " LEFT JOIN tt.members m"
+                                + " WHERE tt.tournament.id = :tournamentId"
+                                + " GROUP BY tt"
+                                + " HAVING COUNT(m) < :teamSize"
+                                + " ORDER BY tt.createdAt ASC, tt.id ASC",
+                        TournamentTeam.class)
+                .setParameter("tournamentId", tournamentId)
+                .setParameter("teamSize", (long) teamSize)
+                .getResultList();
+    }
+
+    @Override
+    public boolean existsByTournamentAndName(final long tournamentId, final String name) {
+        return em.createQuery(
+                                "SELECT COUNT(tt) FROM TournamentTeam tt"
+                                        + " WHERE tt.tournament.id = :tournamentId"
+                                        + " AND tt.name = :name",
+                                Long.class)
+                        .setParameter("tournamentId", tournamentId)
+                        .setParameter("name", name)
+                        .getSingleResult()
+                > 0;
+    }
+
+    @Override
     public Optional<TournamentTeam> findById(final long teamId) {
         return Optional.ofNullable(em.find(TournamentTeam.class, teamId));
     }
@@ -99,7 +167,7 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
         return em.createQuery(
                         "SELECT ttm FROM TournamentTeamMember ttm"
                                 + " JOIN FETCH ttm.user"
-                                + " JOIN ttm.team tt"
+                                + " JOIN FETCH ttm.team tt"
                                 + " WHERE tt.tournament.id = :tournamentId"
                                 + " ORDER BY tt.id ASC, ttm.id ASC",
                         TournamentTeamMember.class)

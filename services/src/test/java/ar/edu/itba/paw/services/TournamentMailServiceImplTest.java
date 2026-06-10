@@ -2,14 +2,17 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
+import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
 import ar.edu.itba.paw.models.types.TournamentMatchStatus;
+import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
+import ar.edu.itba.paw.persistence.TournamentSoloEntryDao;
 import ar.edu.itba.paw.services.internal.TournamentTeamDataService;
 import ar.edu.itba.paw.services.mail.MailDispatchService;
 import ar.edu.itba.paw.services.utils.UserUtils;
@@ -31,6 +34,7 @@ public class TournamentMailServiceImplTest {
     private static final Instant NOW = Instant.parse("2026-04-05T00:00:00Z");
 
     @Mock private TournamentTeamDataService tournamentTeamDataService;
+    @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
 
     private RecordingMailDispatchService mailDispatchService;
     private TournamentMailServiceImpl tournamentMailService;
@@ -39,7 +43,8 @@ public class TournamentMailServiceImplTest {
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
         tournamentMailService =
-                new TournamentMailServiceImpl(tournamentTeamDataService, mailDispatchService);
+                new TournamentMailServiceImpl(
+                        tournamentTeamDataService, tournamentSoloEntryDao, mailDispatchService);
     }
 
     @Test
@@ -64,6 +69,52 @@ public class TournamentMailServiceImplTest {
                 mailDispatchService.recipients);
         Assertions.assertEquals(
                 List.of("bracket-published", "bracket-published"), mailDispatchService.actions);
+    }
+
+    @Test
+    public void sendBracketPublishedEmailIncludesUnplacedPlayers() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, TournamentStatus.IN_PROGRESS);
+        final User placedUser = UserUtils.getUser(2L);
+        final User unplacedUser = UserUtils.getUser(3L);
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
+                .thenReturn(List.of(member(30L, team(20L, tournament, "Team A"), placedUser)));
+        Mockito.when(
+                        tournamentSoloEntryDao.findByTournamentAndStatus(
+                                10L, TournamentSoloEntryStatus.UNASSIGNED))
+                .thenReturn(
+                        List.of(
+                                soloEntry(40L, tournament, placedUser),
+                                soloEntry(41L, tournament, unplacedUser)));
+
+        // 2. Exercise
+        tournamentMailService.sendBracketPublishedEmail(tournament);
+
+        // 3. Assert
+        Assertions.assertEquals(
+                List.of(placedUser.getEmail(), unplacedUser.getEmail()),
+                mailDispatchService.recipients);
+    }
+
+    @Test
+    public void sendTournamentCancelledEmailIncludesSoloRegistrants() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, TournamentStatus.REGISTRATION);
+        final User teamMember = UserUtils.getUser(2L);
+        final User soloRegistrant = UserUtils.getUser(3L);
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
+                .thenReturn(List.of(member(30L, team(20L, tournament, "Team A"), teamMember)));
+        Mockito.when(tournamentSoloEntryDao.findRegisteredByTournament(10L))
+                .thenReturn(List.of(soloEntry(40L, tournament, soloRegistrant)));
+
+        // 2. Exercise
+        tournamentMailService.sendTournamentCancelledEmail(tournament);
+
+        // 3. Assert
+        Assertions.assertEquals(List.of("cancelled", "cancelled"), mailDispatchService.actions);
+        Assertions.assertEquals(
+                List.of(teamMember.getEmail(), soloRegistrant.getEmail()),
+                mailDispatchService.recipients);
     }
 
     @Test
@@ -176,6 +227,12 @@ public class TournamentMailServiceImplTest {
     private static TournamentTeamMember member(
             final long id, final TournamentTeam team, final User user) {
         return new TournamentTeamMember(id, team, user, false, NOW);
+    }
+
+    private static TournamentSoloEntry soloEntry(
+            final long id, final Tournament tournament, final User user) {
+        return new TournamentSoloEntry(
+                id, tournament, user, TournamentSoloEntryStatus.UNASSIGNED, null, NOW, null);
     }
 
     private static TournamentMatch match(

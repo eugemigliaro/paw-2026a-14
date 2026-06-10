@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.ModerationReport;
 import ar.edu.itba.paw.models.PaginatedResult;
+import ar.edu.itba.paw.models.PlayerReview;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.types.AppealDecision;
@@ -43,6 +44,8 @@ public interface ModerationService {
     Optional<ModerationReport> findReportByIdForReporter(Long reportId, User reporter);
 
     boolean canReportUser(User reporter, User targetUser);
+
+    boolean canReportReview(User reporter, PlayerReview review);
 
     boolean hasReportedTarget(User reporter, ReportTargetType targetType, Long targetId);
 
