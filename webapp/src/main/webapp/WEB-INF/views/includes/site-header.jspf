@@ -163,7 +163,7 @@
 							href="${hostRequestsUrl}"
 							class="site-header__settings-item ${currentPath eq hostRequestsPath ? 'site-header__settings-item--active' : ''}"
 							role="menuitem">
-							<span class="site-header__settings-item-icon" aria-hidden="true">
+							<span class="site-header__settings-item-icon site-header__settings-item-icon--outline-head" aria-hidden="true">
 								<icon:profilePlus />
 							</span>
 							<spring:message var="hostRequestsLabel" code="host.requests.all.link" />

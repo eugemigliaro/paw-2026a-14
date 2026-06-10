@@ -307,6 +307,11 @@ button.site-header__settings-item {
 	stroke: none;
 }
 
+.site-header__settings-item-icon--outline-head svg circle {
+	fill: none;
+	stroke: currentColor;
+}
+
 .site-header__settings-item--logout {
 	color: #a53928;
 }
