@@ -888,6 +888,11 @@ public class ModerationServiceImplTest {
         }
 
         @Override
+        public long countTeams(final long tournamentId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean isSoloPoolFull(final long tournamentId) {
             throw new UnsupportedOperationException();
         }

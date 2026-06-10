@@ -153,7 +153,7 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
         return em.createQuery(
                         "SELECT ttm FROM TournamentTeamMember ttm"
                                 + " JOIN FETCH ttm.user"
-                                + " JOIN ttm.team tt"
+                                + " JOIN FETCH ttm.team tt"
                                 + " WHERE tt.tournament.id = :tournamentId"
                                 + " ORDER BY tt.id ASC, ttm.id ASC",
                         TournamentTeamMember.class)

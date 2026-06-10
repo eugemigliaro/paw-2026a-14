@@ -22,6 +22,8 @@ public interface TournamentRegistrationService {
 
     List<TournamentTeam> listJoinableTeams(long tournamentId);
 
+    long countTeams(long tournamentId);
+
     void withdrawFromOpenRegistrations(User user);
 
     boolean isSoloPoolFull(long tournamentId);

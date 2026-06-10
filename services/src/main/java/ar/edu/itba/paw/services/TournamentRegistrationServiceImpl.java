@@ -225,6 +225,12 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     }
 
     @Override
+    public long countTeams(final long tournamentId) {
+        findTournamentOrThrow(tournamentId);
+        return tournamentTeamDataService.countByTournament(tournamentId);
+    }
+
+    @Override
     public boolean isSoloPoolFull(final long tournamentId) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
         return isSoloPoolFull(tournament);

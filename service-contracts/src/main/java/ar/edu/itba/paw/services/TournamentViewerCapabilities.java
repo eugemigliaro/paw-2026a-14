@@ -4,6 +4,9 @@ public class TournamentViewerCapabilities {
 
     private final boolean canJoinSolo;
     private final boolean canLeaveSolo;
+    private final boolean canCreateTeam;
+    private final boolean canJoinTeam;
+    private final boolean canLeaveTeam;
     private final boolean requiresLoginToJoin;
     private final boolean registrationNotStarted;
     private final boolean canCloseRegistration;
@@ -18,6 +21,9 @@ public class TournamentViewerCapabilities {
     public TournamentViewerCapabilities(
             final boolean canJoinSolo,
             final boolean canLeaveSolo,
+            final boolean canCreateTeam,
+            final boolean canJoinTeam,
+            final boolean canLeaveTeam,
             final boolean requiresLoginToJoin,
             final boolean registrationNotStarted,
             final boolean canCloseRegistration,
@@ -30,6 +36,9 @@ public class TournamentViewerCapabilities {
             final boolean closeRegistrationBlockedByCapacity) {
         this.canJoinSolo = canJoinSolo;
         this.canLeaveSolo = canLeaveSolo;
+        this.canCreateTeam = canCreateTeam;
+        this.canJoinTeam = canJoinTeam;
+        this.canLeaveTeam = canLeaveTeam;
         this.requiresLoginToJoin = requiresLoginToJoin;
         this.registrationNotStarted = registrationNotStarted;
         this.canCloseRegistration = canCloseRegistration;
@@ -48,6 +57,18 @@ public class TournamentViewerCapabilities {
 
     public boolean isCanLeaveSolo() {
         return canLeaveSolo;
+    }
+
+    public boolean isCanCreateTeam() {
+        return canCreateTeam;
+    }
+
+    public boolean isCanJoinTeam() {
+        return canJoinTeam;
+    }
+
+    public boolean isCanLeaveTeam() {
+        return canLeaveTeam;
     }
 
     public boolean isRequiresLoginToJoin() {

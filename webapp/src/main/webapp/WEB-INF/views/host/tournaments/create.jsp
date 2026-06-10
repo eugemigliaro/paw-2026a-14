@@ -113,8 +113,8 @@
 									</label>
 								</div>
 								<input type="hidden" name="allowSoloSignup" value="true" />
-								<input type="hidden" name="allowTeamDraft" value="false" />
-								<p class="tournament-mode-notice"><spring:message code="tournament.form.registrationMode.individualOnly" /></p>
+								<input type="hidden" name="allowTeamDraft" value="true" />
+								<p class="tournament-mode-notice"><spring:message code="tournament.form.registrationMode.soloAndTeam" /></p>
 								<%--
 								<label class="recurrence-toggle tournament-mode-toggle" for="tournament-allow-solo">
 									<form:checkbox path="allowSoloSignup" id="tournament-allow-solo" cssClass="recurrence-toggle__input" />

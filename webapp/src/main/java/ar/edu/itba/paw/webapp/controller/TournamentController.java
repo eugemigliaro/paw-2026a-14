@@ -20,9 +20,11 @@ import ar.edu.itba.paw.services.TournamentRegistrationService;
 import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.services.TournamentViewerCapabilities;
 import ar.edu.itba.paw.services.TournamentWinnerDeclarationRequest;
+import ar.edu.itba.paw.webapp.form.CreateTournamentTeamForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
+import ar.edu.itba.paw.webapp.viewmodel.TournamentTeamRosterView;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -31,12 +33,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -99,6 +104,8 @@ public class TournamentController {
                 tournamentService.findParticipatingTournamentIds(user, List.of(tournamentId)));
         mav.addObject("soloJoinPath", "/tournaments/" + tournamentId + "/solo-entry");
         mav.addObject("soloLeavePath", "/tournaments/" + tournamentId + "/solo-entry/leave");
+        mav.addObject("teamCreatePath", "/tournaments/" + tournamentId + "/teams");
+        mav.addObject("teamLeavePath", "/tournaments/" + tournamentId + "/teams/leave");
         mav.addObject(
                 "closeRegistrationPath",
                 "/host/tournaments/" + tournamentId + "/close-registration");
@@ -200,6 +207,56 @@ public class TournamentController {
         return new ModelAndView("redirect:/tournaments/" + tournamentId);
     }
 
+    @PostMapping("/tournaments/{tournamentId:\\d+}/teams")
+    public ModelAndView createTeam(
+            @AuthenticatedUser final User user,
+            @PathVariable("tournamentId") final Long tournamentId,
+            @Valid @ModelAttribute("createTournamentTeamForm") final CreateTournamentTeamForm form,
+            final BindingResult bindingResult,
+            final RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+                    "tournamentErrorCode", "tournament.registration.error.teamNameRequired");
+            return new ModelAndView("redirect:/tournaments/" + tournamentId);
+        }
+        try {
+            tournamentRegistrationService.createTeam(tournamentId, user, form.getName());
+        } catch (final TournamentRegistrationException e) {
+            final String errorCode = "tournament.registration.error." + e.getMessage();
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
+        }
+        return new ModelAndView("redirect:/tournaments/" + tournamentId);
+    }
+
+    @PostMapping("/tournaments/{tournamentId:\\d+}/teams/{teamId:\\d+}/join")
+    public ModelAndView joinTeam(
+            @AuthenticatedUser final User user,
+            @PathVariable("tournamentId") final Long tournamentId,
+            @PathVariable("teamId") final Long teamId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            tournamentRegistrationService.joinTeam(tournamentId, teamId, user);
+        } catch (final TournamentRegistrationException e) {
+            final String errorCode = "tournament.registration.error." + e.getMessage();
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
+        }
+        return new ModelAndView("redirect:/tournaments/" + tournamentId);
+    }
+
+    @PostMapping("/tournaments/{tournamentId:\\d+}/teams/leave")
+    public ModelAndView leaveTeam(
+            @AuthenticatedUser final User user,
+            @PathVariable("tournamentId") final Long tournamentId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            tournamentRegistrationService.leaveTeam(tournamentId, user);
+        } catch (final TournamentRegistrationException e) {
+            final String errorCode = "tournament.registration.error." + e.getMessage();
+            redirectAttributes.addFlashAttribute("tournamentErrorCode", errorCode);
+        }
+        return new ModelAndView("redirect:/tournaments/" + tournamentId);
+    }
+
     private void addTournamentDetailModel(
             final ModelAndView mav,
             final Tournament tournament,
@@ -211,6 +268,8 @@ public class TournamentController {
                 tournamentService.viewerCapabilities(tournament, currentUser);
         final List<TournamentTeamMember> teamMembers =
                 tournamentRegistrationService.listTeamMembers(tournament.getId());
+        final List<TournamentSoloEntry> activeSoloEntries =
+                tournamentRegistrationService.listActiveSoloEntries(tournament.getId());
         final Map<Long, Integer> teamDisplayNumbers = teamDisplayNumbersFromMembers(teamMembers);
 
         mav.addObject("tournament", tournament);
@@ -230,13 +289,54 @@ public class TournamentController {
         mav.addObject("tournamentNextStepCode", nextStepCode(tournament));
         mav.addObject("tournamentAboutParagraphs", aboutParagraphs(tournament));
         mav.addObject("tournamentTeamMembers", teamMembers);
-        mav.addObject(
-                "tournamentActiveSoloEntries",
-                tournamentRegistrationService.listActiveSoloEntries(tournament.getId()));
+        mav.addObject("tournamentActiveSoloEntries", activeSoloEntries);
         mav.addObject("tournamentTeamDisplayNumbers", teamDisplayNumbers);
+        mav.addObject("tournamentTeamRosters", teamRosters(teamMembers, tournament.getTeamSize()));
+        mav.addObject("userProfileImageUrls", userProfileImageUrls(teamMembers, activeSoloEntries));
+        mav.addObject("tournamentUserTeamId", userTeam.map(TournamentTeam::getId).orElse(null));
         mav.addObject(
                 "tournamentCloseRegistrationDisabledMessage",
                 closeRegistrationDisabledMessageCode(capabilities));
+    }
+
+    private static List<TournamentTeamRosterView> teamRosters(
+            final List<TournamentTeamMember> teamMembers, final int teamSize) {
+        final Map<Long, List<TournamentTeamMember>> membersByTeamId = new LinkedHashMap<>();
+        final Map<Long, TournamentTeam> teamsById = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : teamMembers) {
+            final TournamentTeam team = member.getTeam();
+            if (team == null || team.getId() == null) {
+                continue;
+            }
+            teamsById.putIfAbsent(team.getId(), team);
+            membersByTeamId.computeIfAbsent(team.getId(), ignored -> new ArrayList<>()).add(member);
+        }
+        final List<TournamentTeamRosterView> rosters = new ArrayList<>();
+        for (final Map.Entry<Long, TournamentTeam> entry : teamsById.entrySet()) {
+            rosters.add(
+                    new TournamentTeamRosterView(
+                            entry.getValue(), membersByTeamId.get(entry.getKey()), teamSize));
+        }
+        return rosters;
+    }
+
+    private static Map<Long, String> userProfileImageUrls(
+            final List<TournamentTeamMember> teamMembers,
+            final List<TournamentSoloEntry> soloEntries) {
+        final Map<Long, String> urls = new LinkedHashMap<>();
+        for (final TournamentTeamMember member : teamMembers) {
+            final User user = member.getUser();
+            if (user != null && user.getId() != null) {
+                urls.putIfAbsent(user.getId(), profileUrlFor(user));
+            }
+        }
+        for (final TournamentSoloEntry entry : soloEntries) {
+            final User user = entry.getUser();
+            if (user != null && user.getId() != null) {
+                urls.putIfAbsent(user.getId(), profileUrlFor(user));
+            }
+        }
+        return urls;
     }
 
     private static String closeRegistrationDisabledMessageCode(
