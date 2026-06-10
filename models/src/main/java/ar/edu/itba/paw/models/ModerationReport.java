@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.types.ReportStatus;
 import ar.edu.itba.paw.models.types.ReportTargetType;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -329,5 +330,25 @@ public class ModerationReport {
                 + ", hasAppealReason="
                 + (appealReason != null && !appealReason.isBlank())
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof ModerationReport)) {
+            return false;
+        }
+
+        ModerationReport that = (ModerationReport) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

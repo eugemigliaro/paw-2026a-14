@@ -4,6 +4,8 @@ import ar.edu.itba.paw.models.EloUpdatedResult;
 import ar.edu.itba.paw.models.PlayerEloChange;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserSportRating;
+import ar.edu.itba.paw.models.exceptions.userSportRating.UserSportRatingInvalidTeamsException;
+import ar.edu.itba.paw.models.exceptions.userSportRating.UserSportRatingSportNotRatedException;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.UserSportRatingDao;
 import ar.edu.itba.paw.persistence.UserSportRatingLookupResult;
@@ -83,7 +85,7 @@ public class UserSportRatingServiceImpl implements UserSportRatingService {
         return team.stream()
                 .mapToInt(user -> getEffectiveElo(user, sport))
                 .average()
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(UserSportRatingInvalidTeamsException::new);
     }
 
     private double expectedResult(final int playerElo, final double opponentElo) {
@@ -99,17 +101,17 @@ public class UserSportRatingServiceImpl implements UserSportRatingService {
             final List<User> winners, final List<User> losers, final Sport sport) {
         assertRatedSport(sport);
         if (winners == null || winners.isEmpty() || losers == null || losers.isEmpty()) {
-            throw new IllegalArgumentException("Both teams must contain at least one player");
+            throw new UserSportRatingInvalidTeamsException();
         }
         if (winners.stream().anyMatch(user -> user == null)
                 || losers.stream().anyMatch(user -> user == null)) {
-            throw new IllegalArgumentException("Teams cannot contain null players");
+            throw new UserSportRatingInvalidTeamsException();
         }
     }
 
     private void assertRatedSport(final Sport sport) {
         if (sport == null || sport == Sport.OTHER) {
-            throw new IllegalArgumentException("Sport is not rated: " + sport);
+            throw new UserSportRatingSportNotRatedException();
         }
     }
 }

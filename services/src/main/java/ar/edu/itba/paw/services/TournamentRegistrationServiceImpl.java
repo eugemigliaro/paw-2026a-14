@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.tournament.TournamentNotFoundException;
 import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
@@ -466,7 +467,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     private void validateUser(final User user) {
         if (user == null || user.getId() == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.MatchClosedException;
 import ar.edu.itba.paw.models.exceptions.match.MatchForbiddenActionException;
@@ -68,15 +69,17 @@ class HostParticipationControllerTest {
     @Test
     void getHostJoinRequestsRouteRendersAggregateRequestsPage() throws Exception {
         AuthenticationUtils.authenticateUser(7L);
-        when(matchParticipationService.findPendingRequestsForHost(Mockito.any()))
-                .thenReturn(java.util.List.of());
+        when(matchParticipationService.findPendingRequestsForHost(
+                        Mockito.any(), Mockito.anyInt(), Mockito.anyInt()))
+                .thenReturn(new PaginatedResult<>(java.util.List.of(), 0, 1, 10));
 
         mockMvc.perform(get("/host/requests"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/participation/aggregate-requests"))
                 .andExpect(model().attribute("aggregateRequests", true))
                 .andExpect(model().attributeExists("pendingRequests"))
-                .andExpect(model().attribute("matchesUrl", "/matches"));
+                .andExpect(model().attribute("matchesUrl", "/matches"))
+                .andExpect(model().attribute("pageNumber", 1));
     }
 
     @Test

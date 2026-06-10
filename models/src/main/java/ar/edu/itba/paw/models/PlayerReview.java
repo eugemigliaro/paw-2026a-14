@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.converters.PlayerReviewReactionConverter;
 import ar.edu.itba.paw.models.types.PlayerReviewReaction;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -205,5 +206,25 @@ public class PlayerReview {
                 + ", hasDeleteReason="
                 + (deleteReason != null && !deleteReason.isBlank())
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof PlayerReview)) {
+            return false;
+        }
+
+        PlayerReview that = (PlayerReview) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

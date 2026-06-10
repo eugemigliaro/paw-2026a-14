@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchParticipant;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -274,33 +275,66 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
-        final List<MatchParticipant> participants =
+    public PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
+            final User host, final int page, final int pageSize) {
+        final String whereClause =
+                "FROM MatchParticipant mp"
+                        + " JOIN mp.match m"
+                        + " JOIN mp.user u"
+                        + " WHERE m.host.id = :hostUserId"
+                        + " AND m.joinPolicy = :joinPolicy"
+                        + " AND mp.status = :status"
+                        + " AND (mp.scope = :matchScope OR m.startsAt = ("
+                        + "   SELECT MIN(m2.startsAt) FROM MatchParticipant mp2"
+                        + "   JOIN mp2.match m2"
+                        + "   WHERE mp2.user.id = u.id AND mp2.status = :status AND mp2.scope = :seriesScope"
+                        + "   AND m2.series.id = m.series.id"
+                        + " ))";
+
+        final int totalCount =
+                ((Number)
+                                em.createQuery("SELECT COUNT(mp) " + whereClause)
+                                        .setParameter("hostUserId", host.getId())
+                                        .setParameter(
+                                                "joinPolicy", EventJoinPolicy.APPROVAL_REQUIRED)
+                                        .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
+                                        .setParameter("matchScope", ParticipantScope.MATCH)
+                                        .setParameter("seriesScope", ParticipantScope.SERIES)
+                                        .getSingleResult())
+                        .intValue();
+
+        final int safePageSize = Math.max(1, pageSize);
+        final int totalPages = Math.max(1, (totalCount + safePageSize - 1) / safePageSize);
+        final int safePage = Math.min(Math.max(page, 1), totalPages);
+
+        final List<Long> participantIds =
                 em.createQuery(
-                                "SELECT mp FROM MatchParticipant mp"
-                                        + " JOIN mp.match m"
-                                        + " JOIN mp.user u"
-                                        + " WHERE m.host.id = :hostUserId"
-                                        + " AND m.joinPolicy = :joinPolicy"
-                                        + " AND mp.status = :status"
-                                        + " AND (mp.scope = :matchScope OR m.startsAt = ("
-                                        + "   SELECT MIN(m2.startsAt) FROM MatchParticipant mp2"
-                                        + "   JOIN mp2.match m2"
-                                        + "   WHERE mp2.user.id = u.id AND mp2.status = :status AND mp2.scope = :seriesScope"
-                                        + "   AND m2.series.id = m.series.id"
-                                        + " ))"
+                                "SELECT mp.id "
+                                        + whereClause
                                         + " ORDER BY m.startsAt ASC, mp.joinedAt ASC, u.username ASC",
-                                MatchParticipant.class)
+                                Long.class)
                         .setParameter("hostUserId", host.getId())
                         .setParameter("joinPolicy", EventJoinPolicy.APPROVAL_REQUIRED)
                         .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
                         .setParameter("matchScope", ParticipantScope.MATCH)
                         .setParameter("seriesScope", ParticipantScope.SERIES)
+                        .setFirstResult((safePage - 1) * safePageSize)
+                        .setMaxResults(safePageSize)
                         .getResultList();
 
-        if (participants.isEmpty()) {
-            return Collections.emptyList();
+        if (participantIds.isEmpty()) {
+            return new PaginatedResult<>(List.of(), totalCount, safePage, safePageSize);
         }
+
+        final List<MatchParticipant> fetchedParticipants =
+                findPendingParticipantsByIds(participantIds);
+
+        final Map<Long, MatchParticipant> participantMap =
+                fetchedParticipants.stream()
+                        .collect(Collectors.toMap(MatchParticipant::getId, mp -> mp));
+
+        final List<MatchParticipant> participants =
+                participantIds.stream().map(participantMap::get).toList();
 
         final List<Long> matchIds =
                 participants.stream().map(mp -> mp.getMatch().getId()).distinct().toList();
@@ -309,14 +343,17 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
         final Map<Long, Match> matchMap =
                 matches.stream().collect(Collectors.toMap(Match::getId, m -> m));
 
-        return participants.stream()
-                .map(
-                        mp ->
-                                new PendingJoinRequest(
-                                        matchMap.get(mp.getMatch().getId()),
-                                        mp.getUser(),
-                                        mp.getScope() == ParticipantScope.SERIES))
-                .toList();
+        final List<PendingJoinRequest> pending =
+                participants.stream()
+                        .map(
+                                mp ->
+                                        new PendingJoinRequest(
+                                                matchMap.get(mp.getMatch().getId()),
+                                                mp.getUser(),
+                                                mp.getScope() == ParticipantScope.SERIES))
+                        .toList();
+
+        return new PaginatedResult<>(pending, totalCount, safePage, safePageSize);
     }
 
     @Override
@@ -817,6 +854,18 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                 .setParameter("matchId", matchId)
                 .setParameter("statuses", statuses)
                 .getSingleResult();
+    }
+
+    private List<MatchParticipant> findPendingParticipantsByIds(final Collection<Long> ids) {
+        return em.createQuery(
+                        "SELECT DISTINCT mp "
+                                + "FROM MatchParticipant mp "
+                                + "JOIN FETCH mp.user "
+                                + "JOIN FETCH mp.match "
+                                + "WHERE mp.id IN :ids",
+                        MatchParticipant.class)
+                .setParameter("ids", ids)
+                .getResultList();
     }
 
     private List<Match> findMatchesByIds(final Collection<Long> ids) {

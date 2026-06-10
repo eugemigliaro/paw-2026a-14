@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserBan;
 import ar.edu.itba.paw.models.UserLanguages;
 import ar.edu.itba.paw.models.exceptions.moderation.*;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.exceptions.user.UserNotFoundException;
 import ar.edu.itba.paw.models.types.AppealDecision;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -543,7 +544,7 @@ public class ModerationServiceImpl implements ModerationService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 

@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.exceptions.match.*;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesNotJoinedException;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -393,7 +394,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("User must not be null.");
+            throw new InvalidUserException();
         }
     }
 
