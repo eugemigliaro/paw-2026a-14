@@ -473,6 +473,31 @@ class MatchDashboardControllerTest {
     }
 
     @Test
+    void getMatchesRouteSortLinksPreserveMultiValueFiltersAsCsv() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        final MvcResult result =
+                mockMvc.perform(
+                                get("/matches")
+                                        .param("sport", "padel")
+                                        .param("sport", "tennis")
+                                        .param("status", "open")
+                                        .param("status", "completed")
+                                        .param("visibility", "public")
+                                        .param("visibility", "invite_only"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        final MatchListControlsViewModel listControls =
+                (MatchListControlsViewModel)
+                        result.getModelAndView().getModel().get("listControls");
+        final Map<String, String> params = listControls.getSortOptions().get(0).getParams();
+        Assertions.assertEquals("padel,tennis", params.get("sport"));
+        Assertions.assertEquals("open,completed", params.get("status"));
+        Assertions.assertEquals("public,invite_only", params.get("visibility"));
+    }
+
+    @Test
     void getMatchesRouteWithWildcardQueryRendersPageWithInlineError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
 

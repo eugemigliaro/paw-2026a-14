@@ -20,11 +20,10 @@ import ar.edu.itba.paw.webapp.exception.AccessExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.PasswordResetExceptionHandler;
 import ar.edu.itba.paw.webapp.exception.VerificationExceptionHandler;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.ValidatorTestUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import java.util.Locale;
 import java.util.Optional;
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,6 @@ import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 class HostParticipationControllerTest {
 
@@ -54,7 +52,7 @@ class HostParticipationControllerTest {
                 MockMvcBuilders.standaloneSetup(
                                 new HostParticipationController(
                                         matchParticipationService, userService, messageSource))
-                        .setValidator(validator(userEmailValidator))
+                        .setValidator(ValidatorTestUtils.validator(userEmailValidator))
                         .setControllerAdvice(
                                 new AccessExceptionHandler(messageSource),
                                 new PasswordResetExceptionHandler(),
@@ -211,31 +209,5 @@ class HostParticipationControllerTest {
                 .thenThrow(new MatchForbiddenActionException());
 
         mockMvc.perform(get("/host/matches/42/participants")).andExpect(status().isForbidden());
-    }
-
-    private LocalValidatorFactoryBean validator(UserEmailValidator userEmailValidator) {
-        ConstraintValidatorFactory customConstraintFactory =
-                new ConstraintValidatorFactory() {
-                    @Override
-                    public <T extends ConstraintValidator<?, ?>> T getInstance(Class<T> key) {
-                        if (key == UserEmailValidator.class) {
-                            return (T) userEmailValidator;
-                        }
-                        try {
-                            return key.getDeclaredConstructor().newInstance();
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void releaseInstance(ConstraintValidator<?, ?> instance) {}
-                }; // TODO: find a better way to inject the custom validator without having to
-        // reimplement the whole factory
-
-        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
-        factoryBean.setConstraintValidatorFactory(customConstraintFactory);
-        factoryBean.afterPropertiesSet();
-        return factoryBean;
     }
 }

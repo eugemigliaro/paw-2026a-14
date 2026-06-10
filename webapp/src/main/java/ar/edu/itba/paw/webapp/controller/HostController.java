@@ -16,11 +16,11 @@ import ar.edu.itba.paw.models.types.RecurrenceEndMode;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.services.CreateMatchRequest;
 import ar.edu.itba.paw.services.CreateRecurrenceRequest;
-import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UpdateMatchRequest;
 import ar.edu.itba.paw.webapp.form.CreateEventForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
+import ar.edu.itba.paw.webapp.utils.MultipartImageUpload;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -35,7 +35,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -123,7 +122,7 @@ public class HostController {
                         createEventForm.getVisibility(),
                         createEventForm.getJoinPolicy(),
                         EventStatus.OPEN,
-                        bannerUpload(createEventForm.getBannerImage()),
+                        MultipartImageUpload.from(createEventForm.getBannerImage()),
                         toRecurrenceRequest(createEventForm));
 
         final Match createdMatch = matchService.createMatch(request);
@@ -171,7 +170,7 @@ public class HostController {
                         createEventForm.getVisibility(),
                         createEventForm.getJoinPolicy(),
                         existingMatch.getStatus(),
-                        bannerUpload(createEventForm.getBannerImage()),
+                        MultipartImageUpload.from(createEventForm.getBannerImage()),
                         createEventForm.getLatitude(),
                         createEventForm.getLongitude());
 
@@ -386,7 +385,7 @@ public class HostController {
                 visibility,
                 joinPolicy,
                 status,
-                bannerUpload(form.getBannerImage()),
+                MultipartImageUpload.from(form.getBannerImage()),
                 form.getLatitude(),
                 form.getLongitude());
     }
@@ -412,36 +411,6 @@ public class HostController {
                 form.getRecurrenceEndMode() == RecurrenceEndMode.OCCURRENCE_COUNT
                         ? form.getRecurrenceOccurrenceCount()
                         : null);
-    }
-
-    private ImageUpload bannerUpload(
-            final MultipartFile
-                    bannerImage) { // TODO: move this to a different file. It's also used in other
-        // controllers
-        if (bannerImage == null) {
-            return null;
-        }
-        return new ImageUpload() {
-            @Override
-            public String getContentType() {
-                return bannerImage.getContentType();
-            }
-
-            @Override
-            public long getContentLength() {
-                return bannerImage.getSize();
-            }
-
-            @Override
-            public String getOriginalFilename() {
-                return bannerImage.getOriginalFilename();
-            }
-
-            @Override
-            public java.io.InputStream getContentStream() throws java.io.IOException {
-                return bannerImage.getInputStream();
-            }
-        };
     }
 
     private record HostFormConfig(

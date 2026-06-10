@@ -161,6 +161,29 @@ public class MatchParticipationServiceImplTest {
     }
 
     @Test
+    public void testLeaveMatchAllowsSelfCancellationForUpcomingPublicMatch() {
+        // Arrange
+        Mockito.when(matchDataService.findById(10L))
+                .thenReturn(
+                        Optional.of(
+                                createMatch(
+                                        10L,
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
+                                        FIXED_NOW.plusSeconds(3600))));
+        final User u = UserUtils.getUser(20L);
+        Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(true);
+        Mockito.when(matchParticipantDataService.removeParticipant(10L, u)).thenReturn(true);
+
+        // Exercise
+        matchParticipationService.leaveMatch(10L, u);
+
+        // Assert
+        Assertions.assertTrue(mailDispatchService.actions.contains("player-left"));
+    }
+
+    @Test
     public void testRemoveParticipantAllowsSelfLeaveForUpcomingPublicMatch() {
         // Arrange
         Mockito.when(matchDataService.findById(10L))

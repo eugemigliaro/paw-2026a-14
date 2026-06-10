@@ -398,7 +398,7 @@ class HostTournamentControllerTest {
                         tournamentService.cancel(
                                 Mockito.eq(77L),
                                 Mockito.any(User.class),
-                                Mockito.eq("Host cancelled tournament")))
+                                Mockito.eq("host_cancelled")))
                 .thenReturn(tournament(77L, host, TournamentStatus.CANCELLED));
 
         // 2. Exercise + 3. Assert

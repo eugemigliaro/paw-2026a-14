@@ -49,25 +49,24 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public ModelAndView
-            showLogin( // TODO: consider typing these flags as boolean. "1".equals(flag) is a bit
-                    // weird
-                    @RequestParam(value = "error", required = false) final String error,
-                    @RequestParam(value = "email", required = false) final String email,
-                    @RequestParam(value = "verified", required = false) final String verified,
-                    @RequestParam(value = "reset", required = false) final String reset,
-                    @RequestParam(value = "logout", required = false) final String logout,
-                    @RequestParam(value = "continue", required = false) final String continueFlag,
-                    final HttpServletResponse response,
-                    final Locale locale) {
+    public ModelAndView showLogin(
+            @RequestParam(value = "error", required = false) final String error,
+            @RequestParam(value = "email", required = false) final String email,
+            @RequestParam(value = "verified", required = false) final String verified,
+            @RequestParam(value = "reset", required = false) final String reset,
+            @RequestParam(value = "logout", required = false) final String logout,
+            @RequestParam(value = "continue", required = false) final String continueFlag,
+            final HttpServletResponse response,
+            final Locale locale) {
         disableBrowserCaching(response);
         final ModelAndView mav = new ModelAndView("auth/login");
         mav.addObject("loginEmail", email == null ? "" : email);
-        mav.addObject("loginError", loginErrorMessage(error, locale));
-        mav.addObject("showResendVerification", "verify".equalsIgnoreCase(error));
-        mav.addObject("verificationConfirmed", "1".equals(verified));
-        mav.addObject("passwordResetCompleted", "1".equals(reset));
-        mav.addObject("loggedOut", "1".equals(logout));
+        final String loginErrorCode = loginErrorCode(error);
+        mav.addObject("loginErrorCode", loginErrorCode);
+        mav.addObject("showResendVerification", "verify".equals(loginErrorCode));
+        mav.addObject("verificationConfirmed", isTruthyFlag(verified));
+        mav.addObject("passwordResetCompleted", isTruthyFlag(reset));
+        mav.addObject("loggedOut", isTruthyFlag(logout));
         mav.addObject("loginContinue", continueFlag != null);
         return mav;
     }
@@ -195,18 +194,19 @@ public class AuthController {
         return mav;
     }
 
-    // TODO: consider changing the errors to "verify", "passwordSetup" and "invalid", and removing
-    // the messageSource from this class.
-    // That way we can send "auth.login.error." + error as the msg key and resolve it in the view.
-    private String loginErrorMessage(final String error, final Locale locale) {
+    private static boolean isTruthyFlag(final String flag) {
+        return "1".equals(flag) || "true".equalsIgnoreCase(flag);
+    }
+
+    private static String loginErrorCode(final String error) {
         if ("verify".equalsIgnoreCase(error)) {
-            return messageSource.getMessage("auth.login.error.verify", null, locale);
+            return "verify";
         }
         if ("passwordSetup".equalsIgnoreCase(error)) {
-            return messageSource.getMessage("auth.login.error.passwordSetup", null, locale);
+            return "passwordSetup";
         }
         if ("invalid".equalsIgnoreCase(error)) {
-            return messageSource.getMessage("auth.login.error.invalid", null, locale);
+            return "invalid";
         }
         return null;
     }

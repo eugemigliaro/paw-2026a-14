@@ -41,6 +41,7 @@ import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
+import ar.edu.itba.paw.webapp.utils.ValidatorTestUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.math.BigDecimal;
@@ -49,8 +50,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Locale;
 import java.util.Optional;
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorFactory;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -96,7 +95,7 @@ class HostControllerTest {
         final UsernameValidator usernameValidator =
                 new UsernameValidator(Mockito.mock(UserService.class));
         final LocalValidatorFactoryBean validator =
-                validator(messageSource, userEmailValidator, usernameValidator);
+                ValidatorTestUtils.validator(messageSource, userEmailValidator, usernameValidator);
 
         realMatch =
                 MatchUtils.match(42L)
@@ -1182,37 +1181,5 @@ class HostControllerTest {
         final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
         return localeChangeInterceptor;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static LocalValidatorFactoryBean validator(
-            final MessageSource messageSource,
-            final UserEmailValidator userEmailValidator,
-            final UsernameValidator usernameValidator) {
-        final ConstraintValidatorFactory customConstraintFactory =
-                new ConstraintValidatorFactory() {
-                    @Override
-                    public <T extends ConstraintValidator<?, ?>> T getInstance(final Class<T> key) {
-                        if (key == UserEmailValidator.class) {
-                            return (T) userEmailValidator;
-                        } else if (key == UsernameValidator.class) {
-                            return (T) usernameValidator;
-                        }
-                        try {
-                            return key.getDeclaredConstructor().newInstance();
-                        } catch (final Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void releaseInstance(final ConstraintValidator<?, ?> instance) {}
-                };
-
-        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-        validator.setValidationMessageSource(messageSource);
-        validator.setConstraintValidatorFactory(customConstraintFactory);
-        validator.afterPropertiesSet();
-        return validator;
     }
 }
