@@ -62,9 +62,26 @@ public class TournamentMailServiceImpl implements TournamentMailService {
 
     @Override
     public void sendTournamentCancelledEmail(final Tournament tournament) {
-        for (final User recipient : recipients(tournament)) {
+        // A cancellation can happen at any stage, so it must reach everyone still registered:
+        // team members plus the whole solo queue (not just team members, unlike result/completed
+        // emails that fire once every player is already in a team).
+        for (final User recipient : cancelledRecipients(tournament)) {
             mailDispatchService.sendTournamentCancelled(recipient, tournament);
         }
+    }
+
+    private List<User> cancelledRecipients(final Tournament tournament) {
+        if (tournament == null || tournament.getId() == null) {
+            return List.of();
+        }
+
+        final Map<String, User> recipientsByIdentity = new LinkedHashMap<>();
+        collectTeamMembers(tournament, recipientsByIdentity);
+        for (final TournamentSoloEntry entry :
+                tournamentSoloEntryDao.findRegisteredByTournament(tournament.getId())) {
+            addRecipient(recipientsByIdentity, entry == null ? null : entry.getUser());
+        }
+        return List.copyOf(recipientsByIdentity.values());
     }
 
     private List<User> recipients(final Tournament tournament) {

@@ -99,6 +99,20 @@ public class TournamentSoloEntryJpaDao implements TournamentSoloEntryDao {
     }
 
     @Override
+    public List<TournamentSoloEntry> findRegisteredByTournament(final long tournamentId) {
+        return em.createQuery(
+                        "SELECT tse FROM TournamentSoloEntry tse"
+                                + " JOIN FETCH tse.user"
+                                + " WHERE tse.tournament.id = :tournamentId"
+                                + " AND tse.status <> :left"
+                                + " ORDER BY tse.joinedAt ASC, tse.id ASC",
+                        TournamentSoloEntry.class)
+                .setParameter("tournamentId", tournamentId)
+                .setParameter("left", TournamentSoloEntryStatus.LEFT)
+                .getResultList();
+    }
+
+    @Override
     public long countActiveByTournament(final long tournamentId) {
         return em.createQuery(
                         "SELECT COUNT(tse) FROM TournamentSoloEntry tse"

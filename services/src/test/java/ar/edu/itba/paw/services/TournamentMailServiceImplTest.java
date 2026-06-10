@@ -97,6 +97,27 @@ public class TournamentMailServiceImplTest {
     }
 
     @Test
+    public void sendTournamentCancelledEmailIncludesSoloRegistrants() {
+        // 1. Arrange
+        final Tournament tournament = tournament(10L, TournamentStatus.REGISTRATION);
+        final User teamMember = UserUtils.getUser(2L);
+        final User soloRegistrant = UserUtils.getUser(3L);
+        Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
+                .thenReturn(List.of(member(30L, team(20L, tournament, "Team A"), teamMember)));
+        Mockito.when(tournamentSoloEntryDao.findRegisteredByTournament(10L))
+                .thenReturn(List.of(soloEntry(40L, tournament, soloRegistrant)));
+
+        // 2. Exercise
+        tournamentMailService.sendTournamentCancelledEmail(tournament);
+
+        // 3. Assert
+        Assertions.assertEquals(List.of("cancelled", "cancelled"), mailDispatchService.actions);
+        Assertions.assertEquals(
+                List.of(teamMember.getEmail(), soloRegistrant.getEmail()),
+                mailDispatchService.recipients);
+    }
+
+    @Test
     public void sendMatchResultEmailSendsToParticipants() {
         // 1. Arrange
         final Tournament tournament = tournament(10L, TournamentStatus.IN_PROGRESS);

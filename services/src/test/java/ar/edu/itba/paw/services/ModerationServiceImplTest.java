@@ -925,14 +925,12 @@ public class ModerationServiceImplTest {
         }
 
         @Override
-        public TournamentRegistrationReadiness getRegistrationReadiness(
-                final long tournamentId, final User actingUser) {
+        public TournamentRegistrationReadiness getRegistrationReadiness(final long tournamentId) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ar.edu.itba.paw.models.Tournament closeRegistration(
-                final long tournamentId, final User actingUser) {
+        public ar.edu.itba.paw.models.Tournament closeRegistration(final long tournamentId) {
             throw new UnsupportedOperationException();
         }
     }

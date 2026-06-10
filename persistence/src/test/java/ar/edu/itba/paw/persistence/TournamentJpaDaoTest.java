@@ -901,6 +901,27 @@ public class TournamentJpaDaoTest {
                 TournamentSoloEntryStatus.UNASSIGNED, unassigned.get(0).getStatus());
     }
 
+    @Test
+    public void shouldFindRegisteredSoloEntriesExcludingLeft() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.IN_POOL);
+        final TournamentSoloEntry left =
+                tournamentSoloEntryDao.create(
+                        tournament, secondPlayer, TournamentSoloEntryStatus.IN_POOL);
+        left.setStatus(TournamentSoloEntryStatus.LEFT);
+        tournamentSoloEntryDao.update(left);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentSoloEntry> registered =
+                tournamentSoloEntryDao.findRegisteredByTournament(tournament.getId());
+
+        Assertions.assertEquals(
+                List.of(player.getId()),
+                registered.stream().map(entry -> entry.getUser().getId()).toList());
+    }
+
     private Tournament createTournament(final TournamentStatus status) {
         return createTournament(host, "Summer Cup", status);
     }
