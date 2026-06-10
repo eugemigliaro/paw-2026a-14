@@ -1,3 +1,4 @@
+-- Mirror of prod V36.
 UPDATE tournament_matches
 SET status = 'done'
 WHERE status = 'walkover';

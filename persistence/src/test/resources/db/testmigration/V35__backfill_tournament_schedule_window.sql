@@ -1,3 +1,4 @@
+-- Mirror of prod V35 (data backfill).
 UPDATE tournaments t
 SET starts_at = (
 		SELECT MIN(tm.scheduled_starts_at)
