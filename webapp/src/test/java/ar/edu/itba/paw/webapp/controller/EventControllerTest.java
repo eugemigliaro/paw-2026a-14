@@ -264,17 +264,6 @@ class EventControllerTest {
                         .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
                         .joinedPlayers(1)
                         .build();
-        final Match approvalInProgressMatch =
-                MatchUtils.match(57L)
-                        .address("Downtown Club")
-                        .title("Approval In Progress Padel")
-                        .description("Started session with host approval")
-                        .startsAt(Instant.parse("2026-04-04T23:00:00Z"))
-                        .endsAt(Instant.parse("2026-04-05T01:00:00Z"))
-                        .price(BigDecimal.TEN)
-                        .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
-                        .joinedPlayers(1)
-                        .build();
 
         matchService = Mockito.mock(MatchService.class);
 
@@ -302,8 +291,6 @@ class EventControllerTest {
         Mockito.when(matchService.findMatchById(54L))
                 .thenReturn(Optional.of(approvalRecurringPastOccurrence));
         Mockito.when(matchService.findMatchById(56L)).thenReturn(Optional.of(pendingFutureMatch));
-        Mockito.when(matchService.findMatchById(57L))
-                .thenReturn(Optional.of(approvalInProgressMatch));
         Mockito.when(matchService.findMatchById(ArgumentMatchers.anyLong()))
                 .thenAnswer(
                         invocation -> {
@@ -324,7 +311,6 @@ class EventControllerTest {
                                 case 53 -> Optional.of(approvalRecurringSecondOccurrence);
                                 case 54 -> Optional.of(approvalRecurringPastOccurrence);
                                 case 56 -> Optional.of(pendingFutureMatch);
-                                case 57 -> Optional.of(approvalInProgressMatch);
                                 default -> Optional.empty();
                             };
                         });
@@ -507,9 +493,7 @@ class EventControllerTest {
                         invocation -> {
                             final Long matchId = invocation.getArgument(0);
                             final User host = invocation.getArgument(1);
-                            if ((matchId == 52L || matchId == 57L)
-                                    && host != null
-                                    && (host.getId() == 7L || isAdminViewer(host))) {
+                            if (matchId == 52L && host != null && host.getId() == 7L) {
                                 return List.of(UserUtils.getUser(9L));
                             }
                             return List.of();
@@ -1016,55 +1000,6 @@ class EventControllerTest {
     }
 
     @Test
-    void getStartedApprovalRequiredMatchDetailsRouteForHostShowsPendingRequestsWithLockedActions()
-            throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/matches/57"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("hostViewer", true))
-                .andExpect(
-                        model().attribute(
-                                        "matchActionCapabilities",
-                                        Matchers.hasProperty(
-                                                "canManageParticipants", Matchers.is(false))))
-                .andExpect(model().attribute("hostPendingRequestCount", 1))
-                .andExpect(model().attribute("hostPendingRequestsOpen", true))
-                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
-    }
-
-    @Test
-    void getStartedApprovalRequiredMatchDetailsRouteForNonHostDoesNotShowPendingRequests()
-            throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(get("/matches/57"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("hostViewer", false))
-                .andExpect(model().attribute("hostPendingRequestCount", 0))
-                .andExpect(model().attribute("hostPendingRequests", Matchers.empty()));
-    }
-
-    @Test
-    void getStartedApprovalRequiredMatchDetailsRouteForAdminShowsPendingRequests()
-            throws Exception {
-        AuthenticationUtils.authenticateAdmin(99L, "ignored");
-
-        mockMvc.perform(get("/matches/57"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("hostViewer", false))
-                .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(
-                        model().attribute(
-                                        "matchActionCapabilities",
-                                        Matchers.hasProperty(
-                                                "canManageParticipants", Matchers.is(false))))
-                .andExpect(model().attribute("hostPendingRequestCount", 1))
-                .andExpect(model().attribute("hostPendingRequestsOpen", true))
-                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
-    }
-
-    @Test
     void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1289,7 +1224,6 @@ class EventControllerTest {
                 viewer != null
                         && match.getHost() != null
                         && viewer.getId().equals(match.getHost().getId());
-        final boolean manager = host || isAdminViewer(viewer);
         final boolean activeParticipant =
                 viewer != null
                         && currentUserHasReservation
@@ -1303,13 +1237,13 @@ class EventControllerTest {
                                 || Long.valueOf(50L).equals(match.getId()));
         final boolean visible =
                 match.getStatus() == EventStatus.DRAFT
-                        ? manager
+                        ? host
                         : match.getVisibility() == EventVisibility.PRIVATE
                                         || match.getStatus() == EventStatus.CANCELLED
-                                ? manager || activeParticipant || seriesParticipant || invited
+                                ? host || activeParticipant || seriesParticipant || invited
                                 : match.getVisibility() == EventVisibility.PUBLIC;
         final boolean editable =
-                manager
+                host
                         && match.getStatus() != EventStatus.COMPLETED
                         && match.getStatus() != EventStatus.CANCELLED
                         && match.getStartsAt().isAfter(FIXED_NOW);
@@ -1349,20 +1283,15 @@ class EventControllerTest {
                 viewer != null
                         && match.getHost() != null
                         && viewer.getId().equals(match.getHost().getId());
-        final boolean manager = host || isAdminViewer(viewer);
         final MatchActionCapabilities capabilities = actionCapabilities(match, viewer);
         return new MatchManagementPermissions(
                 host,
-                manager,
-                capabilities.isCanManageParticipants(),
+                host,
+                host,
                 capabilities.isCanEdit(),
                 capabilities.isCanCancel(),
                 capabilities.isCanEditSeries(),
                 capabilities.isCanCancelSeries());
-    }
-
-    private boolean isAdminViewer(final User viewer) {
-        return viewer != null && Long.valueOf(99L).equals(viewer.getId());
     }
 
     private MatchInteractionState interactionState(

@@ -17,7 +17,6 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 			<spring:message var="ctaLabel" code="event.booking.cta" />
 			<spring:message var="availabilityLabel" code="event.availability" arguments="${event.availableSpots},${event.maxPlayers}" />
-			<spring:message var="participantListLockedTooltip" code="event.host.participants.lockedTooltip" />
 			<c:choose>
 				<c:when test="${empty event.pricePerPlayer}"><spring:message var="bookingPrice" code="price.tbd" /></c:when>
 				<c:when test="${event.pricePerPlayer == 0}"><spring:message var="bookingPrice" code="price.free" /></c:when>
@@ -71,7 +70,7 @@
 							</div>
 						</section>
 
-						<c:if test="${hostCanManage && isApprovalRequired}">
+						<c:if test="${hostViewer && isApprovalRequired}">
 							<section
 								class="detail-section detail-section--host-collapsible"
 								aria-labelledby="pending-requests-title"
@@ -117,42 +116,30 @@
 														</c:choose>
 													</div>
 													<div class="participant-list__actions">
-														<spring:message var="approveLabel" code="host.requests.approve" />
-														<spring:message var="rejectLabel" code="host.requests.reject" />
-														<c:choose>
-															<c:when test="${matchActionCapabilities.canManageParticipants}">
-																<c:url var="approveAction" value="/host/matches/${event.id}/requests/${req.id}/approve" />
-																<spring:message var="approvingLabel" code="host.requests.approving" />
-																<form
-																	method="post"
-																	action="${approveAction}"
-																	data-submit-guard="true"
-																	data-submit-loading-label="${approvingLabel}"
-																	class="participant-list__action-form">
-																	<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-																	<ui:button label="${approveLabel}" type="submit" size="sm" className="participant-list__action-button" />
-																</form>
-																<c:url var="rejectAction" value="/host/matches/${event.id}/requests/${req.id}/reject" />
-																<spring:message var="rejectingLabel" code="host.requests.rejecting" />
-																<form
-																	method="post"
-																	action="${rejectAction}"
-																	data-submit-guard="true"
-																	data-submit-loading-label="${rejectingLabel}"
-																	class="participant-list__action-form">
-																	<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-																	<ui:button label="${rejectLabel}" type="submit" variant="secondary" size="sm" className="participant-list__action-button" />
-																</form>
-															</c:when>
-															<c:otherwise>
-																<span class="btn btn--primary btn--sm is-disabled participant-list__action-button report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${participantListLockedTooltip}" aria-label="${participantListLockedTooltip}">
-																	<c:out value="${approveLabel}" />
-																</span>
-																<span class="btn btn--secondary btn--sm is-disabled participant-list__action-button report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${participantListLockedTooltip}" aria-label="${participantListLockedTooltip}">
-																	<c:out value="${rejectLabel}" />
-																</span>
-															</c:otherwise>
-														</c:choose>
+														<c:url var="approveAction" value="/host/matches/${event.id}/requests/${req.id}/approve" />
+														<spring:message var="approvingLabel" code="host.requests.approving" />
+														<form
+															method="post"
+															action="${approveAction}"
+															data-submit-guard="true"
+															data-submit-loading-label="${approvingLabel}"
+															class="participant-list__action-form">
+															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+															<spring:message var="approveLabel" code="host.requests.approve" />
+															<ui:button label="${approveLabel}" type="submit" size="sm" className="participant-list__action-button" />
+														</form>
+														<c:url var="rejectAction" value="/host/matches/${event.id}/requests/${req.id}/reject" />
+														<spring:message var="rejectingLabel" code="host.requests.rejecting" />
+														<form
+															method="post"
+															action="${rejectAction}"
+															data-submit-guard="true"
+															data-submit-loading-label="${rejectingLabel}"
+															class="participant-list__action-form">
+															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+															<spring:message var="rejectLabel" code="host.requests.reject" />
+															<ui:button label="${rejectLabel}" type="submit" variant="secondary" size="sm" className="participant-list__action-button" />
+														</form>
 													</div>
 												</li>
 											</c:forEach>
@@ -395,26 +382,16 @@
 												<c:choose>
 													<c:when test="${matchActionCapabilities.canEditSeries}">
 														<a class="host-action-card__button" href="${hostSeriesEditHref}">
-															<span class="host-action-card__icon host-action-card__icon--stack" aria-hidden="true">
-																<span class="host-action-card__icon-layer host-action-card__icon-layer--back">
-																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-																</span>
-																<span class="host-action-card__icon-layer host-action-card__icon-layer--front">
-																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-																</span>
+															<span class="host-action-card__icon" aria-hidden="true">
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditSeriesLabel}" /></span>
 														</a>
 													</c:when>
 													<c:otherwise>
 														<span class="host-action-card__button is-disabled" aria-disabled="true">
-															<span class="host-action-card__icon host-action-card__icon--stack" aria-hidden="true">
-																<span class="host-action-card__icon-layer host-action-card__icon-layer--back">
-																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-																</span>
-																<span class="host-action-card__icon-layer host-action-card__icon-layer--front">
-																	<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-																</span>
+															<span class="host-action-card__icon" aria-hidden="true">
+																<icon:pencil fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 															</span>
 															<span><c:out value="${hostEditSeriesLabel}" /></span>
 														</span>
@@ -432,13 +409,8 @@
 												<form method="post" action="${hostSeriesCancelAction}" data-submit-guard="true" data-submit-loading-label="${hostCancellingLabel}" class="host-action-card__form">
 													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
 													<button class="host-action-card__button host-action-card__button--danger" type="submit" <c:if test="${not matchActionCapabilities.canCancelSeries}">disabled="disabled" aria-disabled="true"</c:if>>
-														<span class="host-action-card__icon host-action-card__icon--stack" aria-hidden="true">
-															<span class="host-action-card__icon-layer host-action-card__icon-layer--back">
-																<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
-															<span class="host-action-card__icon-layer host-action-card__icon-layer--front">
-																<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-															</span>
+														<span class="host-action-card__icon" aria-hidden="true">
+															<icon:calendar fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 														</span>
 														<span><c:out value="${hostCancelSeriesLabel}" /></span>
 													</button>
