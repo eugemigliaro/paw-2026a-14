@@ -146,8 +146,9 @@
 						<c:set var="profilePath" value="/users/${currentUsername}" />
 						<c:url var="profileHref" value="${profilePath}" />
 						<c:set var="hostRequestsPath" value="/host/requests" />
-						<c:url var="hostRequestsUrl" value="${hostRequestsPath}" />
-						<c:url var="reportsHref" value="/reports/mine" />
+						<c:url var="hostRequestsHref" value="${hostRequestsPath}" />
+						<c:set var="reportsPath" value="/reports/mine" />
+						<c:url var="reportsHref" value="${reportsPath}" />
 						<c:url var="logoutHref" value="/logout" />
 						<a
 							href="${profileHref}"
@@ -160,7 +161,7 @@
 							<span><c:out value="${profileLabel}" /></span>
 						</a>
 						<a
-							href="${hostRequestsUrl}"
+							href="${hostRequestsHref}"
 							class="site-header__settings-item ${currentPath eq hostRequestsPath ? 'site-header__settings-item--active' : ''}"
 							role="menuitem">
 							<span class="site-header__settings-item-icon site-header__settings-item-icon--outline-head" aria-hidden="true">
@@ -171,7 +172,7 @@
 						</a>
 						<a
 							href="${reportsHref}"
-							class="site-header__settings-item ${currentPath eq reportsHref ? 'site-header__settings-item--active' : ''}"
+							class="site-header__settings-item ${currentPath eq reportsPath ? 'site-header__settings-item--active' : ''}"
 							role="menuitem">
 							<span class="site-header__settings-item-icon" aria-hidden="true">
 								<icon:report />
@@ -180,10 +181,11 @@
 							<span><c:out value="${reportsLabel}" /></span>
 						</a>
 						<sec:authorize access="hasRole('ADMIN_MOD')">
-							<c:url var="adminReportsHref" value="/admin/reports" />
+							<c:set var="adminReportsPath" value="/admin/reports" />
+							<c:url var="adminReportsHref" value="${adminReportsPath}" />
 							<a
 								href="${adminReportsHref}"
-								class="site-header__settings-item ${currentPath eq adminReportsHref ? 'site-header__settings-item--active' : ''}"
+								class="site-header__settings-item ${currentPath eq adminReportsPath ? 'site-header__settings-item--active' : ''}"
 								role="menuitem">
 								<span class="site-header__settings-item-icon" aria-hidden="true">
 									<icon:alertReport />
