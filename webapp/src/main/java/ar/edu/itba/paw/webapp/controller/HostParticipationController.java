@@ -7,15 +7,11 @@ import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationException;
 import ar.edu.itba.paw.services.MatchInvitationResult;
 import ar.edu.itba.paw.services.MatchParticipationService;
-import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
-import java.util.HashMap;
-import java.util.List;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import java.util.Locale;
-import java.util.Map;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -38,18 +34,15 @@ public class HostParticipationController {
     private static final int REQUESTS_PAGE_SIZE = 10;
 
     private final MatchParticipationService matchParticipationService;
-    private final MatchService matchService;
     private final UserService userService;
     private final MessageSource messageSource;
 
     @Autowired
     public HostParticipationController(
             final MatchParticipationService matchParticipationService,
-            final MatchService matchService,
             final UserService userService,
             final MessageSource messageSource) {
         this.matchParticipationService = matchParticipationService;
-        this.matchService = matchService;
         this.userService = userService;
         this.messageSource = messageSource;
     }
@@ -84,8 +77,6 @@ public class HostParticipationController {
         final ModelAndView mav = new ModelAndView("host/participation/aggregate-requests");
         mav.addObject("aggregateRequests", true);
         mav.addObject("pendingRequests", result.getItems());
-        mav.addObject(
-                "requestActionsDisabledByMatchId", requestActionsDisabledByMatchId(pending, user));
         mav.addObject(
                 "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
         mav.addObject("matchesUrl", "/matches");
@@ -229,27 +220,6 @@ public class HostParticipationController {
 
     private ModelAndView redirectToMatch(final Long matchId) {
         return new ModelAndView("redirect:/matches/" + matchId);
-    }
-
-    private Map<Long, Boolean> requestActionsDisabledByMatchId(
-            final List<PendingJoinRequest> pendingRequests, final User user) {
-        final Map<Long, Boolean> disabledByMatchId = new HashMap<>();
-        for (final PendingJoinRequest request : pendingRequests) {
-            if (request.getMatch() == null || request.getMatch().getId() == null) {
-                continue;
-            }
-            final Long matchId = request.getMatch().getId();
-            if (disabledByMatchId.containsKey(matchId)) {
-                continue;
-            }
-
-            final boolean disabled =
-                    !matchService
-                            .actionCapabilities(request.getMatch(), user)
-                            .isCanManageParticipants();
-            disabledByMatchId.put(matchId, disabled);
-        }
-        return disabledByMatchId;
     }
 
     private String inviteValidationErrorMessage(

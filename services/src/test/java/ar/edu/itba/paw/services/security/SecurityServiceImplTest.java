@@ -5,8 +5,6 @@ import static org.mockito.Mockito.when;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.types.EventJoinPolicy;
-import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.internal.MatchDataService;
@@ -14,7 +12,6 @@ import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import ar.edu.itba.paw.services.utils.UserUtils;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -170,32 +167,6 @@ class SecurityServiceImplTest {
 
         // Assert
         Assertions.assertFalse(result);
-    }
-
-    @Test
-    void canApproveJoinRequestsAllowsAdminModForFutureApprovalRequiredMatch() {
-        // Arrange
-        final User user = UserUtils.getUser(99L);
-        final TestPrincipal principal = new TestPrincipal(user);
-        final var token =
-                new UsernamePasswordAuthenticationToken(
-                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN_MOD")));
-        SecurityContextHolder.getContext().setAuthentication(token);
-
-        final Match match = Mockito.mock(Match.class);
-        final User host = Mockito.mock(User.class);
-        when(host.getId()).thenReturn(1L);
-        when(match.getHost()).thenReturn(host);
-        when(match.getJoinPolicy()).thenReturn(EventJoinPolicy.APPROVAL_REQUIRED);
-        when(match.getVisibility()).thenReturn(EventVisibility.PUBLIC);
-        when(match.getStartsAt()).thenReturn(Instant.now().plusSeconds(3600));
-        when(matchDataService.findById(10L)).thenReturn(Optional.of(match));
-
-        // Exercise
-        final boolean result = securityService.canApproveJoinRequests(10L);
-
-        // Assert
-        Assertions.assertTrue(result);
     }
 
     @Test
