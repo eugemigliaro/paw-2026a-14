@@ -14,6 +14,8 @@ public interface TournamentRegistrationService {
 
     void leaveSolo(long tournamentId, User user);
 
+    void withdrawFromOpenRegistrations(User user);
+
     boolean isSoloPoolFull(long tournamentId);
 
     Optional<TournamentSoloEntry> findSoloEntry(long tournamentId, User user);

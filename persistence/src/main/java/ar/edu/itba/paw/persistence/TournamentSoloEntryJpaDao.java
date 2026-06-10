@@ -58,6 +58,19 @@ public class TournamentSoloEntryJpaDao implements TournamentSoloEntryDao {
     }
 
     @Override
+    public List<TournamentSoloEntry> findInPoolEntriesByUser(final User user) {
+        return em.createQuery(
+                        "FROM TournamentSoloEntry tse"
+                                + " WHERE tse.user.id = :userId"
+                                + " AND tse.status = :status"
+                                + " AND tse.tournament.deleted = FALSE",
+                        TournamentSoloEntry.class)
+                .setParameter("userId", user.getId())
+                .setParameter("status", TournamentSoloEntryStatus.IN_POOL)
+                .getResultList();
+    }
+
+    @Override
     public List<TournamentSoloEntry> findActiveByTournament(final long tournamentId) {
         return em.createQuery(
                         "FROM TournamentSoloEntry tse"

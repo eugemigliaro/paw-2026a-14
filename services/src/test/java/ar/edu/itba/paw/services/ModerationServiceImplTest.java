@@ -59,11 +59,13 @@ public class ModerationServiceImplTest {
     @Mock private MatchNotificationService matchNotificationService;
 
     private RecordingMailDispatchService mailDispatchService;
+    private RecordingTournamentRegistrationService tournamentRegistrationService;
     private ModerationService moderationService;
 
     @BeforeEach
     public void setUp() {
         mailDispatchService = new RecordingMailDispatchService();
+        tournamentRegistrationService = new RecordingTournamentRegistrationService();
         moderationService =
                 new ModerationServiceImpl(
                         userBanDao,
@@ -74,6 +76,7 @@ public class ModerationServiceImplTest {
                         playerReviewDataService,
                         mailDispatchService,
                         matchNotificationService,
+                        tournamentRegistrationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -89,6 +92,7 @@ public class ModerationServiceImplTest {
                         playerReviewDataService,
                         mailDispatchService,
                         matchNotificationService,
+                        tournamentRegistrationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -104,6 +108,7 @@ public class ModerationServiceImplTest {
                         playerReviewDataService,
                         mailDispatchService,
                         matchNotificationService,
+                        tournamentRegistrationService,
                         messageSource(),
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
@@ -157,6 +162,37 @@ public class ModerationServiceImplTest {
         Assertions.assertTrue(
                 mailDispatchService.bannedUntil.get(0).isAfter(FIXED_NOW),
                 "Ban expiry must be strictly after the resolution instant");
+    }
+
+    @Test
+    public void resolveReportWithUserBan_withdrawsBannedUserFromOpenTournamentRegistrations() {
+        final ModerationReport report = sampleUserReport();
+        final User bannedUser = UserUtils.getUser(88L);
+        final Instant expectedBannedUntil = FIXED_NOW.plusSeconds(7L * 24L * 3600L);
+
+        Mockito.when(moderationReportDao.findById(77L)).thenReturn(Optional.of(report));
+        Mockito.when(
+                        moderationReportDao.resolveReport(
+                                Mockito.eq(77L),
+                                Mockito.eq(UserUtils.getUser(99L)),
+                                Mockito.eq(ReportResolution.USER_BANNED),
+                                Mockito.anyString(),
+                                Mockito.any(),
+                                Mockito.eq(ReportStatus.RESOLVED)))
+                .thenReturn(true);
+        Mockito.when(userBanDao.createBan(report, expectedBannedUntil))
+                .thenReturn(new UserBan(10L, report, expectedBannedUntil));
+        Mockito.when(userDataService.findById(88L)).thenReturn(Optional.of(bannedUser));
+
+        moderationService.resolveReport(
+                77L,
+                UserUtils.getUser(99L),
+                ReportResolution.USER_BANNED,
+                "Repeated abuse",
+                ReportStatus.RESOLVED,
+                7);
+
+        Assertions.assertEquals(List.of(bannedUser), tournamentRegistrationService.withdrawnUsers);
     }
 
     @Test
@@ -804,6 +840,77 @@ public class ModerationServiceImplTest {
         public void sendUnbanNotice(final User user) {
             actions.add("unban");
             users.add(user);
+        }
+    }
+
+    private static class RecordingTournamentRegistrationService
+            implements TournamentRegistrationService {
+
+        private final List<User> withdrawnUsers = new ArrayList<>();
+
+        @Override
+        public void withdrawFromOpenRegistrations(final User user) {
+            withdrawnUsers.add(user);
+        }
+
+        @Override
+        public ar.edu.itba.paw.models.TournamentSoloEntry joinSolo(
+                final long tournamentId, final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void leaveSolo(final long tournamentId, final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isSoloPoolFull(final long tournamentId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<ar.edu.itba.paw.models.TournamentSoloEntry> findSoloEntry(
+                final long tournamentId, final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<ar.edu.itba.paw.models.TournamentTeam> findUserTeam(
+                final long tournamentId, final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<ar.edu.itba.paw.models.TournamentSoloEntry> listActiveSoloEntries(
+                final long tournamentId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<ar.edu.itba.paw.models.TournamentTeamMember> listTeamMembers(
+                final long tournamentId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TournamentRegistrationState getRegistrationState(
+                final ar.edu.itba.paw.models.Tournament tournament,
+                final User user,
+                final boolean canCloseRegistration) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TournamentRegistrationReadiness getRegistrationReadiness(
+                final long tournamentId, final User actingUser) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ar.edu.itba.paw.models.Tournament closeRegistration(
+                final long tournamentId, final User actingUser) {
+            throw new UnsupportedOperationException();
         }
     }
 }

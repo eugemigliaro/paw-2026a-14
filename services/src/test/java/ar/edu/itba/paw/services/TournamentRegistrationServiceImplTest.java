@@ -190,6 +190,29 @@ public class TournamentRegistrationServiceImplTest {
     }
 
     @Test
+    public void withdrawFromOpenRegistrationsMarksInPoolEntriesAsLeft() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(2L);
+        final Tournament tournamentA = tournament(10L, UserUtils.getUser(1L), 4, 1);
+        final Tournament tournamentB = tournament(11L, UserUtils.getUser(1L), 4, 1);
+        final TournamentSoloEntry entryA =
+                soloEntry(20L, tournamentA, user, TournamentSoloEntryStatus.IN_POOL);
+        final TournamentSoloEntry entryB =
+                soloEntry(21L, tournamentB, user, TournamentSoloEntryStatus.IN_POOL);
+        Mockito.when(tournamentSoloEntryDao.findInPoolEntriesByUser(user))
+                .thenReturn(List.of(entryA, entryB));
+
+        // 2. Exercise
+        registrationService.withdrawFromOpenRegistrations(user);
+
+        // 3. Assert
+        Assertions.assertEquals(TournamentSoloEntryStatus.LEFT, entryA.getStatus());
+        Assertions.assertEquals(TournamentSoloEntryStatus.LEFT, entryB.getStatus());
+        Assertions.assertEquals(FIXED_NOW, entryA.getLeftAt());
+        Assertions.assertNull(entryA.getAssignedTeam());
+    }
+
+    @Test
     public void listTeamMembersAfterRegistrationClosesReturnsAssignedMembers() {
         // 1. Arrange
         final Tournament tournament =

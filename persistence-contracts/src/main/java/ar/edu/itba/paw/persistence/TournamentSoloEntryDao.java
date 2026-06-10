@@ -15,6 +15,8 @@ public interface TournamentSoloEntryDao {
 
     List<Tournament> findTournamentsByUser(User user);
 
+    List<TournamentSoloEntry> findInPoolEntriesByUser(User user);
+
     List<TournamentSoloEntry> findActiveByTournament(long tournamentId);
 
     long countActiveByTournament(long tournamentId);

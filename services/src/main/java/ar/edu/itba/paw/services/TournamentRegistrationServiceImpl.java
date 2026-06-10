@@ -109,6 +109,20 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     }
 
     @Override
+    @Transactional
+    public void withdrawFromOpenRegistrations(final User user) {
+        validateUser(user);
+        final Instant now = Instant.now(clock);
+        for (final TournamentSoloEntry soloEntry :
+                tournamentSoloEntryDao.findInPoolEntriesByUser(user)) {
+            soloEntry.setStatus(TournamentSoloEntryStatus.LEFT);
+            soloEntry.setAssignedTeam(null);
+            soloEntry.setLeftAt(now);
+            tournamentSoloEntryDao.update(soloEntry);
+        }
+    }
+
+    @Override
     public boolean isSoloPoolFull(final long tournamentId) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
         return isSoloPoolFull(tournament);

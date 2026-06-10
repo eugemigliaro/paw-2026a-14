@@ -677,6 +677,33 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldFindOnlyInPoolSoloEntriesForUserAcrossTournaments() {
+        final Tournament first = createTournament(host, "First Cup", TournamentStatus.REGISTRATION);
+        final Tournament second =
+                createTournament(host, "Second Cup", TournamentStatus.REGISTRATION);
+        final Tournament leftTournament =
+                createTournament(host, "Left Cup", TournamentStatus.REGISTRATION);
+        final TournamentSoloEntry firstEntry =
+                tournamentSoloEntryDao.create(first, player, TournamentSoloEntryStatus.IN_POOL);
+        final TournamentSoloEntry secondEntry =
+                tournamentSoloEntryDao.create(second, player, TournamentSoloEntryStatus.IN_POOL);
+        tournamentSoloEntryDao.create(leftTournament, player, TournamentSoloEntryStatus.LEFT);
+        tournamentSoloEntryDao.create(first, secondPlayer, TournamentSoloEntryStatus.IN_POOL);
+
+        em.flush();
+        em.clear();
+
+        final List<TournamentSoloEntry> entries =
+                tournamentSoloEntryDao.findInPoolEntriesByUser(player);
+
+        Assertions.assertEquals(
+                java.util.Set.of(firstEntry.getId(), secondEntry.getId()),
+                entries.stream()
+                        .map(TournamentSoloEntry::getId)
+                        .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
     public void shouldRejectDuplicateSoloEntryForUser() {
         final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
         tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.IN_POOL);
