@@ -18,6 +18,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToTournamentMatchStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import java.util.List;
@@ -213,6 +214,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToRecurrenceEndModeConverter());
         registry.addConverter(new StringToEventFilterConverter());
         registry.addConverter(new StringToEventCategoryConverter());
+        registry.addConverter(new StringToTournamentMatchStatusConverter());
     }
 
     @Override

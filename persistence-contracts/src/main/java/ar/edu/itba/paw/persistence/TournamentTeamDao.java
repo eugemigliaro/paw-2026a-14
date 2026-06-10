@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,8 @@ public interface TournamentTeamDao {
     Optional<TournamentTeam> findById(long teamId);
 
     List<TournamentTeam> findByTournament(long tournamentId);
+
+    List<TournamentTeam> findByTournaments(Collection<Long> tournamentIds);
 
     List<TournamentTeam> findByTournamentUnordered(long tournamentId);
 

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventFilter;
 import ar.edu.itba.paw.models.query.EventSort;
@@ -21,6 +22,7 @@ import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.ParticipantStatus;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchReservationService;
@@ -308,6 +310,26 @@ class MatchDashboardControllerTest {
                         TournamentStatus.REGISTRATION,
                         FIXED_NOW,
                         FIXED_NOW);
+        final TournamentMatch tournamentMatch =
+                new TournamentMatch(
+                        80L,
+                        hostedTournament,
+                        1,
+                        0,
+                        null,
+                        null,
+                        null,
+                        Instant.parse("2026-04-06T10:00:00Z"),
+                        Instant.parse("2026-04-06T12:00:00Z"),
+                        "Match Address",
+                        null,
+                        null,
+                        TournamentMatchStatus.SCHEDULED,
+                        null,
+                        null,
+                        FIXED_NOW,
+                        FIXED_NOW);
+
         final TournamentService tournamentService = Mockito.mock(TournamentService.class);
         Mockito.when(
                         tournamentService.findDashboardTournaments(
@@ -326,6 +348,18 @@ class MatchDashboardControllerTest {
                                 ArgumentMatchers.nullable(Double.class),
                                 ArgumentMatchers.nullable(Double.class)))
                 .thenReturn(new PaginatedResult<>(List.of(hostedTournament), 1, 1, 12));
+        Mockito.when(
+                        tournamentService.findDashboardTournamentMatches(
+                                Mockito.any(),
+                                Mockito.anyBoolean(),
+                                ArgumentMatchers.nullable(String.class),
+                                ArgumentMatchers.<List<Sport>>any(),
+                                ArgumentMatchers.<List<TournamentMatchStatus>>any(),
+                                Mockito.any(),
+                                Mockito.any(),
+                                Mockito.anyInt(),
+                                Mockito.anyInt()))
+                .thenReturn(new PaginatedResult<>(List.of(tournamentMatch), 1, 1, 12));
 
         controller =
                 new MatchDashboardController(
@@ -383,6 +417,31 @@ class MatchDashboardControllerTest {
                 .andExpect(view().name("events/list"))
                 .andExpect(model().attributeExists("events"))
                 .andExpect(model().attribute("selectedCategories", List.of()))
+                .andExpect(model().attribute("pageTitleCode", "page.title.matches"))
+                .andExpect(model().attribute("listTitleCode", "matches.title"));
+    }
+
+    @Test
+    void getMatchesRouteWithTournamentMatchTypeRendersTournamentMatchPage() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches").param("type", "tournament_match"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("events/list"))
+                .andExpect(model().attributeExists("events"))
+                .andExpect(model().attribute("pageTitleCode", "page.title.tournamentMatches"))
+                .andExpect(model().attribute("listTitleCode", "matches.title"))
+                .andExpect(model().attribute("selectedType", "tournament_match"));
+    }
+
+    @Test
+    void getMatchesRouteWithMatchTypeDefaultsToRegularMatches() throws Exception {
+        AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+
+        mockMvc.perform(get("/matches").param("type", "match"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("events/list"))
+                .andExpect(model().attributeExists("events"))
                 .andExpect(model().attribute("pageTitleCode", "page.title.matches"))
                 .andExpect(model().attribute("listTitleCode", "matches.title"));
     }

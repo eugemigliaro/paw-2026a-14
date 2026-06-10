@@ -2,11 +2,16 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.Tournament;
+import ar.edu.itba.paw.models.TournamentMatch;
+import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.query.EventSort;
+import ar.edu.itba.paw.models.query.InvolvementScope;
 import ar.edu.itba.paw.models.types.Sport;
+import ar.edu.itba.paw.models.types.TournamentMatchStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -60,4 +65,19 @@ public interface TournamentService {
     Set<Long> findParticipatingTournamentIds(User user, List<Long> tournamentIds);
 
     TournamentViewerCapabilities viewerCapabilities(Tournament tournament, User viewer);
+
+    PaginatedResult<TournamentMatch> findDashboardTournamentMatches(
+            User user,
+            Boolean upcoming,
+            String query,
+            List<Sport> sports,
+            List<TournamentMatchStatus> statuses,
+            InvolvementScope involvement,
+            EventSort sort,
+            int page,
+            int pageSize);
+
+    List<TournamentTeam> findBracketTeams(long tournamentId);
+
+    List<TournamentTeam> findBracketTeams(Collection<Long> tournamentIds);
 }
