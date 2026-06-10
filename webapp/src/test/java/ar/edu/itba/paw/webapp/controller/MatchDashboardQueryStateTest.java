@@ -20,6 +20,27 @@ import org.junit.jupiter.api.Test;
 class MatchDashboardQueryStateTest {
 
     @Test
+    void resolveUsesEmptyCategorySelectionAsAllMatchCategories() {
+        final SearchForm searchForm = new SearchForm();
+        searchForm.setType(EventType.MATCH);
+        searchForm.setCategory(List.of());
+
+        final MatchDashboardQueryState.DashboardSelection selection =
+                MatchDashboardQueryState.resolve(searchForm);
+
+        assertFalse(selection.tournament());
+        assertTrue(selection.searchForm().getCategory().isEmpty());
+        assertEquals(Boolean.TRUE, selection.includeHosted());
+        assertEquals(
+                List.of(
+                        ParticipantStatus.JOINED,
+                        ParticipantStatus.CHECKED_IN,
+                        ParticipantStatus.INVITED,
+                        ParticipantStatus.PENDING_APPROVAL),
+                selection.participantStatuses());
+    }
+
+    @Test
     void resolveClearsMatchOnlyFiltersForTournamentQueries() {
         final SearchForm searchForm = new SearchForm();
         searchForm.setType(EventType.TOURNAMENT);

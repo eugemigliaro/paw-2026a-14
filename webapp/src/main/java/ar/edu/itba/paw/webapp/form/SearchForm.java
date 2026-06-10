@@ -24,7 +24,6 @@ public class SearchForm {
 
     private static final EventFilter DEFAULT_FILTER = EventFilter.UPCOMING;
     private static final EventType DEFAULT_TYPE = EventType.MATCH;
-    private static final EventCategory DEFAULT_CATEGORY = EventCategory.HOSTED;
 
     @Size(max = 150, message = "{SearchForm.q.Size}")
     @Pattern(regexp = "^[\\p{L}\\p{N} ]*$", message = "{SearchForm.q.Pattern}")
@@ -186,8 +185,8 @@ public class SearchForm {
         if (type == null) {
             type = DEFAULT_TYPE;
         }
-        if (category == null || category.isEmpty()) {
-            category.add(DEFAULT_CATEGORY);
+        if (category == null) {
+            category = new ArrayList<>();
         }
     }
 
