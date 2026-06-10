@@ -7,7 +7,9 @@ import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.tournament.*;
+import ar.edu.itba.paw.models.exceptions.tournament.TournamentInvalidRequestException;
 import ar.edu.itba.paw.models.exceptions.tournamentLifecycle.*;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.InvolvementScope;
 import ar.edu.itba.paw.models.types.Sport;
@@ -516,13 +518,13 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateHost(final User host) {
         if (host == null || host.getId() == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 
     private void validateRequest(final CreateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("invalidRequest");
+            throw new TournamentInvalidRequestException();
         }
         validateSport(request.getSport());
         validateCommonFields(
@@ -552,7 +554,7 @@ public class TournamentServiceImpl implements TournamentService {
 
     private void validateUpdateRequest(final UpdateTournamentRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("invalidRequest");
+            throw new TournamentInvalidRequestException();
         }
         validateSport(request.getSport());
         validateCommonFields(
