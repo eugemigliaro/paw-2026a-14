@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -1024,6 +1025,11 @@ public class TournamentRegistrationServiceImplTest {
 
         @Override
         public List<Tournament> findTournamentsByMember(final User user) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<TournamentTeam> findByTournaments(Collection<Long> teamIds) {
             throw new UnsupportedOperationException();
         }
 
