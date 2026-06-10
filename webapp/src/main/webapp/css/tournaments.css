@@ -499,6 +499,30 @@
 	gap: 0.5rem;
 }
 
+.tournament-bracket-actions__strategy-select-wrap {
+	display: block;
+	position: relative;
+}
+
+.tournament-bracket-actions__strategy-select {
+	background-image: none;
+}
+
+.tournament-bracket-actions__strategy-select-wrap::after {
+	color: #2b5b55;
+	content: "▾";
+	font-size: 0.85rem;
+	pointer-events: none;
+	position: absolute;
+	right: 1rem;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.tournament-bracket-actions__generate-tooltip {
+	display: inline-flex;
+}
+
 .tournament-roster-panel {
 	display: grid;
 	gap: 1.25rem;
