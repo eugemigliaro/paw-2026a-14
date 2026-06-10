@@ -247,7 +247,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         nonNullUser(targetUser);
-        requireHost(match, host.getId());
+        requireCanManageMatch(match, host);
         requireApprovalManagedMatch(match);
 
         if (match.isRecurringOccurrence()
@@ -283,7 +283,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         nonNullUser(targetUser);
-        requireHost(match, host.getId());
+        requireCanManageMatch(match, host);
         requireApprovalManagedMatch(match);
 
         if (!matchParticipantDataService.rejectRequest(matchId, targetUser)) {
@@ -328,7 +328,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public List<User> findPendingRequests(final Long matchId, final User host) {
         final Match match = requireMatch(matchId);
         nonNullUser(host);
-        requireHost(match, host.getId());
+        requireCanManageMatch(match, host);
         requireApprovalManagedMatch(match);
         return matchParticipantDataService.findPendingRequests(matchId);
     }
