@@ -15,12 +15,9 @@ import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
 import ar.edu.itba.paw.services.internal.UserDataService;
-import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SecurityServiceImpl implements SecurityService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SecurityServiceImpl.class);
     private static final String ADMIN_MOD_AUTHORITY = "ROLE_ADMIN_MOD";
 
     private final MatchDataService matchDataService;
@@ -89,19 +85,10 @@ public class SecurityServiceImpl implements SecurityService {
     }
 
     private User extractUserFromPrincipal(final Object principal) {
-        if (principal == null) return null;
-        try {
-            final Method m = principal.getClass().getMethod("getUser");
-            final Object id = m.invoke(principal);
-            if (id instanceof User) return (User) id;
-            return null;
-        } catch (final Exception e) {
-            LOGGER.debug(
-                    "Unable to extract user from principal of type {}",
-                    principal.getClass().getName(),
-                    e);
-            return null;
+        if (principal instanceof AuthenticatedPrincipal authenticatedPrincipal) {
+            return authenticatedPrincipal.getAuthenticatedUser();
         }
+        return null;
     }
 
     @Override

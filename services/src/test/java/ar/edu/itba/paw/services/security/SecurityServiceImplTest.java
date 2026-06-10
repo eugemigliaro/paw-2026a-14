@@ -51,14 +51,15 @@ class SecurityServiceImplTest {
         SecurityContextHolder.clearContext();
     }
 
-    static class TestPrincipal {
+    static class TestPrincipal implements AuthenticatedPrincipal {
         private final User user;
 
         TestPrincipal(final User user) {
             this.user = user;
         }
 
-        public User getUser() {
+        @Override
+        public User getAuthenticatedUser() {
             return user;
         }
     }
@@ -74,6 +75,25 @@ class SecurityServiceImplTest {
 
         Assertions.assertTrue(securityService.isAuthenticated());
         Assertions.assertEquals(42L, securityService.currentUser().getId());
+    }
+
+    @Test
+    void unsupportedPrincipalIsNotAuthenticatedAsApplicationUser() {
+        // Arrange
+        final var token =
+                new UsernamePasswordAuthenticationToken(
+                        "unsupported-principal",
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        // Exercise
+        final boolean authenticated = securityService.isAuthenticated();
+        final User currentUser = securityService.currentUser();
+
+        // Assert
+        Assertions.assertFalse(authenticated);
+        Assertions.assertNull(currentUser);
     }
 
     @Test
