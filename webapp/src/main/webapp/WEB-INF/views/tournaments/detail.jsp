@@ -85,19 +85,19 @@
 						</section>
 
 						<c:if test="${tournament.status.dbValue eq 'registration' and (not empty tournamentTeamRosters or not empty tournamentActiveSoloEntries)}">
-							<section class="panel detail-section tournament-teams" aria-labelledby="tournament-teams-title">
-								<div class="section-head section-head--detail-compact">
-									<div>
-										<span class="detail-label"><spring:message code="tournament.teams.label" /></span>
-										<h2 id="tournament-teams-title" class="detail-section__title">
-											<spring:message code="tournament.teams.title" />
-										</h2>
-									</div>
-								</div>
-
+							<section class="detail-section tournament-teams" aria-labelledby="tournament-teams-title">
+								<div class="tournament-teams__columns">
 								<c:if test="${not empty tournamentTeamRosters}">
-									<ul class="tournament-teams__grid">
-										<c:forEach var="roster" items="${tournamentTeamRosters}">
+									<div class="tournament-teams__column">
+										<div class="section-head section-head--detail-compact">
+											<div>
+												<h2 id="tournament-teams-title" class="detail-section__title">
+													<spring:message code="tournament.teams.title" />
+												</h2>
+											</div>
+										</div>
+											<ul class="tournament-teams__grid">
+											<c:forEach var="roster" items="${tournamentTeamRosters}">
 											<li class="tournament-teams__card ${roster.team.id eq tournamentUserTeamId ? 'tournament-teams__card--mine' : ''}">
 												<div class="tournament-teams__card-head">
 													<h3 class="tournament-teams__name">
@@ -148,13 +148,19 @@
 												</div>
 											</li>
 										</c:forEach>
-									</ul>
+										</ul>
+									</div>
 								</c:if>
 
 								<c:if test="${not empty tournamentActiveSoloEntries}">
-									<div class="tournament-teams__solo">
-										<p class="detail-label"><spring:message code="tournament.teams.soloPool.title" /></p>
-										<ul class="participant-list tournament-teams__solo-list">
+									<div class="tournament-teams__column">
+										<div class="section-head section-head--detail-compact">
+											<div>
+												<h2 class="detail-section__title"><spring:message code="tournament.teams.soloPool.title" /></h2>
+											</div>
+										</div>
+										<div class="tournament-teams__card">
+											<ul class="participant-list tournament-teams__members tournament-teams__solo-list">
 											<c:forEach var="entry" items="${tournamentActiveSoloEntries}">
 												<li class="participant-list__item">
 													<c:url var="soloAvatarSrc" value="${userProfileImageUrls[entry.user.id]}" />
@@ -165,9 +171,11 @@
 													</div>
 												</li>
 											</c:forEach>
-										</ul>
+											</ul>
+										</div>
 									</div>
 								</c:if>
+								</div>
 							</section>
 						</c:if>
 					</div>

@@ -201,6 +201,10 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     public void leaveTeam(final long tournamentId, final User user) {
         validateUser(user);
         final Tournament tournament = findTournamentOrThrow(tournamentId);
+        // Serialize against the join paths so the delete-on-empty check below cannot race a
+        // concurrent joinTeam: without the lock, this could count zero members and delete the
+        // team out from under a player the other transaction just added.
+        tournamentDataService.lockForRegistration(tournamentId);
         requireRegistrationOpen(tournament);
 
         final TournamentTeam team =
