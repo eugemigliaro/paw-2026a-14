@@ -6,7 +6,9 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.*;
+import ar.edu.itba.paw.models.exceptions.matchRecurrence.*;
 import ar.edu.itba.paw.models.exceptions.matchUpdate.*;
+import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -1019,62 +1021,55 @@ public class MatchServiceImplTest {
         final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
         final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
 
-        // 2. Exercise
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                matchService.createMatch(
-                                        new CreateMatchRequest(
-                                                UserUtils.getUser(1L),
-                                                "Test Address",
-                                                "Weekly Padel",
-                                                "Test Description",
-                                                dateOf(startsAt),
-                                                timeOf(startsAt),
-                                                dateOf(endsAt),
-                                                timeOf(endsAt),
-                                                8,
-                                                BigDecimal.ZERO,
-                                                Sport.PADEL,
-                                                EventVisibility.PUBLIC,
-                                                EventJoinPolicy.DIRECT,
-                                                EventStatus.OPEN,
-                                                null,
-                                                new CreateRecurrenceRequest(
-                                                        RecurrenceFrequency.WEEKLY,
-                                                        RecurrenceEndMode.UNTIL_DATE,
-                                                        java.time.LocalDate.of(2026, 4, 12),
-                                                        null))));
-
-        // 3. Assert
-        Assertions.assertEquals("match.recurrence.error.tooFewOccurrences", exception.getMessage());
+        // 2. Exercise & 3. Assert
+        Assertions.assertThrows(
+                MatchRecurrenceTooFewOccurrencesException.class,
+                () ->
+                        matchService.createMatch(
+                                new CreateMatchRequest(
+                                        UserUtils.getUser(1L),
+                                        "Test Address",
+                                        "Weekly Padel",
+                                        "Test Description",
+                                        dateOf(startsAt),
+                                        timeOf(startsAt),
+                                        dateOf(endsAt),
+                                        timeOf(endsAt),
+                                        8,
+                                        BigDecimal.ZERO,
+                                        Sport.PADEL,
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
+                                        null,
+                                        new CreateRecurrenceRequest(
+                                                RecurrenceFrequency.WEEKLY,
+                                                RecurrenceEndMode.UNTIL_DATE,
+                                                java.time.LocalDate.of(2026, 4, 12),
+                                                null))));
     }
 
     @Test
     public void testCreateMatchRejectsPastStartTime() {
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                matchService.createMatch(
-                                        new CreateMatchRequest(
-                                                UserUtils.getUser(1L),
-                                                "Test Address",
-                                                "Test Match",
-                                                "Test Description",
-                                                dateOf(FIXED_NOW),
-                                                timeOf(FIXED_NOW),
-                                                dateOf(null),
-                                                timeOf(null),
-                                                10,
-                                                BigDecimal.ZERO,
-                                                Sport.FOOTBALL,
-                                                EventVisibility.PUBLIC,
-                                                EventStatus.OPEN,
-                                                null)));
-
-        Assertions.assertEquals("match.schedule.error.invalid", exception.getMessage());
+        Assertions.assertThrows(
+                MatchInvalidScheduleException.class,
+                () ->
+                        matchService.createMatch(
+                                new CreateMatchRequest(
+                                        UserUtils.getUser(1L),
+                                        "Test Address",
+                                        "Test Match",
+                                        "Test Description",
+                                        dateOf(FIXED_NOW),
+                                        timeOf(FIXED_NOW),
+                                        dateOf(null),
+                                        timeOf(null),
+                                        10,
+                                        BigDecimal.ZERO,
+                                        Sport.FOOTBALL,
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        null)));
     }
 
     @Test
@@ -1097,13 +1092,9 @@ public class MatchServiceImplTest {
                         EventStatus.OPEN,
                         null);
 
-        // 2. Exercise
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class, () -> matchService.createMatch(request));
-
-        // 3. Assert
-        Assertions.assertEquals("match.create.error.capacityAboveMax", exception.getMessage());
+        // 2. Exercise & 3. Assert
+        Assertions.assertThrows(
+                MatchCapacityAboveMaxException.class, () -> matchService.createMatch(request));
     }
 
     @Test
@@ -1970,6 +1961,32 @@ public class MatchServiceImplTest {
 
         final List<Long> ids = result.getItems().stream().map(Match::getId).toList();
         Assertions.assertEquals(List.of(2L, 3L, 4L), ids);
+    }
+
+    @Test
+    public void testFindDashboardMatchesRejectsInvalidPage() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(1L);
+
+        // 2. Exercise & 3. Assert
+        Assertions.assertThrows(
+                InvalidPaginationException.class,
+                () ->
+                        matchService.findDashboardMatches(
+                                user,
+                                Boolean.TRUE,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                0,
+                                10));
     }
 
     @Test

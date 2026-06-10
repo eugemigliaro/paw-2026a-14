@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.exceptions.registration.NameInvalidException;
 import ar.edu.itba.paw.models.exceptions.registration.PhoneInvalidException;
 import ar.edu.itba.paw.models.exceptions.registration.UsernameInvalidException;
 import ar.edu.itba.paw.models.exceptions.registration.UsernameTakenException;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.services.internal.UserDataService;
 import java.io.IOException;
 import java.util.Collection;
@@ -135,7 +136,7 @@ public class UserServiceImpl implements UserService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 
