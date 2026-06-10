@@ -60,7 +60,7 @@
 							<c:otherwise>
 								<spring:message code="tournament.team.solo.name" arguments="${teamDisplayNumbers[match.teamA.id]}" />
 							</c:otherwise>
-						</c:choose> vs <c:choose>
+						</c:choose> <spring:message code="tournament.match.versus"/> <c:choose>
 							<c:when test="${not empty match.teamB.name}">
 								<c:out value="${match.teamB.name}" />
 							</c:when>
