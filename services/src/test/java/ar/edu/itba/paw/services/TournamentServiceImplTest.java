@@ -414,7 +414,7 @@ public class TournamentServiceImplTest {
                         TournamentStatus.REGISTRATION,
                         FIXED_NOW.minusSeconds(3600),
                         FIXED_NOW.plusSeconds(3600));
-        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L))
                 .thenReturn(new TournamentRegistrationReadiness(0, 2, 2, false));
 
         // 2. Exercise
@@ -492,7 +492,7 @@ public class TournamentServiceImplTest {
                         TournamentStatus.REGISTRATION,
                         FIXED_NOW.minusSeconds(3600),
                         FIXED_NOW.plusSeconds(3600));
-        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L, host))
+        Mockito.when(tournamentRegistrationService.getRegistrationReadiness(10L))
                 .thenReturn(new TournamentRegistrationReadiness(1, 0, 1, true));
 
         // 2. Exercise

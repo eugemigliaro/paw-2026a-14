@@ -5,7 +5,6 @@ import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.models.types.TournamentFormat;
@@ -43,7 +42,6 @@ public class TournamentRegistrationServiceImplTest {
     @Mock private TournamentDataService tournamentDataService;
     @Mock private TournamentSoloEntryDao tournamentSoloEntryDao;
     @Mock private TournamentTeamDataService tournamentTeamDataService;
-    @Mock private SecurityService securityService;
 
     private TournamentRegistrationServiceImpl registrationService;
 
@@ -53,7 +51,6 @@ public class TournamentRegistrationServiceImplTest {
                 new TournamentRegistrationServiceImpl(
                         tournamentDataService,
                         tournamentSoloEntryDao,
-                        securityService,
                         tournamentTeamDataService,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.lenient()
@@ -244,7 +241,7 @@ public class TournamentRegistrationServiceImplTest {
                 configureCloseRegistrationWithTeamCreation(tournament, entries);
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final Tournament result = registrationService.closeRegistration(10L);
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.BRACKET_SETUP, result.getStatus());
@@ -269,7 +266,7 @@ public class TournamentRegistrationServiceImplTest {
                 configureCloseRegistrationWithTeamCreation(tournament, entries);
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final Tournament result = registrationService.closeRegistration(10L);
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.BRACKET_SETUP, result.getStatus());
@@ -288,7 +285,7 @@ public class TournamentRegistrationServiceImplTest {
                 configureCloseRegistrationWithTeamCreation(tournament, entries);
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final Tournament result = registrationService.closeRegistration(10L);
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.BRACKET_SETUP, result.getStatus());
@@ -308,7 +305,7 @@ public class TournamentRegistrationServiceImplTest {
         // 2. Exercise + Assert
         Assertions.assertThrows(
                 TournamentRegistrationUnderCapacityException.class,
-                () -> registrationService.closeRegistration(10L, host));
+                () -> registrationService.closeRegistration(10L));
         Assertions.assertEquals(TournamentStatus.REGISTRATION, tournament.getStatus());
         Assertions.assertNull(tournament.getRegistrationClosedAt());
         Assertions.assertNull(tournament.getCancelledAt());
@@ -335,7 +332,7 @@ public class TournamentRegistrationServiceImplTest {
         // 2. Exercise + Assert
         Assertions.assertThrows(
                 TournamentRegistrationNotOpenException.class,
-                () -> registrationService.closeRegistration(10L, host));
+                () -> registrationService.closeRegistration(10L));
     }
 
     @Test
@@ -359,18 +356,6 @@ public class TournamentRegistrationServiceImplTest {
         Assertions.assertThrows(
                 TournamentRegistrationAlreadyOnTeamException.class,
                 () -> registrationService.joinSolo(10L, user));
-    }
-
-    @Test
-    public void nonHostCannotCloseRegistration() {
-        // 1. Arrange
-        final Tournament tournament = tournament(10L, UserUtils.getUser(1L), 4, 1);
-        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
-
-        // 2. Exercise + Assert
-        Assertions.assertThrows(
-                TournamentForbiddenActionException.class,
-                () -> registrationService.closeRegistration(10L, UserUtils.getUser(2L)));
     }
 
     @Test
@@ -627,7 +612,6 @@ public class TournamentRegistrationServiceImplTest {
                 new TournamentRegistrationServiceImpl(
                         tournamentDataService,
                         tournamentSoloEntryDao,
-                        securityService,
                         teamData,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
@@ -659,7 +643,6 @@ public class TournamentRegistrationServiceImplTest {
                 new TournamentRegistrationServiceImpl(
                         tournamentDataService,
                         tournamentSoloEntryDao,
-                        securityService,
                         teamData,
                         Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
@@ -712,7 +695,7 @@ public class TournamentRegistrationServiceImplTest {
         final List<TournamentTeam> createdTeams = recordCreatedSoloTeams(tournament);
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final Tournament result = registrationService.closeRegistration(10L);
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.BRACKET_SETUP, result.getStatus());
@@ -764,7 +747,7 @@ public class TournamentRegistrationServiceImplTest {
         final List<TournamentTeam> createdTeams = recordCreatedSoloTeams(tournament);
 
         // 2. Exercise
-        final Tournament result = registrationService.closeRegistration(10L, host);
+        final Tournament result = registrationService.closeRegistration(10L);
 
         // 3. Assert
         Assertions.assertEquals(TournamentStatus.BRACKET_SETUP, result.getStatus());

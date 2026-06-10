@@ -3,7 +3,9 @@ package ar.edu.itba.paw.services.security;
 import static org.mockito.Mockito.when;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
@@ -145,5 +147,46 @@ class SecurityServiceImplTest {
 
         // Assert
         Assertions.assertFalse(result);
+    }
+
+    @Test
+    void canCloseRegistrationAllowsHostDuringRegistration() {
+        // Arrange
+        final User user = UserUtils.getUser(99L);
+        final TestPrincipal principal = new TestPrincipal(user);
+        final var token =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        final Tournament tournament = Mockito.mock(Tournament.class);
+        final User host = Mockito.mock(User.class);
+        when(host.getId()).thenReturn(99L);
+        when(tournament.getHost()).thenReturn(host);
+        when(tournament.getStatus()).thenReturn(TournamentStatus.REGISTRATION);
+        when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+
+        // Exercise + Assert
+        Assertions.assertTrue(securityService.canCloseRegistration(10L));
+    }
+
+    @Test
+    void canCloseRegistrationDeniesNonHostRegularUser() {
+        // Arrange
+        final User user = UserUtils.getUser(99L);
+        final TestPrincipal principal = new TestPrincipal(user);
+        final var token =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        final Tournament tournament = Mockito.mock(Tournament.class);
+        final User host = Mockito.mock(User.class);
+        when(host.getId()).thenReturn(1L);
+        when(tournament.getHost()).thenReturn(host);
+        when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+
+        // Exercise + Assert
+        Assertions.assertFalse(securityService.canCloseRegistration(10L));
     }
 }

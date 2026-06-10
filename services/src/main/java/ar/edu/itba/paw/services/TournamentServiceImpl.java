@@ -367,7 +367,7 @@ public class TournamentServiceImpl implements TournamentService {
         final boolean closeRegistrationBlockedByCapacity =
                 canCloseRegistration
                         && tournamentRegistrationService
-                                .getRegistrationReadiness(tournament.getId(), viewer)
+                                .getRegistrationReadiness(tournament.getId())
                                 .isCancellationRisk();
         final boolean closeRegistrationDisabled =
                 !registrationOpen || closeRegistrationBlockedByCapacity;

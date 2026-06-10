@@ -5,7 +5,6 @@ import ar.edu.itba.paw.models.TournamentSoloEntry;
 import ar.edu.itba.paw.models.TournamentTeam;
 import ar.edu.itba.paw.models.TournamentTeamMember;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.exceptions.tournament.TournamentForbiddenActionException;
 import ar.edu.itba.paw.models.exceptions.tournament.TournamentNotFoundException;
 import ar.edu.itba.paw.models.exceptions.tournamentRegistration.*;
 import ar.edu.itba.paw.models.types.TournamentPairingStrategy;
@@ -33,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class TournamentRegistrationServiceImpl implements TournamentRegistrationService {
 
-    private final SecurityService securityService;
     private final TournamentDataService tournamentDataService;
     private final TournamentSoloEntryDao tournamentSoloEntryDao;
     private final TournamentTeamDataService tournamentTeamDataService;
@@ -42,12 +40,10 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     public TournamentRegistrationServiceImpl(
             final TournamentDataService tournamentDataService,
             final TournamentSoloEntryDao tournamentSoloEntryDao,
-            final SecurityService securityService,
             final TournamentTeamDataService tournamentTeamDataService,
             final Clock clock) {
         this.tournamentDataService = tournamentDataService;
         this.tournamentSoloEntryDao = tournamentSoloEntryDao;
-        this.securityService = securityService;
         this.tournamentTeamDataService = tournamentTeamDataService;
         this.clock = clock;
     }
@@ -57,6 +53,9 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     public TournamentSoloEntry joinSolo(final long tournamentId, final User user) {
         validateUser(user);
         final Tournament tournament = findTournamentOrThrow(tournamentId);
+        // Serialize all registration writes for this tournament so the shared people-capacity
+        // check cannot be raced across the solo and team paths (see joinTeam/createTeam).
+        tournamentDataService.lockForRegistration(tournamentId);
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowSoloSignup()) {
@@ -134,6 +133,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     public TournamentTeam createTeam(final long tournamentId, final User user, final String name) {
         validateUser(user);
         final Tournament tournament = findTournamentOrThrow(tournamentId);
+        tournamentDataService.lockForRegistration(tournamentId);
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowTeamDraft()) {
@@ -171,6 +171,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
             final long tournamentId, final long teamId, final User user) {
         validateUser(user);
         final Tournament tournament = findTournamentOrThrow(tournamentId);
+        tournamentDataService.lockForRegistration(tournamentId);
         requireRegistrationOpen(tournament);
 
         if (!tournament.isAllowTeamDraft()) {
@@ -304,10 +305,8 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
     }
 
     @Override
-    public TournamentRegistrationReadiness getRegistrationReadiness(
-            final long tournamentId, final User actingUser) {
+    public TournamentRegistrationReadiness getRegistrationReadiness(final long tournamentId) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
-        validateCanMutate(tournament, actingUser);
         if (TournamentStatus.REGISTRATION != tournament.getStatus()) {
             return new TournamentRegistrationReadiness(0, 0, 0, false);
         }
@@ -331,9 +330,11 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
     @Override
     @Transactional
-    public Tournament closeRegistration(final long tournamentId, final User actingUser) {
+    public Tournament closeRegistration(final long tournamentId) {
         final Tournament tournament = findTournamentOrThrow(tournamentId);
-        validateCanMutate(tournament, actingUser);
+        // Hold the same lock the join paths take, so no registration write can interleave with
+        // team assembly while we read counts and pack teams.
+        tournamentDataService.lockForRegistration(tournamentId);
         requireRegistrationOpen(tournament);
 
         final int teamSize = tournament.getTeamSize();
@@ -412,20 +413,6 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         return TournamentStatus.REGISTRATION == tournament.getStatus()
                 && opensAt != null
                 && now.isBefore(opensAt);
-    }
-
-    private void validateCanMutate(final Tournament tournament, final User actingUser) {
-        if (!canMutate(tournament, actingUser)) {
-            throw new TournamentForbiddenActionException();
-        }
-    }
-
-    private boolean canMutate(final Tournament tournament, final User actingUser) {
-        if (tournament == null || actingUser == null || actingUser.getId() == null) {
-            return false;
-        }
-        return tournament.getHost().getId().equals(actingUser.getId())
-                || securityService.canActAsAdminMod(actingUser);
     }
 
     private Optional<TournamentSoloEntry> findSoloEntry(

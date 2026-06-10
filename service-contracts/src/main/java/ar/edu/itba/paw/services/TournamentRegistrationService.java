@@ -37,7 +37,7 @@ public interface TournamentRegistrationService {
     TournamentRegistrationState getRegistrationState(
             Tournament tournament, User user, boolean canCloseRegistration);
 
-    TournamentRegistrationReadiness getRegistrationReadiness(long tournamentId, User actingUser);
+    TournamentRegistrationReadiness getRegistrationReadiness(long tournamentId);
 
-    Tournament closeRegistration(long tournamentId, User actingUser);
+    Tournament closeRegistration(long tournamentId);
 }
