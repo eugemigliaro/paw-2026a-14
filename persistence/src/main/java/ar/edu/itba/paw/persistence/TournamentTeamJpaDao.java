@@ -97,6 +97,19 @@ public class TournamentTeamJpaDao implements TournamentTeamDao {
     }
 
     @Override
+    public boolean existsByTournamentAndName(final long tournamentId, final String name) {
+        return em.createQuery(
+                                "SELECT COUNT(tt) FROM TournamentTeam tt"
+                                        + " WHERE tt.tournament.id = :tournamentId"
+                                        + " AND tt.name = :name",
+                                Long.class)
+                        .setParameter("tournamentId", tournamentId)
+                        .setParameter("name", name)
+                        .getSingleResult()
+                > 0;
+    }
+
+    @Override
     public Optional<TournamentTeam> findById(final long teamId) {
         return Optional.ofNullable(em.find(TournamentTeam.class, teamId));
     }

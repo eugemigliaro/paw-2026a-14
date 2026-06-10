@@ -869,6 +869,20 @@ public class TournamentJpaDaoTest {
     }
 
     @Test
+    public void shouldReportWhetherTeamNameExistsInTournament() {
+        final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
+        tournamentTeamDao.create(tournament, "Falcons", TournamentTeamOrigin.TEAM_DRAFT, null);
+
+        em.flush();
+        em.clear();
+
+        Assertions.assertTrue(
+                tournamentTeamDao.existsByTournamentAndName(tournament.getId(), "Falcons"));
+        Assertions.assertFalse(
+                tournamentTeamDao.existsByTournamentAndName(tournament.getId(), "Hawks"));
+    }
+
+    @Test
     public void shouldFindSoloEntriesByStatus() {
         final Tournament tournament = createTournament(TournamentStatus.REGISTRATION);
         tournamentSoloEntryDao.create(tournament, player, TournamentSoloEntryStatus.UNASSIGNED);

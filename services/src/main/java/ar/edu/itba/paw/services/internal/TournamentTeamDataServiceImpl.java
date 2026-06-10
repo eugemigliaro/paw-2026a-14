@@ -62,6 +62,11 @@ public class TournamentTeamDataServiceImpl implements TournamentTeamDataService 
     }
 
     @Override
+    public boolean existsByTournamentAndName(final long tournamentId, final String name) {
+        return tournamentTeamDao.existsByTournamentAndName(tournamentId, name);
+    }
+
+    @Override
     public Optional<TournamentTeam> findById(final long teamId) {
         return tournamentTeamDao.findById(teamId);
     }

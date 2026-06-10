@@ -25,6 +25,8 @@ public interface TournamentTeamDao {
 
     List<TournamentTeam> findJoinableByTournament(long tournamentId, int teamSize);
 
+    boolean existsByTournamentAndName(long tournamentId, String name);
+
     Optional<TournamentTeam> findById(long teamId);
 
     List<TournamentTeam> findByTournament(long tournamentId);

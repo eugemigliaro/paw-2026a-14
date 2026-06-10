@@ -142,7 +142,7 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
 
         final String trimmedName = name == null ? null : name.trim();
         if (trimmedName == null || trimmedName.isEmpty()) {
-            throw new IllegalArgumentException("exception.tournamentTeam.nameRequired");
+            throw new TournamentRegistrationTeamNameRequiredException();
         }
 
         requireNotAlreadyRegistered(tournament, user);
@@ -153,6 +153,9 @@ public class TournamentRegistrationServiceImpl implements TournamentRegistration
         }
         if (isAtCapacity(tournament)) {
             throw new TournamentRegistrationTournamentFullException();
+        }
+        if (tournamentTeamDataService.existsByTournamentAndName(tournamentId, trimmedName)) {
+            throw new TournamentRegistrationTeamNameTakenException();
         }
 
         final TournamentTeam team =

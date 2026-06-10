@@ -408,8 +408,23 @@ public class TournamentRegistrationServiceImplTest {
 
         // 2. Exercise + Assert
         Assertions.assertThrows(
-                IllegalArgumentException.class,
+                TournamentRegistrationTeamNameRequiredException.class,
                 () -> registrationService.createTeam(10L, user, "   "));
+    }
+
+    @Test
+    public void createTeamWhenNameTakenFails() {
+        // 1. Arrange
+        final Tournament tournament = tournamentTeamDraft(10L, UserUtils.getUser(1L), 4, 5);
+        final User user = UserUtils.getUser(2L);
+        Mockito.when(tournamentDataService.findById(10L)).thenReturn(Optional.of(tournament));
+        Mockito.when(tournamentTeamDataService.existsByTournamentAndName(10L, "Falcons"))
+                .thenReturn(true);
+
+        // 2. Exercise + Assert
+        Assertions.assertThrows(
+                TournamentRegistrationTeamNameTakenException.class,
+                () -> registrationService.createTeam(10L, user, "Falcons"));
     }
 
     @Test
@@ -991,6 +1006,11 @@ public class TournamentRegistrationServiceImplTest {
         @Override
         public List<TournamentTeam> findJoinableByTournament(
                 final long tournamentId, final int teamSize) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean existsByTournamentAndName(final long tournamentId, final String name) {
             throw new UnsupportedOperationException();
         }
 
