@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.MatchClosedException;
@@ -26,6 +27,7 @@ import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSe
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyInvitedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyPendingException;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.exceptions.user.UserNotFoundException;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
@@ -96,7 +98,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoin(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
 
         if (isHost(match, user.getId())) {
@@ -140,7 +142,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public void requestToJoinSeries(final Long matchId, final User user) {
         final Match match = requireMatch(matchId);
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
 
         if (isHost(match, user.getId())) {
@@ -245,7 +247,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         nonNullUser(targetUser);
-        requireCanManageMatch(match, host);
+        requireHost(match, host.getId());
         requireApprovalManagedMatch(match);
 
         if (match.isRecurringOccurrence()
@@ -281,7 +283,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         final Match match = requireMatch(matchId);
         nonNullUser(host);
         nonNullUser(targetUser);
-        requireCanManageMatch(match, host);
+        requireHost(match, host.getId());
         requireApprovalManagedMatch(match);
 
         if (!matchParticipantDataService.rejectRequest(matchId, targetUser)) {
@@ -326,15 +328,16 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     public List<User> findPendingRequests(final Long matchId, final User host) {
         final Match match = requireMatch(matchId);
         nonNullUser(host);
-        requireCanManageMatch(match, host);
+        requireHost(match, host.getId());
         requireApprovalManagedMatch(match);
         return matchParticipantDataService.findPendingRequests(matchId);
     }
 
     @Override
-    public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
+    public PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
+            final User host, final int page, final int pageSize) {
         nonNullUser(host);
-        return matchParticipantDataService.findPendingRequestsForHost(host);
+        return matchParticipantDataService.findPendingRequestsForHost(host, page, pageSize);
     }
 
     @Override
@@ -348,7 +351,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
     @Override
     public List<Match> findPendingRequestMatches(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
         return matchParticipantDataService.findPendingRequestMatches(user);
     }
@@ -761,7 +764,7 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
 
     private static void nonNullUser(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 

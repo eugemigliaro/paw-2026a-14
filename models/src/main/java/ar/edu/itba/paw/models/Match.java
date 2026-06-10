@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -463,5 +464,25 @@ public class Match {
                 + ", deletedByUserId="
                 + (deletedByUser == null ? null : deletedByUser.getId())
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof Match)) {
+            return false;
+        }
+
+        Match that = (Match) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

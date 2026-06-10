@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.converters.TournamentSoloEntryStatusConverter;
 import ar.edu.itba.paw.models.types.TournamentSoloEntryStatus;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -142,5 +143,25 @@ public class TournamentSoloEntry {
 
     public void setLeftAt(final Instant leftAt) {
         this.leftAt = leftAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof TournamentSoloEntry)) {
+            return false;
+        }
+
+        TournamentSoloEntry that = (TournamentSoloEntry) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

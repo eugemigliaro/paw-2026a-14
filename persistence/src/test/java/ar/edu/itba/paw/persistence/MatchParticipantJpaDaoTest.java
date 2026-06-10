@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.MatchParticipant;
 import ar.edu.itba.paw.models.MatchSeries;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -165,12 +166,12 @@ public class MatchParticipantJpaDaoTest {
         createParticipant(match, player, ParticipantStatus.PENDING_APPROVAL);
         flushAndClear();
 
-        final List<PendingJoinRequest> requests =
-                matchParticipantDao.findPendingRequestsForHost(host);
+        final PaginatedResult<PendingJoinRequest> result =
+                matchParticipantDao.findPendingRequestsForHost(host, 1, 10);
 
-        Assertions.assertEquals(1, requests.size());
-        Assertions.assertEquals(match.getId(), requests.get(0).getMatch().getId());
-        Assertions.assertEquals(player.getId(), requests.get(0).getUser().getId());
+        Assertions.assertEquals(1, result.getItems().size());
+        Assertions.assertEquals(match.getId(), result.getItems().get(0).getMatch().getId());
+        Assertions.assertEquals(player.getId(), result.getItems().get(0).getUser().getId());
     }
 
     @Test
@@ -192,10 +193,10 @@ public class MatchParticipantJpaDaoTest {
         Assertions.assertEquals(ParticipantStatus.PENDING_APPROVAL, p1.getStatus());
         Assertions.assertEquals(ParticipantScope.SERIES, p1.getScope());
 
-        final List<PendingJoinRequest> hostRequests =
-                matchParticipantDao.findPendingRequestsForHost(host);
-        Assertions.assertEquals(1, hostRequests.size());
-        Assertions.assertTrue(hostRequests.get(0).isSeriesRequest());
+        final PaginatedResult<PendingJoinRequest> hostRequests =
+                matchParticipantDao.findPendingRequestsForHost(host, 1, 10);
+        Assertions.assertEquals(1, hostRequests.getItems().size());
+        Assertions.assertTrue(hostRequests.getItems().get(0).isSeriesRequest());
     }
 
     @Test

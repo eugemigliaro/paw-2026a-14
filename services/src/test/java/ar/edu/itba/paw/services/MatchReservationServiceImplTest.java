@@ -34,12 +34,13 @@ public class MatchReservationServiceImplTest {
 
     @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDataService matchParticipantDataService;
-    @Mock private MatchNotificationService matchNotificationService;
 
+    private RecordingMatchNotificationService matchNotificationService;
     private MatchReservationServiceImpl matchReservationService;
 
     @BeforeEach
     public void setUp() {
+        matchNotificationService = new RecordingMatchNotificationService();
         matchReservationService =
                 new MatchReservationServiceImpl(
                         matchDataService,
@@ -63,7 +64,9 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
         Mockito.when(matchParticipantDataService.createReservationIfSpace(10L, u)).thenReturn(true);
 
-        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, u));
+        matchReservationService.reserveSpot(10L, u);
+
+        Assertions.assertEquals(List.of("host-player-joined"), matchNotificationService.actions);
     }
 
     @Test
@@ -82,8 +85,11 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(10L, u)).thenReturn(false);
         Mockito.when(matchParticipantDataService.createReservationIfSpace(10L, u)).thenReturn(true);
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSpot(10L, u));
+        // Exercise
+        matchReservationService.reserveSpot(10L, u);
+
+        // Assert: the host reserving their own match must not be self-notified
+        Assertions.assertTrue(matchNotificationService.actions.isEmpty());
     }
 
     @Test
@@ -253,7 +259,9 @@ public class MatchReservationServiceImplTest {
                                 100L, u, FIXED_NOW))
                 .thenReturn(2);
 
-        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSeries(10L, u));
+        matchReservationService.reserveSeries(10L, u);
+
+        Assertions.assertEquals(List.of("host-player-joined"), matchNotificationService.actions);
     }
 
     @Test
@@ -288,8 +296,11 @@ public class MatchReservationServiceImplTest {
                                 100L, u, FIXED_NOW))
                 .thenReturn(2);
 
-        // Exercise and Assert
-        Assertions.assertDoesNotThrow(() -> matchReservationService.reserveSeries(10L, u));
+        // Exercise
+        matchReservationService.reserveSeries(10L, u);
+
+        // Assert: the host reserving their own series must not be self-notified
+        Assertions.assertTrue(matchNotificationService.actions.isEmpty());
     }
 
     @Test
@@ -360,8 +371,11 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.cancelFutureSeriesReservations(100L, u, FIXED_NOW))
                 .thenReturn(2);
 
-        Assertions.assertDoesNotThrow(
-                () -> matchReservationService.cancelSeriesReservations(10L, u));
+        matchReservationService.cancelSeriesReservations(10L, u);
+
+        // Cancellation sends no notification; the exact-argument stub above relies on
+        // MockitoExtension strict stubbing to guarantee the DAO cancellation was invoked.
+        Assertions.assertTrue(matchNotificationService.actions.isEmpty());
     }
 
     @Test

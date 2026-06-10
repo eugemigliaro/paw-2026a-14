@@ -6,7 +6,9 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.*;
+import ar.edu.itba.paw.models.exceptions.matchRecurrence.*;
 import ar.edu.itba.paw.models.exceptions.matchUpdate.*;
+import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -55,6 +57,7 @@ public class MatchServiceImplTest {
     @Mock private ImageService imageService;
 
     private RecordingMailDispatchService mailDispatchService;
+    private RecordingMatchNotificationService recordingNotifications;
     private MatchNotificationService matchNotificationService;
     private MatchServiceImpl matchService;
 
@@ -64,10 +67,8 @@ public class MatchServiceImplTest {
     public void setUp() {
         SecurityContextHolder.clearContext();
         mailDispatchService = new RecordingMailDispatchService();
-        matchNotificationService =
-                Mockito.spy(
-                        new MatchNotificationServiceImpl(
-                                matchParticipantDataService, mailDispatchService));
+        recordingNotifications = new RecordingMatchNotificationService();
+        matchNotificationService = recordingNotifications;
         matchService =
                 new MatchServiceImpl(
                         matchDataService,
@@ -77,7 +78,6 @@ public class MatchServiceImplTest {
                         securityService,
                         new RecurringMatchAsyncService(matchDataService),
                         clock);
-        matchService = Mockito.spy(matchService);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Mockito.lenient()
@@ -102,6 +102,11 @@ public class MatchServiceImplTest {
                         securityService,
                         new RecurringMatchAsyncService(matchDataService),
                         clock);
+    }
+
+    private void useRealMatchNotificationService() {
+        useMatchNotificationService(
+                new MatchNotificationServiceImpl(matchParticipantDataService, mailDispatchService));
     }
 
     @Test
@@ -1019,62 +1024,55 @@ public class MatchServiceImplTest {
         final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
         final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
 
-        // 2. Exercise
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                matchService.createMatch(
-                                        new CreateMatchRequest(
-                                                UserUtils.getUser(1L),
-                                                "Test Address",
-                                                "Weekly Padel",
-                                                "Test Description",
-                                                dateOf(startsAt),
-                                                timeOf(startsAt),
-                                                dateOf(endsAt),
-                                                timeOf(endsAt),
-                                                8,
-                                                BigDecimal.ZERO,
-                                                Sport.PADEL,
-                                                EventVisibility.PUBLIC,
-                                                EventJoinPolicy.DIRECT,
-                                                EventStatus.OPEN,
-                                                null,
-                                                new CreateRecurrenceRequest(
-                                                        RecurrenceFrequency.WEEKLY,
-                                                        RecurrenceEndMode.UNTIL_DATE,
-                                                        java.time.LocalDate.of(2026, 4, 12),
-                                                        null))));
-
-        // 3. Assert
-        Assertions.assertEquals("match.recurrence.error.tooFewOccurrences", exception.getMessage());
+        // 2. Exercise & 3. Assert
+        Assertions.assertThrows(
+                MatchRecurrenceTooFewOccurrencesException.class,
+                () ->
+                        matchService.createMatch(
+                                new CreateMatchRequest(
+                                        UserUtils.getUser(1L),
+                                        "Test Address",
+                                        "Weekly Padel",
+                                        "Test Description",
+                                        dateOf(startsAt),
+                                        timeOf(startsAt),
+                                        dateOf(endsAt),
+                                        timeOf(endsAt),
+                                        8,
+                                        BigDecimal.ZERO,
+                                        Sport.PADEL,
+                                        EventVisibility.PUBLIC,
+                                        EventJoinPolicy.DIRECT,
+                                        EventStatus.OPEN,
+                                        null,
+                                        new CreateRecurrenceRequest(
+                                                RecurrenceFrequency.WEEKLY,
+                                                RecurrenceEndMode.UNTIL_DATE,
+                                                java.time.LocalDate.of(2026, 4, 12),
+                                                null))));
     }
 
     @Test
     public void testCreateMatchRejectsPastStartTime() {
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                matchService.createMatch(
-                                        new CreateMatchRequest(
-                                                UserUtils.getUser(1L),
-                                                "Test Address",
-                                                "Test Match",
-                                                "Test Description",
-                                                dateOf(FIXED_NOW),
-                                                timeOf(FIXED_NOW),
-                                                dateOf(null),
-                                                timeOf(null),
-                                                10,
-                                                BigDecimal.ZERO,
-                                                Sport.FOOTBALL,
-                                                EventVisibility.PUBLIC,
-                                                EventStatus.OPEN,
-                                                null)));
-
-        Assertions.assertEquals("match.schedule.error.invalid", exception.getMessage());
+        Assertions.assertThrows(
+                MatchInvalidScheduleException.class,
+                () ->
+                        matchService.createMatch(
+                                new CreateMatchRequest(
+                                        UserUtils.getUser(1L),
+                                        "Test Address",
+                                        "Test Match",
+                                        "Test Description",
+                                        dateOf(FIXED_NOW),
+                                        timeOf(FIXED_NOW),
+                                        dateOf(null),
+                                        timeOf(null),
+                                        10,
+                                        BigDecimal.ZERO,
+                                        Sport.FOOTBALL,
+                                        EventVisibility.PUBLIC,
+                                        EventStatus.OPEN,
+                                        null)));
     }
 
     @Test
@@ -1097,13 +1095,9 @@ public class MatchServiceImplTest {
                         EventStatus.OPEN,
                         null);
 
-        // 2. Exercise
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class, () -> matchService.createMatch(request));
-
-        // 3. Assert
-        Assertions.assertEquals("match.create.error.capacityAboveMax", exception.getMessage());
+        // 2. Exercise & 3. Assert
+        Assertions.assertThrows(
+                MatchCapacityAboveMaxException.class, () -> matchService.createMatch(request));
     }
 
     @Test
@@ -1973,6 +1967,32 @@ public class MatchServiceImplTest {
     }
 
     @Test
+    public void testFindDashboardMatchesRejectsInvalidPage() {
+        // 1. Arrange
+        final User user = UserUtils.getUser(1L);
+
+        // 2. Exercise & 3. Assert
+        Assertions.assertThrows(
+                InvalidPaginationException.class,
+                () ->
+                        matchService.findDashboardMatches(
+                                user,
+                                Boolean.TRUE,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                0,
+                                10));
+    }
+
+    @Test
     public void testFindDashboardMatchesPagination() {
         final User user = UserUtils.getUser(1L);
         final List<Match> expected = List.of(createTestMatch(2L, "M2", "football"));
@@ -2451,11 +2471,14 @@ public class MatchServiceImplTest {
 
         Assertions.assertEquals(EventStatus.CANCELLED, result.getStatus());
         Assertions.assertEquals(24L, result.getId());
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(recordingNotifications.actions.isEmpty());
     }
 
     @Test
     public void testUpdateMatchWithoutConfirmedParticipantsSendsNoMail() {
+        // The no-mail outcome must come from the real notification service filtering an
+        // empty participant list, not from the recording fake never dispatching mail.
+        useRealMatchNotificationService();
         final Match existingMatch = createTestMatch(25L, "Old Title", "football");
         final Match updatedMatch =
                 new Match(
@@ -2532,6 +2555,9 @@ public class MatchServiceImplTest {
 
     @Test
     public void testCancelMatchWithoutConfirmedParticipantsSendsNoMail() {
+        // The no-mail outcome must come from the real notification service filtering an
+        // empty participant list, not from the recording fake never dispatching mail.
+        useRealMatchNotificationService();
         final Match existingMatch = createTestMatch(26L, "Test Match", "football");
         final Match cancelledMatch =
                 new Match(
@@ -2595,7 +2621,7 @@ public class MatchServiceImplTest {
                                         EventStatus.OPEN,
                                         null)));
 
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(recordingNotifications.actions.isEmpty());
     }
 
     @Test
@@ -2606,7 +2632,7 @@ public class MatchServiceImplTest {
                 MatchNotFoundException.class,
                 () -> matchService.cancelMatch(28L, UserUtils.getUser(1L)));
 
-        Assertions.assertTrue(mailDispatchService.actions.isEmpty());
+        Assertions.assertTrue(recordingNotifications.actions.isEmpty());
     }
 
     private static class RecordingMailDispatchService implements MailDispatchService {
@@ -2638,87 +2664,6 @@ public class MatchServiceImplTest {
                 final User recipient, final Match firstAffectedMatch, final int occurrenceCount) {
             actions.add("recurring-matches-cancelled");
             recipients.add(recipient.getEmail());
-        }
-    }
-
-    private static class RecordingMatchNotificationService implements MatchNotificationService {
-
-        private final List<String> actions = new ArrayList<>();
-        private final List<List<User>> affectedUserGroups = new ArrayList<>();
-        private final List<User> approvedUsers = new ArrayList<>();
-
-        @Override
-        public void notifyMatchUpdated(final Match match) {
-            actions.add("match-updated");
-        }
-
-        @Override
-        public void notifyMatchCancelled(final Match match) {
-            actions.add("match-cancelled");
-        }
-
-        @Override
-        public void notifyRecurringMatchesUpdated(final List<Match> matches) {
-            actions.add("recurring-matches-updated");
-        }
-
-        @Override
-        public void notifyRecurringMatchesCancelled(final List<Match> matches) {
-            actions.add("recurring-matches-cancelled");
-        }
-
-        @Override
-        public void notifyHostPlayerJoined(final Match match, final User player) {
-            actions.add("host-player-joined");
-        }
-
-        @Override
-        public void notifyHostJoinRequestReceived(final Match match, final User player) {
-            actions.add("host-join-request-received");
-        }
-
-        @Override
-        public void notifyPlayerRequestApproved(final Match match, final User player) {
-            actions.add("request-approved");
-            approvedUsers.add(player);
-        }
-
-        @Override
-        public void notifyPlayerRequestRejected(final Match match, final User player) {
-            actions.add("request-rejected");
-        }
-
-        @Override
-        public void notifyPendingRequestClosedByPrivacyChange(
-                final Match match, final List<User> players) {
-            actions.add("pending-request-closed");
-            affectedUserGroups.add(players);
-        }
-
-        @Override
-        public void notifyInvitationOpenedToPublic(final Match match, final List<User> players) {
-            actions.add("invitation-opened-to-public");
-            affectedUserGroups.add(players);
-        }
-
-        @Override
-        public void notifyHostInviteAccepted(final Match match, final User player) {
-            actions.add("host-invite-accepted");
-        }
-
-        @Override
-        public void notifyHostInviteDeclined(final Match match, final User player) {
-            actions.add("host-invite-declined");
-        }
-
-        @Override
-        public void notifyHostPlayerLeft(final Match match, final User player) {
-            actions.add("host-player-left");
-        }
-
-        @Override
-        public void notifyPlayerRemovedByHost(final Match match, final User player) {
-            actions.add("player-removed-by-host");
         }
     }
 

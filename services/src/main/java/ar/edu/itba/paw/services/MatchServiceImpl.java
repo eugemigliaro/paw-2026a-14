@@ -7,7 +7,10 @@ import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.exceptions.match.*;
+import ar.edu.itba.paw.models.exceptions.matchRecurrence.*;
 import ar.edu.itba.paw.models.exceptions.matchUpdate.*;
+import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
+import ar.edu.itba.paw.models.exceptions.user.InvalidUserException;
 import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.query.EventTimeFilter;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
@@ -85,7 +88,7 @@ public class MatchServiceImpl implements MatchService {
         validateScheduleOrThrow(
                 toInstant(request.getStartDate(), request.getStartTime()),
                 toInstant(request.getEndDate(), request.getEndTime()),
-                new IllegalArgumentException("match.schedule.error.invalid"));
+                new MatchInvalidScheduleException());
         validateCreateCapacityOrThrow(request.getMaxPlayers());
 
         if (request.isRecurring()) {
@@ -1253,10 +1256,10 @@ public class MatchServiceImpl implements MatchService {
     private void validatePageAndSizeOrThrow(
             final int page, final int pageSize, final int defaultPageSize) {
         if (page < 1) {
-            throw new IllegalArgumentException("pagination.error.invalidPage");
+            throw new InvalidPaginationException("invalidPage");
         }
         if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("pagination.error.invalidPageSize");
+            throw new InvalidPaginationException("invalidPageSize");
         }
     }
 
@@ -1269,7 +1272,7 @@ public class MatchServiceImpl implements MatchService {
         if (recurrence == null
                 || recurrence.getFrequency() == null
                 || recurrence.getEndMode() == null) {
-            throw new IllegalArgumentException("match.recurrence.error.invalid");
+            throw new MatchRecurrenceInvalidException();
         }
 
         final LocalDateTime firstLocalStart =
@@ -1302,16 +1305,16 @@ public class MatchServiceImpl implements MatchService {
             case UNTIL_DATE:
                 return countOccurrencesUntilDate(firstLocalStart, recurrence);
             default:
-                throw new IllegalArgumentException("match.recurrence.error.invalid");
+                throw new MatchRecurrenceInvalidException();
         }
     }
 
     private int validateOccurrenceCount(final Integer occurrenceCount) {
         if (occurrenceCount == null || occurrenceCount < MIN_RECURRING_OCCURRENCES) {
-            throw new IllegalArgumentException("match.recurrence.error.tooFewOccurrences");
+            throw new MatchRecurrenceTooFewOccurrencesException();
         }
         if (occurrenceCount > MAX_RECURRING_OCCURRENCES) {
-            throw new IllegalArgumentException("match.recurrence.error.tooManyOccurrences");
+            throw new MatchRecurrenceTooManyOccurrencesException();
         }
         return occurrenceCount;
     }
@@ -1320,7 +1323,7 @@ public class MatchServiceImpl implements MatchService {
             final LocalDateTime firstLocalStart, final CreateRecurrenceRequest recurrence) {
         final LocalDate untilDate = recurrence.getUntilDate();
         if (untilDate == null || !untilDate.isAfter(firstLocalStart.toLocalDate())) {
-            throw new IllegalArgumentException("match.recurrence.error.untilDate");
+            throw new MatchRecurrenceUntilDateException();
         }
 
         int count = 0;
@@ -1328,13 +1331,13 @@ public class MatchServiceImpl implements MatchService {
         while (!occurrenceStart.toLocalDate().isAfter(untilDate)) {
             count++;
             if (count > MAX_RECURRING_OCCURRENCES) {
-                throw new IllegalArgumentException("match.recurrence.error.tooManyOccurrences");
+                throw new MatchRecurrenceTooManyOccurrencesException();
             }
             occurrenceStart = addFrequency(firstLocalStart, recurrence.getFrequency(), count);
         }
 
         if (count < MIN_RECURRING_OCCURRENCES) {
-            throw new IllegalArgumentException("match.recurrence.error.tooFewOccurrences");
+            throw new MatchRecurrenceTooFewOccurrencesException();
         }
         return count;
     }
@@ -1356,7 +1359,7 @@ public class MatchServiceImpl implements MatchService {
 
     private void nonNullUser(final User user) {
         if (user == null) {
-            throw new IllegalArgumentException("exception.user.notNull");
+            throw new InvalidUserException();
         }
     }
 
@@ -1373,7 +1376,7 @@ public class MatchServiceImpl implements MatchService {
 
     private void validateCreateCapacityOrThrow(final int maxPlayers) {
         if (maxPlayers > MAX_PLAYERS_PER_MATCH) {
-            throw new IllegalArgumentException("match.create.error.capacityAboveMax");
+            throw new MatchCapacityAboveMaxException();
         }
     }
 

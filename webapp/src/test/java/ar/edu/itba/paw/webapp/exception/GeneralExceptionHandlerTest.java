@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -41,6 +42,11 @@ class GeneralExceptionHandlerTest {
         @GetMapping("/throws-generic")
         public void throwsGeneric() {
             throw new IllegalStateException("boom");
+        }
+
+        @GetMapping("/throws-invalid-pagination")
+        public void throwsInvalidPagination() {
+            throw new InvalidPaginationException("invalidPage");
         }
 
         @GetMapping("/method-only")
@@ -87,6 +93,14 @@ class GeneralExceptionHandlerTest {
     @Test
     void invalidTypedParameterRenders400Page() throws Exception {
         mockMvc.perform(get("/typed-param").param("id", "bad"))
+                .andExpect(status().isBadRequest())
+                .andExpect(view().name("errors/error-page"))
+                .andExpect(model().attribute("number", "400"));
+    }
+
+    @Test
+    void invalidPaginationRenders400Page() throws Exception {
+        mockMvc.perform(get("/throws-invalid-pagination"))
                 .andExpect(status().isBadRequest())
                 .andExpect(view().name("errors/error-page"))
                 .andExpect(model().attribute("number", "400"));

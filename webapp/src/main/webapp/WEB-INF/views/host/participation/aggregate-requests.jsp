@@ -4,7 +4,6 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.hostRequests" />
-<spring:message var="participantListLockedTooltip" code="event.host.participants.lockedTooltip" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -64,50 +63,97 @@
 												</div>
 											</div>
 											<div class="participant-manage-list__actions">
-												<spring:message var="approveLabel" code="host.requests.approve" />
-												<spring:message var="rejectLabel" code="host.requests.reject" />
-												<c:choose>
-													<c:when test="${not requestActionsDisabledByMatchId[req.match.id]}">
-														<c:url var="approveAction" value="/host/matches/${req.match.id}/requests/${req.user.id}/approve" />
-														<spring:message var="approvingLabel" code="host.requests.approving" />
-														<form
-															method="post"
-															action="${approveAction}"
-															data-submit-guard="true"
-															data-submit-loading-label="${approvingLabel}"
-															class="participant-manage-list__action-form"
-														>
-															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-															<ui:button label="${approveLabel}" type="submit" />
-														</form>
-														<c:url var="rejectAction" value="/host/matches/${req.match.id}/requests/${req.user.id}/reject" />
-														<spring:message var="rejectingLabel" code="host.requests.rejecting" />
-														<form
-															method="post"
-															action="${rejectAction}"
-															data-submit-guard="true"
-															data-submit-loading-label="${rejectingLabel}"
-															class="participant-manage-list__action-form"
-														>
-															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-															<ui:button label="${rejectLabel}" type="submit" variant="secondary" />
-														</form>
-													</c:when>
-													<c:otherwise>
-														<span class="btn btn--primary btn--md is-disabled report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${participantListLockedTooltip}" aria-label="${participantListLockedTooltip}">
-															<c:out value="${approveLabel}" />
-														</span>
-														<span class="btn btn--secondary btn--md is-disabled report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${participantListLockedTooltip}" aria-label="${participantListLockedTooltip}">
-															<c:out value="${rejectLabel}" />
-														</span>
-													</c:otherwise>
-												</c:choose>
+												<c:url var="approveAction" value="/host/matches/${req.match.id}/requests/${req.user.id}/approve" />
+												<spring:message var="approvingLabel" code="host.requests.approving" />
+												<form
+													method="post"
+													action="${approveAction}"
+													data-submit-guard="true"
+													data-submit-loading-label="${approvingLabel}"
+													class="participant-manage-list__action-form"
+												>
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<spring:message var="approveLabel" code="host.requests.approve" />
+													<ui:button label="${approveLabel}" type="submit" />
+												</form>
+												<c:url var="rejectAction" value="/host/matches/${req.match.id}/requests/${req.user.id}/reject" />
+												<spring:message var="rejectingLabel" code="host.requests.rejecting" />
+												<form
+													method="post"
+													action="${rejectAction}"
+													data-submit-guard="true"
+													data-submit-loading-label="${rejectingLabel}"
+													class="participant-manage-list__action-form"
+												>
+													<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+													<spring:message var="rejectLabel" code="host.requests.reject" />
+													<ui:button label="${rejectLabel}" type="submit" variant="secondary" />
+												</form>
 											</div>
 										</li>
 									</c:forEach>
 								</ul>
 							</c:otherwise>
 						</c:choose>
+						<c:if test="${not empty paginationItems}">
+							<spring:message var="previousLabel" code="pagination.previous" />
+							<spring:message var="nextLabel" code="pagination.next" />
+							<spring:message var="paginationAria" code="host.requests.pagination.aria" />
+							<section class="feed-pagination" aria-label="${paginationAria}">
+								<nav class="feed-pagination__nav" aria-label="${paginationAria}">
+									<div>
+										<c:choose>
+											<c:when test="${hasPreviousPage}">
+												<c:url var="prevHref" value="${previousPageHref}" />
+												<a class="feed-pagination__control" href="${prevHref}">
+													<c:out value="${previousLabel}" />
+												</a>
+											</c:when>
+											<c:otherwise>
+												<span class="feed-pagination__control feed-pagination__control--disabled">
+													<c:out value="${previousLabel}" />
+												</span>
+											</c:otherwise>
+										</c:choose>
+									</div>
+									<div class="feed-pagination__pages">
+										<c:forEach var="item" items="${paginationItems}">
+											<c:choose>
+												<c:when test="${item.ellipsis}">
+													<span class="feed-pagination__ellipsis"><c:out value="${item.label}" /></span>
+												</c:when>
+												<c:when test="${item.current}">
+													<span class="feed-pagination__page feed-pagination__page--current" aria-current="page">
+														<c:out value="${item.label}" />
+													</span>
+												</c:when>
+												<c:otherwise>
+													<c:url var="pageHref" value="${item.href}" />
+													<a class="feed-pagination__page" href="${pageHref}">
+														<c:out value="${item.label}" />
+													</a>
+												</c:otherwise>
+											</c:choose>
+										</c:forEach>
+									</div>
+									<div>
+										<c:choose>
+											<c:when test="${hasNextPage}">
+												<c:url var="nextHref" value="${nextPageHref}" />
+												<a class="feed-pagination__control" href="${nextHref}">
+													<c:out value="${nextLabel}" />
+												</a>
+											</c:when>
+											<c:otherwise>
+												<span class="feed-pagination__control feed-pagination__control--disabled">
+													<c:out value="${nextLabel}" />
+												</span>
+											</c:otherwise>
+										</c:choose>
+									</div>
+								</nav>
+							</section>
+						</c:if>
 					</section>
 				</div>
 			</main>

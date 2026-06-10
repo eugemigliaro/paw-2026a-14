@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.util.List;
@@ -36,7 +37,8 @@ public interface MatchParticipationService {
 
     List<User> findPendingRequests(Long matchId, User host);
 
-    List<PendingJoinRequest> findPendingRequestsForHost(User host);
+    PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
+            User host, int page, int pageSize);
 
     List<User> findConfirmedParticipants(Long matchId, User host);
 

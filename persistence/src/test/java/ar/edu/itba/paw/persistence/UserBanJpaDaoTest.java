@@ -24,7 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 @ContextConfiguration(classes = TestConfiguration.class)
 public class UserBanJpaDaoTest {
 
-    private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+    // Fixed reference time for determinism. Must stay ahead of the real clock: upliftBan
+    // persists the wall-clock now, and shouldUpliftBan_WhenBanExists asserts it lands
+    // before FUTURE.
+    private static final Instant NOW = Instant.parse("2099-04-05T00:00:00Z");
     private static final Instant FUTURE = NOW.plus(7, ChronoUnit.DAYS);
     private static final Instant PAST = NOW.minus(7, ChronoUnit.DAYS);
 
@@ -298,9 +301,11 @@ public class UserBanJpaDaoTest {
     @Test
     public void shouldUpliftBan_WhenBanNotFound() {
         final Long nonExistentBanId = 99999L;
+        final long bansBefore = countUserBans();
 
         Assertions.assertDoesNotThrow(() -> userBanDao.upliftBan(nonExistentBanId));
 
+        Assertions.assertEquals(bansBefore, countUserBans());
         Assertions.assertEquals(0, countUserBans());
     }
 

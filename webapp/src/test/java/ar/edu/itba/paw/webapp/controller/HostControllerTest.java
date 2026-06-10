@@ -52,10 +52,8 @@ import java.util.Locale;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
@@ -419,6 +417,25 @@ class HostControllerTest {
     @Test
     void postHostPublishCreatesAndRedirectsForAuthenticatedUsers() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        // Only the expected request shape creates match 43; anything else fails the test.
+        Mockito.doThrow(new AssertionError("createMatch called with unexpected request"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
+        Mockito.doReturn(MatchUtils.match(43L).build())
+                .when(matchService)
+                .createMatch(
+                        Mockito.argThat(
+                                (CreateMatchRequest req) ->
+                                        req != null
+                                                && !req.isRecurring()
+                                                && LocalDate.parse("2099-04-10")
+                                                        .equals(req.getStartDate())
+                                                && LocalTime.parse("18:00")
+                                                        .equals(req.getStartTime())
+                                                && LocalDate.parse("2099-04-10")
+                                                        .equals(req.getEndDate())
+                                                && LocalTime.parse("19:30")
+                                                        .equals(req.getEndTime())));
 
         mockMvc.perform(
                         post("/matches/new")
@@ -436,19 +453,20 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
-
-        final CreateMatchRequest request = captureCreateMatchRequest();
-        Assertions.assertNotNull(request);
-        Assertions.assertFalse(request.isRecurring());
-        Assertions.assertEquals(LocalDate.parse("2099-04-10"), request.getStartDate());
-        Assertions.assertEquals(LocalTime.parse("18:00"), request.getStartTime());
-        Assertions.assertEquals(LocalDate.parse("2099-04-10"), request.getEndDate());
-        Assertions.assertEquals(LocalTime.parse("19:30"), request.getEndTime());
     }
 
     @Test
     void postLegacyHostPublishCreatesAndRedirectsForStaleForms() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("createMatch called with unexpected request"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
+        Mockito.doReturn(MatchUtils.match(43L).build())
+                .when(matchService)
+                .createMatch(
+                        Mockito.argThat(
+                                (CreateMatchRequest req) ->
+                                        req != null && "Host Test Match".equals(req.getTitle())));
 
         mockMvc.perform(
                         post("/host/matches/new")
@@ -466,15 +484,23 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
-
-        final CreateMatchRequest request = captureCreateMatchRequest();
-        Assertions.assertNotNull(request);
-        Assertions.assertEquals("Host Test Match", request.getTitle());
     }
 
     @Test
     void postHostPublishPassesValidCoordinatesToService() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("createMatch called with unexpected request"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
+        Mockito.doReturn(MatchUtils.match(43L).build())
+                .when(matchService)
+                .createMatch(
+                        Mockito.argThat(
+                                (CreateMatchRequest req) ->
+                                        req != null
+                                                && Double.valueOf(-34.61).equals(req.getLatitude())
+                                                && Double.valueOf(-58.38)
+                                                        .equals(req.getLongitude())));
 
         mockMvc.perform(
                         post("/matches/new")
@@ -494,16 +520,14 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
-
-        final CreateMatchRequest request = captureCreateMatchRequest();
-        Assertions.assertNotNull(request);
-        Assertions.assertEquals(-34.61, request.getLatitude());
-        Assertions.assertEquals(-58.38, request.getLongitude());
     }
 
     @Test
     void postHostPublishRejectsPartialCoordinates() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("createMatch must not be called when validation fails"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
 
         mockMvc.perform(
                         post("/matches/new")
@@ -523,14 +547,14 @@ class HostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "longitude"));
-
-        Mockito.verify(matchService, Mockito.never())
-                .createMatch(Mockito.any(CreateMatchRequest.class));
     }
 
     @Test
     void postHostPublishRejectsOutOfRangeCoordinates() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("createMatch must not be called when validation fails"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
 
         mockMvc.perform(
                         post("/matches/new")
@@ -551,14 +575,31 @@ class HostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "latitude"));
-
-        Mockito.verify(matchService, Mockito.never())
-                .createMatch(Mockito.any(CreateMatchRequest.class));
     }
 
     @Test
     void postHostPublishCreatesRecurringMatchWithOccurrenceCount() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("createMatch called with unexpected request"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
+        Mockito.doReturn(MatchUtils.match(43L).build())
+                .when(matchService)
+                .createMatch(
+                        Mockito.argThat(
+                                (CreateMatchRequest req) ->
+                                        req != null
+                                                && req.isRecurring()
+                                                && req.getRecurrence() != null
+                                                && "weekly"
+                                                        .equals(
+                                                                req.getRecurrence()
+                                                                        .getFrequency()
+                                                                        .getDbValue())
+                                                && Integer.valueOf(3)
+                                                        .equals(
+                                                                req.getRecurrence()
+                                                                        .getOccurrenceCount())));
 
         mockMvc.perform(
                         post("/matches/new")
@@ -580,17 +621,31 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
-
-        final CreateMatchRequest request = captureCreateMatchRequest();
-        Assertions.assertNotNull(request);
-        Assertions.assertTrue(request.isRecurring());
-        Assertions.assertEquals("weekly", request.getRecurrence().getFrequency().getDbValue());
-        Assertions.assertEquals(3, request.getRecurrence().getOccurrenceCount());
     }
 
     @Test
     void postHostPublishCreatesRecurringMatchWithUntilDate() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("createMatch called with unexpected request"))
+                .when(matchService)
+                .createMatch(Mockito.any(CreateMatchRequest.class));
+        Mockito.doReturn(MatchUtils.match(43L).build())
+                .when(matchService)
+                .createMatch(
+                        Mockito.argThat(
+                                (CreateMatchRequest req) ->
+                                        req != null
+                                                && req.isRecurring()
+                                                && req.getRecurrence() != null
+                                                && "until_date"
+                                                        .equals(
+                                                                req.getRecurrence()
+                                                                        .getEndMode()
+                                                                        .getDbValue())
+                                                && LocalDate.of(2099, 4, 24)
+                                                        .equals(
+                                                                req.getRecurrence()
+                                                                        .getUntilDate())));
 
         mockMvc.perform(
                         post("/matches/new")
@@ -612,12 +667,6 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/43"));
-
-        final CreateMatchRequest request = captureCreateMatchRequest();
-        Assertions.assertNotNull(request);
-        Assertions.assertTrue(request.isRecurring());
-        Assertions.assertEquals("until_date", request.getRecurrence().getEndMode().getDbValue());
-        Assertions.assertEquals(LocalDate.of(2099, 4, 24), request.getRecurrence().getUntilDate());
     }
 
     @Test
@@ -869,6 +918,23 @@ class HostControllerTest {
     @Test
     void postHostSeriesEditRedirectsToDetailOnSuccess() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        Mockito.doThrow(
+                        new AssertionError(
+                                "updateSeriesFromOccurrence called with unexpected request"))
+                .when(matchService)
+                .updateSeriesFromOccurrence(
+                        Mockito.anyLong(),
+                        Mockito.any(User.class),
+                        Mockito.any(UpdateMatchRequest.class));
+        Mockito.doReturn(java.util.List.of(recurringSecondOccurrence))
+                .when(matchService)
+                .updateSeriesFromOccurrence(
+                        Mockito.eq(47L),
+                        Mockito.argThat(u -> u != null && Long.valueOf(7L).equals(u.getId())),
+                        Mockito.argThat(
+                                (UpdateMatchRequest req) ->
+                                        req != null
+                                                && "Updated Weekly Padel".equals(req.getTitle())));
 
         mockMvc.perform(
                         post("/host/matches/47/series/edit")
@@ -887,14 +953,30 @@ class HostControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/47"))
                 .andExpect(flash().attribute("hostAction", "seriesUpdated"));
-
-        final UpdateMatchRequest request = captureSeriesUpdateRequest();
-        Assertions.assertEquals("Updated Weekly Padel", request.getTitle());
     }
 
     @Test
     void postHostEditPersistsPrivateVisibilityAsInviteOnly() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        // The controller's contract is forwarding the submitted PRIVATE visibility with the
+        // form's join policy verbatim; the PRIVATE -> INVITE_ONLY normalization is service
+        // behavior covered by MatchServiceImplTest.
+        Mockito.doThrow(new AssertionError("updateMatch called with unexpected request"))
+                .when(matchService)
+                .updateMatch(
+                        Mockito.anyLong(),
+                        Mockito.any(User.class),
+                        Mockito.any(UpdateMatchRequest.class));
+        Mockito.doReturn(findFixtureMatch(42L))
+                .when(matchService)
+                .updateMatch(
+                        Mockito.eq(42L),
+                        Mockito.argThat(u -> u != null && Long.valueOf(7L).equals(u.getId())),
+                        Mockito.argThat(
+                                (UpdateMatchRequest req) ->
+                                        req != null
+                                                && EventVisibility.PRIVATE == req.getVisibility()
+                                                && EventJoinPolicy.DIRECT == req.getJoinPolicy()));
 
         mockMvc.perform(
                         post("/host/matches/42/edit")
@@ -913,17 +995,27 @@ class HostControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
                 .andExpect(flash().attribute("hostAction", "updated"));
-
-        final Match updatedMatch =
-                buildUpdatedMatch(42L, UserUtils.getUser(7L), captureUpdateRequest());
-        Assertions.assertNotNull(updatedMatch);
-        Assertions.assertEquals(EventVisibility.PRIVATE, updatedMatch.getVisibility());
-        Assertions.assertEquals(EventJoinPolicy.INVITE_ONLY, updatedMatch.getJoinPolicy());
     }
 
     @Test
     void postHostEditPersistsPublicVisibilityAndJoinPolicyFromPrivateMatch() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("updateMatch called with unexpected request"))
+                .when(matchService)
+                .updateMatch(
+                        Mockito.anyLong(),
+                        Mockito.any(User.class),
+                        Mockito.any(UpdateMatchRequest.class));
+        Mockito.doReturn(findFixtureMatch(51L))
+                .when(matchService)
+                .updateMatch(
+                        Mockito.eq(51L),
+                        Mockito.argThat(u -> u != null && Long.valueOf(7L).equals(u.getId())),
+                        Mockito.argThat(
+                                (UpdateMatchRequest req) ->
+                                        req != null
+                                                && EventVisibility.PUBLIC == req.getVisibility()
+                                                && EventJoinPolicy.DIRECT == req.getJoinPolicy()));
 
         mockMvc.perform(
                         post("/host/matches/51/edit")
@@ -942,17 +1034,17 @@ class HostControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/51"))
                 .andExpect(flash().attribute("hostAction", "updated"));
-
-        final Match updatedMatch =
-                buildUpdatedMatch(51L, UserUtils.getUser(7L), captureUpdateRequest());
-        Assertions.assertNotNull(updatedMatch);
-        Assertions.assertEquals(EventVisibility.PUBLIC, updatedMatch.getVisibility());
-        Assertions.assertEquals(EventJoinPolicy.DIRECT, updatedMatch.getJoinPolicy());
     }
 
     @Test
     void postHostEditRejectsPublicInviteOnlyPolicyFromStaleFormState() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
+        Mockito.doThrow(new AssertionError("updateMatch must not be called when validation fails"))
+                .when(matchService)
+                .updateMatch(
+                        Mockito.anyLong(),
+                        Mockito.any(User.class),
+                        Mockito.any(UpdateMatchRequest.class));
 
         mockMvc.perform(
                         post("/host/matches/51/edit")
@@ -971,12 +1063,6 @@ class HostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("host/create-match"))
                 .andExpect(model().attributeHasFieldErrors("createEventForm", "joinPolicy"));
-
-        Mockito.verify(matchService, Mockito.never())
-                .updateMatch(
-                        Mockito.anyLong(),
-                        Mockito.any(User.class),
-                        Mockito.any(UpdateMatchRequest.class));
     }
 
     @Test
@@ -1117,30 +1203,6 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/host/matches/44/cancel")).andExpect(status().isNotFound());
-    }
-
-    private CreateMatchRequest captureCreateMatchRequest() {
-        final ArgumentCaptor<CreateMatchRequest> captor =
-                ArgumentCaptor.forClass(CreateMatchRequest.class);
-        Mockito.verify(matchService).createMatch(captor.capture());
-        return captor.getValue();
-    }
-
-    private UpdateMatchRequest captureUpdateRequest() {
-        final ArgumentCaptor<UpdateMatchRequest> captor =
-                ArgumentCaptor.forClass(UpdateMatchRequest.class);
-        Mockito.verify(matchService)
-                .updateMatch(Mockito.anyLong(), Mockito.any(User.class), captor.capture());
-        return captor.getValue();
-    }
-
-    private UpdateMatchRequest captureSeriesUpdateRequest() {
-        final ArgumentCaptor<UpdateMatchRequest> captor =
-                ArgumentCaptor.forClass(UpdateMatchRequest.class);
-        Mockito.verify(matchService)
-                .updateSeriesFromOccurrence(
-                        Mockito.anyLong(), Mockito.any(User.class), captor.capture());
-        return captor.getValue();
     }
 
     private static MessageSource messageSource() {

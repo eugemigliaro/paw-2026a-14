@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
@@ -43,7 +42,6 @@ import java.util.Optional;
 import java.util.Set;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -69,31 +67,19 @@ class EventControllerTest {
     private PlayerReviewService playerReviewService;
     private ModerationService moderationService;
 
-    private MatchException reservationFailure;
-    private MatchException reservationCancellationFailure;
-    private MatchException seriesReservationFailure;
-    private MatchException seriesCancellationFailure;
     private boolean currentUserHasReservation;
     private boolean currentUserHasSeriesReservation;
     private boolean currentUserHasJoinRequest;
     private boolean currentUserHasSeriesJoinRequest;
-    private boolean occurrenceReservationCancellationUsed;
-    private boolean seriesReservationCancellationUsed;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
 
-        reservationFailure = null;
-        reservationCancellationFailure = null;
-        seriesReservationFailure = null;
-        seriesCancellationFailure = null;
         currentUserHasReservation = false;
         currentUserHasSeriesReservation = false;
         currentUserHasJoinRequest = false;
         currentUserHasSeriesJoinRequest = false;
-        occurrenceReservationCancellationUsed = false;
-        seriesReservationCancellationUsed = false;
 
         final Match realMatch =
                 MatchUtils.match(42L)
@@ -278,17 +264,6 @@ class EventControllerTest {
                         .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
                         .joinedPlayers(1)
                         .build();
-        final Match approvalInProgressMatch =
-                MatchUtils.match(57L)
-                        .address("Downtown Club")
-                        .title("Approval In Progress Padel")
-                        .description("Started session with host approval")
-                        .startsAt(Instant.parse("2026-04-04T23:00:00Z"))
-                        .endsAt(Instant.parse("2026-04-05T01:00:00Z"))
-                        .price(BigDecimal.TEN)
-                        .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
-                        .joinedPlayers(1)
-                        .build();
 
         matchService = Mockito.mock(MatchService.class);
 
@@ -316,8 +291,6 @@ class EventControllerTest {
         Mockito.when(matchService.findMatchById(54L))
                 .thenReturn(Optional.of(approvalRecurringPastOccurrence));
         Mockito.when(matchService.findMatchById(56L)).thenReturn(Optional.of(pendingFutureMatch));
-        Mockito.when(matchService.findMatchById(57L))
-                .thenReturn(Optional.of(approvalInProgressMatch));
         Mockito.when(matchService.findMatchById(ArgumentMatchers.anyLong()))
                 .thenAnswer(
                         invocation -> {
@@ -338,7 +311,6 @@ class EventControllerTest {
                                 case 53 -> Optional.of(approvalRecurringSecondOccurrence);
                                 case 54 -> Optional.of(approvalRecurringPastOccurrence);
                                 case 56 -> Optional.of(pendingFutureMatch);
-                                case 57 -> Optional.of(approvalInProgressMatch);
                                 default -> Optional.empty();
                             };
                         });
@@ -468,49 +440,6 @@ class EventControllerTest {
                             return Set.of();
                         });
 
-        Mockito.doAnswer(
-                        invocation -> {
-                            final User user = invocation.getArgument(1);
-                            if (reservationFailure != null) {
-                                throw reservationFailure;
-                            }
-                            if (user == null) {
-                                throw new MatchParticipationNotJoinedException();
-                            }
-                            return null;
-                        })
-                .when(matchReservationService)
-                .reserveSpot(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
-        Mockito.doAnswer(
-                        invocation -> {
-                            final User user = invocation.getArgument(1);
-                            if (seriesReservationFailure != null) {
-                                throw seriesReservationFailure;
-                            }
-                            if (user == null) {
-                                throw new MatchParticipationNotJoinedException();
-                            }
-                            return null;
-                        })
-                .when(matchReservationService)
-                .reserveSeries(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
-        Mockito.doAnswer(
-                        invocation -> {
-                            final User user = invocation.getArgument(1);
-                            seriesReservationCancellationUsed = true;
-                            if (seriesCancellationFailure != null) {
-                                throw seriesCancellationFailure;
-                            }
-                            if (user == null) {
-                                throw new MatchParticipationNotJoinedException();
-                            }
-                            return null;
-                        })
-                .when(matchReservationService)
-                .cancelSeriesReservations(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
 
         Mockito.when(
@@ -557,17 +486,6 @@ class EventControllerTest {
                             return Set.of();
                         });
 
-        Mockito.doAnswer(
-                        invocation -> {
-                            occurrenceReservationCancellationUsed = true;
-                            if (reservationCancellationFailure != null) {
-                                throw reservationCancellationFailure;
-                            }
-                            return null;
-                        })
-                .when(matchParticipationService)
-                .leaveMatch(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
         Mockito.when(
                         matchParticipationService.findPendingRequests(
                                 ArgumentMatchers.anyLong(), ArgumentMatchers.any()))
@@ -575,9 +493,7 @@ class EventControllerTest {
                         invocation -> {
                             final Long matchId = invocation.getArgument(0);
                             final User host = invocation.getArgument(1);
-                            if ((matchId == 52L || matchId == 57L)
-                                    && host != null
-                                    && (host.getId() == 7L || isAdminViewer(host))) {
+                            if (matchId == 52L && host != null && host.getId() == 7L) {
                                 return List.of(UserUtils.getUser(9L));
                             }
                             return List.of();
@@ -1084,55 +1000,6 @@ class EventControllerTest {
     }
 
     @Test
-    void getStartedApprovalRequiredMatchDetailsRouteForHostShowsPendingRequestsWithLockedActions()
-            throws Exception {
-        AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
-
-        mockMvc.perform(get("/matches/57"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("hostViewer", true))
-                .andExpect(
-                        model().attribute(
-                                        "matchActionCapabilities",
-                                        Matchers.hasProperty(
-                                                "canManageParticipants", Matchers.is(false))))
-                .andExpect(model().attribute("hostPendingRequestCount", 1))
-                .andExpect(model().attribute("hostPendingRequestsOpen", true))
-                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
-    }
-
-    @Test
-    void getStartedApprovalRequiredMatchDetailsRouteForNonHostDoesNotShowPendingRequests()
-            throws Exception {
-        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-
-        mockMvc.perform(get("/matches/57"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("hostViewer", false))
-                .andExpect(model().attribute("hostPendingRequestCount", 0))
-                .andExpect(model().attribute("hostPendingRequests", Matchers.empty()));
-    }
-
-    @Test
-    void getStartedApprovalRequiredMatchDetailsRouteForAdminShowsPendingRequests()
-            throws Exception {
-        AuthenticationUtils.authenticateAdmin(99L, "ignored");
-
-        mockMvc.perform(get("/matches/57"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("hostViewer", false))
-                .andExpect(model().attribute("hostCanManage", true))
-                .andExpect(
-                        model().attribute(
-                                        "matchActionCapabilities",
-                                        Matchers.hasProperty(
-                                                "canManageParticipants", Matchers.is(false))))
-                .andExpect(model().attribute("hostPendingRequestCount", 1))
-                .andExpect(model().attribute("hostPendingRequestsOpen", true))
-                .andExpect(model().attribute("hostPendingRequests", Matchers.hasSize(1)));
-    }
-
-    @Test
     void getRealMatchDetailsRouteForHostDisablesManagementOnCompletedEvent() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
@@ -1216,7 +1083,9 @@ class EventControllerTest {
     @Test
     void postReservationRequestWhenAlreadyReservedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationFailure = new MatchParticipationAlreadyJoinedException();
+        Mockito.doThrow(new MatchParticipationAlreadyJoinedException())
+                .when(matchReservationService)
+                .reserveSpot(ArgumentMatchers.eq(42L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1245,14 +1114,25 @@ class EventControllerTest {
     void postRecurringOccurrenceReservationCancelAsAuthenticatedUserCancelsOnlySelectedDate()
             throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
+        // Wrong-path detection: cancelling one occurrence must use the single-occurrence
+        // leave, never the series-wide cancellation, and only with the expected arguments.
+        Mockito.doThrow(new AssertionError("series cancellation path must not be used"))
+                .when(matchReservationService)
+                .cancelSeriesReservations(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+        Mockito.doThrow(new AssertionError("leaveMatch called with unexpected arguments"))
+                .when(matchParticipationService)
+                .leaveMatch(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+        Mockito.doNothing()
+                .when(matchParticipationService)
+                .leaveMatch(
+                        ArgumentMatchers.eq(46L),
+                        ArgumentMatchers.argThat(
+                                u -> u != null && Long.valueOf(9L).equals(u.getId())));
 
         mockMvc.perform(post("/matches/46/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/46"))
                 .andExpect(flash().attribute("reservationStatus", "cancelled"));
-
-        Assertions.assertTrue(occurrenceReservationCancellationUsed);
-        Assertions.assertFalse(seriesReservationCancellationUsed);
     }
 
     @Test
@@ -1267,7 +1147,9 @@ class EventControllerTest {
     @Test
     void postReservationCancelWithNoActiveReservationShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationCancellationFailure = new MatchParticipationNotJoinedException();
+        Mockito.doThrow(new MatchParticipationNotJoinedException())
+                .when(matchParticipationService)
+                .leaveMatch(ArgumentMatchers.eq(42L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1296,7 +1178,9 @@ class EventControllerTest {
     @Test
     void postSeriesReservationRequestWhenAlreadyJoinedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesReservationFailure = new MatchParticipationSeriesAlreadyJoinedException();
+        Mockito.doThrow(new MatchParticipationSeriesAlreadyJoinedException())
+                .when(matchReservationService)
+                .reserveSeries(ArgumentMatchers.eq(46L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1324,7 +1208,10 @@ class EventControllerTest {
     @Test
     void postSeriesReservationCancelWithNoFutureReservationsShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesCancellationFailure = new MatchParticipationSeriesNotJoinedException();
+        Mockito.doThrow(new MatchParticipationSeriesNotJoinedException())
+                .when(matchReservationService)
+                .cancelSeriesReservations(
+                        ArgumentMatchers.eq(46L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1337,7 +1224,6 @@ class EventControllerTest {
                 viewer != null
                         && match.getHost() != null
                         && viewer.getId().equals(match.getHost().getId());
-        final boolean manager = host || isAdminViewer(viewer);
         final boolean activeParticipant =
                 viewer != null
                         && currentUserHasReservation
@@ -1351,13 +1237,13 @@ class EventControllerTest {
                                 || Long.valueOf(50L).equals(match.getId()));
         final boolean visible =
                 match.getStatus() == EventStatus.DRAFT
-                        ? manager
+                        ? host
                         : match.getVisibility() == EventVisibility.PRIVATE
                                         || match.getStatus() == EventStatus.CANCELLED
-                                ? manager || activeParticipant || seriesParticipant || invited
+                                ? host || activeParticipant || seriesParticipant || invited
                                 : match.getVisibility() == EventVisibility.PUBLIC;
         final boolean editable =
-                manager
+                host
                         && match.getStatus() != EventStatus.COMPLETED
                         && match.getStatus() != EventStatus.CANCELLED
                         && match.getStartsAt().isAfter(FIXED_NOW);
@@ -1397,20 +1283,15 @@ class EventControllerTest {
                 viewer != null
                         && match.getHost() != null
                         && viewer.getId().equals(match.getHost().getId());
-        final boolean manager = host || isAdminViewer(viewer);
         final MatchActionCapabilities capabilities = actionCapabilities(match, viewer);
         return new MatchManagementPermissions(
                 host,
-                manager,
-                capabilities.isCanManageParticipants(),
+                host,
+                host,
                 capabilities.isCanEdit(),
                 capabilities.isCanCancel(),
                 capabilities.isCanEditSeries(),
                 capabilities.isCanCancelSeries());
-    }
-
-    private boolean isAdminViewer(final User viewer) {
-        return viewer != null && Long.valueOf(99L).equals(viewer.getId());
     }
 
     private MatchInteractionState interactionState(
