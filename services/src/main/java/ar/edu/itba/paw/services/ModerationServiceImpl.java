@@ -220,6 +220,17 @@ public class ModerationServiceImpl implements ModerationService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean canReportReview(final User reporter, final PlayerReview review) {
+        return reporter != null
+                && review != null
+                && review.getReviewer() != null
+                && reporter.getId() != null
+                && review.getReviewer().getId() != null
+                && !reporter.getId().equals(review.getReviewer().getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean hasReportedTarget(
             final User reporter, final ReportTargetType targetType, final Long targetId) {
         return reporter != null

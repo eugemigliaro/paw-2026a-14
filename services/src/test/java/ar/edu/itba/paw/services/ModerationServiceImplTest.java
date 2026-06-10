@@ -312,6 +312,35 @@ public class ModerationServiceImplTest {
     }
 
     @Test
+    public void canReportReview_returnsFalse_whenReporterCreatedReview() {
+        final User reporter = UserUtils.getUser(7L);
+        final PlayerReview review = samplePlayerReview(reporter);
+
+        final boolean result = moderationService.canReportReview(reporter, review);
+
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    public void canReportReview_returnsTrue_whenReporterDidNotCreateReview() {
+        final User reporter = UserUtils.getUser(8L);
+        final PlayerReview review = samplePlayerReview(UserUtils.getUser(7L));
+
+        final boolean result = moderationService.canReportReview(reporter, review);
+
+        Assertions.assertTrue(result);
+    }
+
+    @Test
+    public void canReportReview_returnsFalse_whenReviewHasNoReviewer() {
+        final PlayerReview review = samplePlayerReview(null);
+
+        final boolean result = moderationService.canReportReview(UserUtils.getUser(8L), review);
+
+        Assertions.assertFalse(result);
+    }
+
+    @Test
     public void reportContent_throwsModerationException_whenActiveReportLimitReached() {
         Mockito.when(moderationReportDao.countActiveReportsByReporter(UserUtils.getUser(50L)))
                 .thenReturn(3);
@@ -637,6 +666,21 @@ public class ModerationServiceImplTest {
                 null,
                 FIXED_NOW,
                 FIXED_NOW);
+    }
+
+    private static PlayerReview samplePlayerReview(final User reviewer) {
+        return new PlayerReview(
+                123L,
+                reviewer,
+                UserUtils.getUser(99L),
+                PlayerReviewReaction.LIKE,
+                "Helpful",
+                FIXED_NOW,
+                FIXED_NOW,
+                false,
+                null,
+                null,
+                null);
     }
 
     private static Match sampleMatch() {
