@@ -126,8 +126,7 @@ public class EventController {
         final Match cancellationContext = matchService.findMatchById(matchId).orElse(null);
 
         try {
-            matchParticipationService.removeParticipant(
-                    matchId, user, user); // TODO: sending user twice ?
+            matchParticipationService.leaveMatch(matchId, user);
             if (eventPageSupport.shouldRedirectToPlayerMatchesAfterCancellation(
                     cancellationContext, user)) {
                 return new ModelAndView("redirect:/matches");

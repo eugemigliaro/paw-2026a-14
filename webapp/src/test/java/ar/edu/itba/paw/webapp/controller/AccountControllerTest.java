@@ -14,11 +14,10 @@ import ar.edu.itba.paw.services.ImageUpload;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
+import ar.edu.itba.paw.webapp.utils.ValidatorTestUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import ar.edu.itba.paw.webapp.validation.UsernameValidator;
 import java.util.Locale;
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
@@ -52,7 +50,8 @@ class AccountControllerTest {
                 MockMvcBuilders.standaloneSetup(new AccountController(userService))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setValidator(
-                                validator(messageSource, userEmailValidator, usernameValidator))
+                                ValidatorTestUtils.validator(
+                                        messageSource, userEmailValidator, usernameValidator))
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
@@ -208,37 +207,5 @@ class AccountControllerTest {
         final LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
         return localeChangeInterceptor;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static LocalValidatorFactoryBean validator(
-            final MessageSource messageSource,
-            final UserEmailValidator userEmailValidator,
-            final UsernameValidator usernameValidator) {
-        final ConstraintValidatorFactory customConstraintFactory =
-                new ConstraintValidatorFactory() {
-                    @Override
-                    public <T extends ConstraintValidator<?, ?>> T getInstance(final Class<T> key) {
-                        if (key == UserEmailValidator.class) {
-                            return (T) userEmailValidator;
-                        } else if (key == UsernameValidator.class) {
-                            return (T) usernameValidator;
-                        }
-                        try {
-                            return key.getDeclaredConstructor().newInstance();
-                        } catch (final Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void releaseInstance(final ConstraintValidator<?, ?> instance) {}
-                };
-
-        final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-        validator.setValidationMessageSource(messageSource);
-        validator.setConstraintValidatorFactory(customConstraintFactory);
-        validator.afterPropertiesSet();
-        return validator;
     }
 }

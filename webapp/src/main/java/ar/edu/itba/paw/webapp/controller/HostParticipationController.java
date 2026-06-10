@@ -62,8 +62,7 @@ public class HostParticipationController {
 
     @GetMapping("/host/requests")
     public ModelAndView showAllPendingRequests(
-            @AuthenticatedUser final User user,
-            final Locale locale) { // TODO: this method is never used
+            @AuthenticatedUser final User user, final Locale locale) {
         final List<PendingJoinRequest> pending =
                 matchParticipationService.findPendingRequestsForHost(user);
 
