@@ -159,7 +159,7 @@ final class EventPageSupport {
         final boolean isHost = managementPermissions.isHostViewer();
         final boolean hostCanManageParticipants = managementPermissions.canManageParticipants();
         final List<User> pendingHostRequests =
-                hostCanManageParticipants && isApprovalRequired
+                isHost && isApprovalRequired
                         ? matchParticipationService.findPendingRequests(eventId, currentUser)
                         : List.of();
         final List<User> pendingHostInvites =

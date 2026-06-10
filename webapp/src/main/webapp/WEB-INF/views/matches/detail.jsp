@@ -17,6 +17,7 @@
 			<spring:message var="participantsAria" code="event.detail.participantsAria" />
 			<spring:message var="ctaLabel" code="event.booking.cta" />
 			<spring:message var="availabilityLabel" code="event.availability" arguments="${event.availableSpots},${event.maxPlayers}" />
+			<spring:message var="participantListLockedTooltip" code="event.host.participants.lockedTooltip" />
 			<c:choose>
 				<c:when test="${empty event.pricePerPlayer}"><spring:message var="bookingPrice" code="price.tbd" /></c:when>
 				<c:when test="${event.pricePerPlayer == 0}"><spring:message var="bookingPrice" code="price.free" /></c:when>
@@ -116,30 +117,42 @@
 														</c:choose>
 													</div>
 													<div class="participant-list__actions">
-														<c:url var="approveAction" value="/host/matches/${event.id}/requests/${req.id}/approve" />
-														<spring:message var="approvingLabel" code="host.requests.approving" />
-														<form
-															method="post"
-															action="${approveAction}"
-															data-submit-guard="true"
-															data-submit-loading-label="${approvingLabel}"
-															class="participant-list__action-form">
-															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-															<spring:message var="approveLabel" code="host.requests.approve" />
-															<ui:button label="${approveLabel}" type="submit" size="sm" className="participant-list__action-button" />
-														</form>
-														<c:url var="rejectAction" value="/host/matches/${event.id}/requests/${req.id}/reject" />
-														<spring:message var="rejectingLabel" code="host.requests.rejecting" />
-														<form
-															method="post"
-															action="${rejectAction}"
-															data-submit-guard="true"
-															data-submit-loading-label="${rejectingLabel}"
-															class="participant-list__action-form">
-															<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-															<spring:message var="rejectLabel" code="host.requests.reject" />
-															<ui:button label="${rejectLabel}" type="submit" variant="secondary" size="sm" className="participant-list__action-button" />
-														</form>
+														<spring:message var="approveLabel" code="host.requests.approve" />
+														<spring:message var="rejectLabel" code="host.requests.reject" />
+														<c:choose>
+															<c:when test="${matchActionCapabilities.canManageParticipants}">
+																<c:url var="approveAction" value="/host/matches/${event.id}/requests/${req.id}/approve" />
+																<spring:message var="approvingLabel" code="host.requests.approving" />
+																<form
+																	method="post"
+																	action="${approveAction}"
+																	data-submit-guard="true"
+																	data-submit-loading-label="${approvingLabel}"
+																	class="participant-list__action-form">
+																	<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+																	<ui:button label="${approveLabel}" type="submit" size="sm" className="participant-list__action-button" />
+																</form>
+																<c:url var="rejectAction" value="/host/matches/${event.id}/requests/${req.id}/reject" />
+																<spring:message var="rejectingLabel" code="host.requests.rejecting" />
+																<form
+																	method="post"
+																	action="${rejectAction}"
+																	data-submit-guard="true"
+																	data-submit-loading-label="${rejectingLabel}"
+																	class="participant-list__action-form">
+																	<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+																	<ui:button label="${rejectLabel}" type="submit" variant="secondary" size="sm" className="participant-list__action-button" />
+																</form>
+															</c:when>
+															<c:otherwise>
+																<span class="btn btn--primary btn--sm is-disabled participant-list__action-button report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${participantListLockedTooltip}" aria-label="${participantListLockedTooltip}">
+																	<c:out value="${approveLabel}" />
+																</span>
+																<span class="btn btn--secondary btn--sm is-disabled participant-list__action-button report-disabled-control report-tooltip" role="button" aria-disabled="true" tabindex="0" data-tooltip="${participantListLockedTooltip}" aria-label="${participantListLockedTooltip}">
+																	<c:out value="${rejectLabel}" />
+																</span>
+															</c:otherwise>
+														</c:choose>
 													</div>
 												</li>
 											</c:forEach>
