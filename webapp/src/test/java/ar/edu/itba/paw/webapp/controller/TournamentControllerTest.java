@@ -398,7 +398,7 @@ class TournamentControllerTest {
                 .andExpect(
                         flash().attribute(
                                         "tournamentErrorCode",
-                                        "tournament.registration.error.teamNameRequired"));
+                                        "CreateTournamentTeamForm.name.NotBlank"));
     }
 
     @Test
