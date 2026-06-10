@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import java.time.Instant;
@@ -34,7 +35,8 @@ public interface MatchParticipantDao {
 
     int countPendingRequests(Long matchId);
 
-    List<PendingJoinRequest> findPendingRequestsForHost(User host);
+    PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
+            User host, int page, int pageSize);
 
     boolean approveRequest(Long matchId, User user);
 

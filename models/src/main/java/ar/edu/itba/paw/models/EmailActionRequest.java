@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.types.EmailActionStatus;
 import ar.edu.itba.paw.models.types.EmailActionType;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -197,5 +198,25 @@ public class EmailActionRequest {
                 + ", hasPayload="
                 + (payloadJson != null && !payloadJson.isBlank())
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof EmailActionRequest)) {
+            return false;
+        }
+
+        EmailActionRequest that = (EmailActionRequest) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

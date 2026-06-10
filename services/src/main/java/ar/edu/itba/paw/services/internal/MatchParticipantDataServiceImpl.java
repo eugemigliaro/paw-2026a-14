@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.internal;
 
 import ar.edu.itba.paw.models.Match;
+import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.MatchParticipantDao;
@@ -92,8 +93,9 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     }
 
     @Override
-    public List<PendingJoinRequest> findPendingRequestsForHost(final User host) {
-        return matchParticipantDao.findPendingRequestsForHost(host);
+    public PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
+            final User host, final int page, final int pageSize) {
+        return matchParticipantDao.findPendingRequestsForHost(host, page, pageSize);
     }
 
     @Override

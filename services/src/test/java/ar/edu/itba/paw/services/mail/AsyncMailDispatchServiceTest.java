@@ -54,7 +54,9 @@ public class AsyncMailDispatchServiceTest {
         Mockito.when(templateRenderer.renderUnbanNotification(ArgumentMatchers.any()))
                 .thenReturn(new MailContent("subject", "<p>html</p>", "text"));
 
-        Assertions.assertDoesNotThrow(() -> asyncMailDispatchService.sendUnbanNotice(user));
+        asyncMailDispatchService.sendUnbanNotice(user);
+
+        Assertions.assertEquals(1, mailService.sendAttempts);
     }
 
     @Test
@@ -187,6 +189,7 @@ public class AsyncMailDispatchServiceTest {
     private static class RecordingMailService implements MailService {
 
         private final boolean fail;
+        private int sendAttempts;
         private String recipientEmail;
         private MailContent content;
 
@@ -196,6 +199,7 @@ public class AsyncMailDispatchServiceTest {
 
         @Override
         public void send(final String recipientEmail, final MailContent content) {
+            sendAttempts++;
             if (fail) {
                 throw new IllegalStateException("smtp failed");
             }

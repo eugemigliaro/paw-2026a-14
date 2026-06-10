@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -77,5 +78,25 @@ public class UserBan {
                 + ", bannedUntil="
                 + bannedUntil
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof UserBan)) {
+            return false;
+        }
+
+        UserBan that = (UserBan) o;
+
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

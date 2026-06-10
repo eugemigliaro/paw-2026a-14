@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.exception;
 
+import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
 import ar.edu.itba.paw.webapp.utils.ErrorPageViews;
 import java.util.Locale;
 import javax.servlet.http.HttpServletResponse;
@@ -65,6 +66,7 @@ public class GeneralExceptionHandler {
     @ExceptionHandler({
         BindException.class,
         HttpMessageNotReadableException.class,
+        InvalidPaginationException.class,
         MethodArgumentNotValidException.class,
         MissingServletRequestParameterException.class,
         MissingServletRequestPartException.class,

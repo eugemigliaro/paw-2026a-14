@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.types.TournamentTeamOrigin;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
@@ -425,6 +426,76 @@ public class TournamentJpaDaoTest {
 
         Assertions.assertEquals(List.of(matching.getId()), tournamentIds(results));
         Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    public void shouldEscapeLikeWildcardsWhenSearchingPublicTournaments() {
+        final Instant startsAt = Instant.parse("2026-04-05T00:00:00Z");
+        createTournament(
+                "Plain Cup",
+                Sport.PADEL,
+                TournamentStatus.REGISTRATION,
+                startsAt,
+                BigDecimal.ZERO,
+                null,
+                null);
+        final Tournament percent =
+                createTournament(
+                        "100% Cup",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        startsAt,
+                        BigDecimal.ZERO,
+                        null,
+                        null);
+        final Tournament underscore =
+                createTournament(
+                        "C_p Night",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        startsAt,
+                        BigDecimal.ZERO,
+                        null,
+                        null);
+        final Tournament backslash =
+                createTournament(
+                        "Back\\slash Cup",
+                        Sport.PADEL,
+                        TournamentStatus.REGISTRATION,
+                        startsAt,
+                        BigDecimal.ZERO,
+                        null,
+                        null);
+
+        em.flush();
+        em.clear();
+
+        final Map<String, Long> expectedByQuery =
+                Map.of(
+                        "%", percent.getId(),
+                        "_", underscore.getId(),
+                        "\\", backslash.getId());
+        for (final Map.Entry<String, Long> expected : expectedByQuery.entrySet()) {
+            final String query = expected.getKey();
+            final List<Tournament> results =
+                    tournamentDao.findPublicTournaments(
+                            query,
+                            List.of(),
+                            null,
+                            null,
+                            null,
+                            null,
+                            EventSort.SOONEST,
+                            null,
+                            null,
+                            0,
+                            10);
+            final int count =
+                    tournamentDao.countPublicTournaments(query, List.of(), null, null, null, null);
+
+            Assertions.assertEquals(List.of(expected.getValue()), tournamentIds(results), query);
+            Assertions.assertEquals(1, count, query);
+        }
     }
 
     @Test

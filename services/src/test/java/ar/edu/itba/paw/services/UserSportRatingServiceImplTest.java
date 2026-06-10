@@ -4,6 +4,8 @@ import ar.edu.itba.paw.models.EloUpdatedResult;
 import ar.edu.itba.paw.models.PlayerEloChange;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserSportRating;
+import ar.edu.itba.paw.models.exceptions.userSportRating.UserSportRatingInvalidTeamsException;
+import ar.edu.itba.paw.models.exceptions.userSportRating.UserSportRatingSportNotRatedException;
 import ar.edu.itba.paw.models.types.Sport;
 import ar.edu.itba.paw.persistence.UserSportRatingDao;
 import ar.edu.itba.paw.persistence.UserSportRatingLookupResult;
@@ -88,12 +90,9 @@ public class UserSportRatingServiceImplTest {
     public void testGetEffectiveEloRejectsUnratedSport() {
         final User user = createUser(14L);
 
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () -> userSportRatingService.getEffectiveElo(user, Sport.OTHER));
-
-        Assertions.assertEquals("Sport is not rated: other", exception.getMessage());
+        Assertions.assertThrows(
+                UserSportRatingSportNotRatedException.class,
+                () -> userSportRatingService.getEffectiveElo(user, Sport.OTHER));
     }
 
     @Test
@@ -168,45 +167,33 @@ public class UserSportRatingServiceImplTest {
         final User winner = createUser(6L);
         final User loser = createUser(7L);
 
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                userSportRatingService.applyMatchResult(
-                                        List.of(winner), List.of(loser), Sport.OTHER));
-
-        Assertions.assertEquals("Sport is not rated: other", exception.getMessage());
+        Assertions.assertThrows(
+                UserSportRatingSportNotRatedException.class,
+                () ->
+                        userSportRatingService.applyMatchResult(
+                                List.of(winner), List.of(loser), Sport.OTHER));
     }
 
     @Test
     public void testApplyMatchResultRejectsEmptyWinnerTeam() {
         final User loser = createUser(8L);
 
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                userSportRatingService.applyMatchResult(
-                                        List.of(), List.of(loser), Sport.FOOTBALL));
-
-        Assertions.assertEquals(
-                "Both teams must contain at least one player", exception.getMessage());
+        Assertions.assertThrows(
+                UserSportRatingInvalidTeamsException.class,
+                () ->
+                        userSportRatingService.applyMatchResult(
+                                List.of(), List.of(loser), Sport.FOOTBALL));
     }
 
     @Test
     public void testApplyMatchResultRejectsNullPlayers() {
         final User winner = createUser(9L);
 
-        final IllegalArgumentException exception =
-                Assertions.assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                userSportRatingService.applyMatchResult(
-                                        List.of(winner),
-                                        Collections.singletonList(null),
-                                        Sport.FOOTBALL));
-
-        Assertions.assertEquals("Teams cannot contain null players", exception.getMessage());
+        Assertions.assertThrows(
+                UserSportRatingInvalidTeamsException.class,
+                () ->
+                        userSportRatingService.applyMatchResult(
+                                List.of(winner), Collections.singletonList(null), Sport.FOOTBALL));
     }
 
     private void stubExistingRating(final User user, final UserSportRating rating) {

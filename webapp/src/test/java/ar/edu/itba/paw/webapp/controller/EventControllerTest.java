@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.exceptions.match.MatchException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
@@ -43,7 +42,6 @@ import java.util.Optional;
 import java.util.Set;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -69,31 +67,19 @@ class EventControllerTest {
     private PlayerReviewService playerReviewService;
     private ModerationService moderationService;
 
-    private MatchException reservationFailure;
-    private MatchException reservationCancellationFailure;
-    private MatchException seriesReservationFailure;
-    private MatchException seriesCancellationFailure;
     private boolean currentUserHasReservation;
     private boolean currentUserHasSeriesReservation;
     private boolean currentUserHasJoinRequest;
     private boolean currentUserHasSeriesJoinRequest;
-    private boolean occurrenceReservationCancellationUsed;
-    private boolean seriesReservationCancellationUsed;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
 
-        reservationFailure = null;
-        reservationCancellationFailure = null;
-        seriesReservationFailure = null;
-        seriesCancellationFailure = null;
         currentUserHasReservation = false;
         currentUserHasSeriesReservation = false;
         currentUserHasJoinRequest = false;
         currentUserHasSeriesJoinRequest = false;
-        occurrenceReservationCancellationUsed = false;
-        seriesReservationCancellationUsed = false;
 
         final Match realMatch =
                 MatchUtils.match(42L)
@@ -468,49 +454,6 @@ class EventControllerTest {
                             return Set.of();
                         });
 
-        Mockito.doAnswer(
-                        invocation -> {
-                            final User user = invocation.getArgument(1);
-                            if (reservationFailure != null) {
-                                throw reservationFailure;
-                            }
-                            if (user == null) {
-                                throw new MatchParticipationNotJoinedException();
-                            }
-                            return null;
-                        })
-                .when(matchReservationService)
-                .reserveSpot(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
-        Mockito.doAnswer(
-                        invocation -> {
-                            final User user = invocation.getArgument(1);
-                            if (seriesReservationFailure != null) {
-                                throw seriesReservationFailure;
-                            }
-                            if (user == null) {
-                                throw new MatchParticipationNotJoinedException();
-                            }
-                            return null;
-                        })
-                .when(matchReservationService)
-                .reserveSeries(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
-        Mockito.doAnswer(
-                        invocation -> {
-                            final User user = invocation.getArgument(1);
-                            seriesReservationCancellationUsed = true;
-                            if (seriesCancellationFailure != null) {
-                                throw seriesCancellationFailure;
-                            }
-                            if (user == null) {
-                                throw new MatchParticipationNotJoinedException();
-                            }
-                            return null;
-                        })
-                .when(matchReservationService)
-                .cancelSeriesReservations(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
-
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
 
         Mockito.when(
@@ -556,17 +499,6 @@ class EventControllerTest {
                             }
                             return Set.of();
                         });
-
-        Mockito.doAnswer(
-                        invocation -> {
-                            occurrenceReservationCancellationUsed = true;
-                            if (reservationCancellationFailure != null) {
-                                throw reservationCancellationFailure;
-                            }
-                            return null;
-                        })
-                .when(matchParticipationService)
-                .leaveMatch(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
 
         Mockito.when(
                         matchParticipationService.findPendingRequests(
@@ -1216,7 +1148,9 @@ class EventControllerTest {
     @Test
     void postReservationRequestWhenAlreadyReservedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationFailure = new MatchParticipationAlreadyJoinedException();
+        Mockito.doThrow(new MatchParticipationAlreadyJoinedException())
+                .when(matchReservationService)
+                .reserveSpot(ArgumentMatchers.eq(42L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/42/reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1245,14 +1179,25 @@ class EventControllerTest {
     void postRecurringOccurrenceReservationCancelAsAuthenticatedUserCancelsOnlySelectedDate()
             throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
+        // Wrong-path detection: cancelling one occurrence must use the single-occurrence
+        // leave, never the series-wide cancellation, and only with the expected arguments.
+        Mockito.doThrow(new AssertionError("series cancellation path must not be used"))
+                .when(matchReservationService)
+                .cancelSeriesReservations(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+        Mockito.doThrow(new AssertionError("leaveMatch called with unexpected arguments"))
+                .when(matchParticipationService)
+                .leaveMatch(ArgumentMatchers.anyLong(), ArgumentMatchers.any());
+        Mockito.doNothing()
+                .when(matchParticipationService)
+                .leaveMatch(
+                        ArgumentMatchers.eq(46L),
+                        ArgumentMatchers.argThat(
+                                u -> u != null && Long.valueOf(9L).equals(u.getId())));
 
         mockMvc.perform(post("/matches/46/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/46"))
                 .andExpect(flash().attribute("reservationStatus", "cancelled"));
-
-        Assertions.assertTrue(occurrenceReservationCancellationUsed);
-        Assertions.assertFalse(seriesReservationCancellationUsed);
     }
 
     @Test
@@ -1267,7 +1212,9 @@ class EventControllerTest {
     @Test
     void postReservationCancelWithNoActiveReservationShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        reservationCancellationFailure = new MatchParticipationNotJoinedException();
+        Mockito.doThrow(new MatchParticipationNotJoinedException())
+                .when(matchParticipationService)
+                .leaveMatch(ArgumentMatchers.eq(42L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1296,7 +1243,9 @@ class EventControllerTest {
     @Test
     void postSeriesReservationRequestWhenAlreadyJoinedShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesReservationFailure = new MatchParticipationSeriesAlreadyJoinedException();
+        Mockito.doThrow(new MatchParticipationSeriesAlreadyJoinedException())
+                .when(matchReservationService)
+                .reserveSeries(ArgumentMatchers.eq(46L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
@@ -1324,7 +1273,10 @@ class EventControllerTest {
     @Test
     void postSeriesReservationCancelWithNoFutureReservationsShowsError() throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
-        seriesCancellationFailure = new MatchParticipationSeriesNotJoinedException();
+        Mockito.doThrow(new MatchParticipationSeriesNotJoinedException())
+                .when(matchReservationService)
+                .cancelSeriesReservations(
+                        ArgumentMatchers.eq(46L), ArgumentMatchers.any(User.class));
 
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
