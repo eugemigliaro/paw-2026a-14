@@ -113,11 +113,16 @@ class HostParticipationControllerTest {
                         .endsAt(Instant.parse("2026-04-05T19:00:00Z"))
                         .build();
 
-        when(matchParticipationService.findPendingRequestsForHost(Mockito.any()))
+        when(matchParticipationService.findPendingRequestsForHost(
+                        Mockito.any(), Mockito.anyInt(), Mockito.anyInt()))
                 .thenReturn(
-                        java.util.List.of(
-                                new PendingJoinRequest(futureMatch, player, false),
-                                new PendingJoinRequest(startedMatch, player, false)));
+                        new PaginatedResult<>(
+                                java.util.List.of(
+                                        new PendingJoinRequest(futureMatch, player, false),
+                                        new PendingJoinRequest(startedMatch, player, false)),
+                                2,
+                                1,
+                                10));
         when(matchService.actionCapabilities(Mockito.eq(futureMatch), Mockito.any()))
                 .thenReturn(capabilities(true));
         when(matchService.actionCapabilities(Mockito.eq(startedMatch), Mockito.any()))
