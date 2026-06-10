@@ -126,6 +126,7 @@ Rules:
 - define JPA entities in `models` or `persistence` as appropriate; keep entity classes clean and framework-light
 - use Hibernate annotations (`@Entity`, `@Table`, `@Column`, `@OneToMany`, `@ManyToOne`, etc.) for mapping
 - keep database migrations in `persistence/src/main/resources/db/migration` managed by Flyway
+- the HSQLDB test migrations in `persistence/src/test/resources/db/testmigration` must mirror the prod migrations one-to-one: same version numbers and names, with each test file reproducing its prod counterpart's schema effect. When you add or change a prod migration, add or change the matching test migration in the same commit. Translate Postgres-only constructs to their HSQLDB equivalents (enums → `VARCHAR` + named `CHECK`, with each `ALTER TYPE ... ADD VALUE` becoming a `CHECK` widening at the same version; partial indexes → full unique indexes/constraints; `BYTEA` → `LONGVARBINARY`; `TIMESTAMPTZ` → `TIMESTAMP`; `DOUBLE PRECISION` → `DOUBLE`). Where a prod step has no HSQLDB analog (e.g. enum→varchar conversion when already varchar), keep the file as a documented no-op so the numbering stays aligned
 - transaction management is handled by Spring's `@Transactional`
 - when changing persistence behavior, update or add repository tests
 - prefer explicit DAO methods backed by JPQL, criteria, named queries, or repository helpers already present in the project; do not add Spring Data just to solve a DAO

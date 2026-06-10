@@ -1,3 +1,4 @@
+-- Mirror of prod V30.
 ALTER TABLE matches ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE match_participants ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 

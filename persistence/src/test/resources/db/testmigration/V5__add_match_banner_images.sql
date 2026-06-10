@@ -1,10 +1,10 @@
+-- Mirror of prod V5. Postgres BYTEA becomes HSQLDB LONGVARBINARY.
 CREATE TABLE images (
-	id BIGINT PRIMARY KEY DEFAULT NEXT VALUE FOR images_imageid_seq,
+	id BIGSERIAL PRIMARY KEY,
 	content_type VARCHAR(100) NOT NULL,
-	content_length BIGINT NOT NULL,
+	content_length BIGINT NOT NULL CHECK (content_length > 0),
 	content LONGVARBINARY NOT NULL,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CHECK (content_length > 0)
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE matches
@@ -12,8 +12,6 @@ ALTER TABLE matches
 
 ALTER TABLE matches
 	ADD CONSTRAINT fk_matches_banner_image
-	FOREIGN KEY (banner_image_id)
-	REFERENCES images(id)
-	ON DELETE SET NULL;
+	FOREIGN KEY (banner_image_id) REFERENCES images(id) ON DELETE SET NULL;
 
 CREATE INDEX idx_matches_banner_image_id ON matches(banner_image_id);

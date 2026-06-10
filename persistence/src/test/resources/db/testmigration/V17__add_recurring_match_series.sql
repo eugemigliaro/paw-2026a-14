@@ -1,7 +1,8 @@
-CREATE SEQUENCE match_series_id_seq START WITH 1 INCREMENT BY 1;
-
+-- Mirror of prod V17. recurrence_frequency_type enum emulated with CHECK.
+-- match_series uses BIGSERIAL here; the named match_series_id_seq Hibernate
+-- expects is created in V28 (align_match_id_sequences), as in prod.
 CREATE TABLE match_series (
-	id BIGINT PRIMARY KEY DEFAULT NEXT VALUE FOR match_series_id_seq,
+	id BIGSERIAL PRIMARY KEY,
 	host_user_id BIGINT NOT NULL REFERENCES users(id),
 	frequency VARCHAR(30) NOT NULL,
 	starts_at TIMESTAMP NOT NULL,
@@ -28,13 +29,15 @@ ALTER TABLE matches
 	ADD COLUMN series_occurrence_index INTEGER;
 
 ALTER TABLE matches
-	ADD CONSTRAINT chk_matches_series_identity_complete
-	CHECK (
+	ADD CONSTRAINT chk_matches_series_identity_complete CHECK (
 		(series_id IS NULL AND series_occurrence_index IS NULL)
 		OR (series_id IS NOT NULL AND series_occurrence_index IS NOT NULL)
 	);
 
 CREATE INDEX idx_matches_series_id ON matches(series_id);
 
+-- Prod uses a partial unique index (... WHERE series_id IS NOT NULL); HSQLDB
+-- enforces the same uniqueness via a unique constraint on the pair (NULL
+-- series rows stay distinct under SQL NULL semantics).
 ALTER TABLE matches
 	ADD CONSTRAINT uq_matches_series_occurrence UNIQUE (series_id, series_occurrence_index);

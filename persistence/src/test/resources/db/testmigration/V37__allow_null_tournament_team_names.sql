@@ -1,3 +1,4 @@
+-- Mirror of prod V37.
 ALTER TABLE tournament_teams ALTER COLUMN name DROP NOT NULL;
 
 UPDATE tournament_teams

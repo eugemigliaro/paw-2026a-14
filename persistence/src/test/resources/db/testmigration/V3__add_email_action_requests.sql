@@ -1,5 +1,8 @@
+-- Mirror of prod V3. email_action_type / email_action_status enums emulated as
+-- VARCHAR + named CHECK. action_type starts with only 'match_reservation';
+-- later types are added in V4 and V7.
 CREATE TABLE email_action_requests (
-	id BIGINT PRIMARY KEY DEFAULT NEXT VALUE FOR email_action_requests_id_seq,
+	id BIGSERIAL PRIMARY KEY,
 	action_type VARCHAR(50) NOT NULL,
 	email VARCHAR(255) NOT NULL,
 	user_id BIGINT REFERENCES users(id),
@@ -10,8 +13,8 @@ CREATE TABLE email_action_requests (
 	consumed_at TIMESTAMP,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CONSTRAINT ck_email_action_type CHECK (action_type IN ('match_reservation')),
-	CONSTRAINT ck_email_action_status CHECK (status IN ('pending', 'completed', 'failed', 'expired'))
+	CONSTRAINT ck_email_action_requests_action_type CHECK (action_type IN ('match_reservation')),
+	CONSTRAINT ck_email_action_requests_status CHECK (status IN ('pending', 'completed', 'failed', 'expired'))
 );
 
 CREATE INDEX idx_email_action_requests_email ON email_action_requests(email);

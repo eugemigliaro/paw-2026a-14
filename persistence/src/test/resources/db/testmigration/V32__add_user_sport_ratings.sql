@@ -1,3 +1,5 @@
+-- Mirror of prod V32. Prod creates user_sport_ratings_id_seq inline here (not
+-- in an align migration), so the test does the same.
 CREATE SEQUENCE user_sport_ratings_id_seq START WITH 1 INCREMENT BY 1;
 
 CREATE TABLE user_sport_ratings (
@@ -13,4 +15,6 @@ CREATE TABLE user_sport_ratings (
 );
 
 CREATE INDEX idx_user_sport_ratings_user_id ON user_sport_ratings(user_id);
+-- Prod indexes (sport, elo DESC, user_id); HSQLDB index direction does not
+-- affect correctness for these lookups.
 CREATE INDEX idx_user_sport_ratings_sport_elo_user_id ON user_sport_ratings(sport, elo, user_id);
