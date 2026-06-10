@@ -5,7 +5,7 @@ import javax.validation.constraints.Size;
 
 public class CreateTournamentTeamForm {
     @NotBlank(message = "{CreateTournamentTeamForm.name.NotBlank}")
-    @Size(max = 150, message = "{CreateTournamentTeamForm.name.Size}")
+    @Size(max = 32, message = "{CreateTournamentTeamForm.name.Size}")
     private String name;
 
     public String getName() {
