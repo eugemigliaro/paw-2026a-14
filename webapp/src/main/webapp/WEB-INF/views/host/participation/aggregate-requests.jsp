@@ -35,7 +35,7 @@
 						<c:choose>
 							<c:when test="${empty pendingRequests}">
 								<p class="participation-empty-state">
-									<c:out value="${emptyMessage}" />
+									<spring:message code="host.requests.all.empty" />
 								</p>
 							</c:when>
 							<c:otherwise>

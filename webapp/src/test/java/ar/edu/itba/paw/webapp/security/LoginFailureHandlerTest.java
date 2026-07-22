@@ -21,9 +21,7 @@ class LoginFailureHandlerTest {
         request.setParameter("email", "pending@test.com");
 
         handler.onAuthenticationFailure(
-                request,
-                response,
-                new EmailNotVerifiedAuthenticationException("Email verification required"));
+                request, response, new EmailNotVerifiedAuthenticationException());
 
         assertNotNull(response.getRedirectedUrl());
         assertTrue(response.getRedirectedUrl().contains("/login?error=verify"));
@@ -40,9 +38,7 @@ class LoginFailureHandlerTest {
         request.setParameter("email", "legacy@test.com");
 
         handler.onAuthenticationFailure(
-                request,
-                response,
-                new PasswordSetupRequiredAuthenticationException("Password setup required"));
+                request, response, new PasswordSetupRequiredAuthenticationException());
 
         assertNotNull(response.getRedirectedUrl());
         assertTrue(response.getRedirectedUrl().contains("/login?error=passwordSetup"));
@@ -58,8 +54,7 @@ class LoginFailureHandlerTest {
 
         request.setParameter("email", "player@test.com");
 
-        handler.onAuthenticationFailure(
-                request, response, new BadCredentialsException("Invalid credentials"));
+        handler.onAuthenticationFailure(request, response, new BadCredentialsException("invalid"));
 
         assertNotNull(response.getRedirectedUrl());
         assertTrue(response.getRedirectedUrl().contains("/login?error=invalid"));

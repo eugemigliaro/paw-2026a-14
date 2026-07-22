@@ -3,7 +3,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
-<c:set var="pageTitle" value="${pageTitle}" />
+<spring:message var="pageTitle" code="page.title.${number}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -16,11 +16,11 @@
 			<main class="page-shell error-shell">
 				<section class="error-hero">
 					<div class="error-hero__copy">
-						<p class="eyebrow"><c:out value="${eyebrow}" /></p>
+						<p class="eyebrow"><spring:message code="error.${number}.eyebrow" /></p>
 						<header class="page-heading">
-							<h1 class="page-heading__title"><c:out value="${title}" /></h1>
+							<h1 class="page-heading__title"><spring:message code="error.${number}.title" /></h1>
 							<p class="page-heading__description">
-								<c:out value="${description}" />
+								<spring:message code="error.${number}.description" />
 							</p>
 						</header>
 

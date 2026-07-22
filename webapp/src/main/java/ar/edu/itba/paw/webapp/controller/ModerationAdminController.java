@@ -22,7 +22,6 @@ import java.util.Optional;
 import javax.validation.Valid;
 import javax.validation.groups.Default;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -47,16 +46,12 @@ public class ModerationAdminController {
 
     private final ModerationService moderationService;
     private final UserService userService;
-    private final MessageSource messageSource;
 
     @Autowired
     public ModerationAdminController(
-            final ModerationService moderationService,
-            final UserService userService,
-            final MessageSource messageSource) {
+            final ModerationService moderationService, final UserService userService) {
         this.moderationService = moderationService;
         this.userService = userService;
-        this.messageSource = messageSource;
     }
 
     @ModelAttribute("resolutionForm")
@@ -84,19 +79,7 @@ public class ModerationAdminController {
         final List<AdminReportView> reportViews = reportViews(result.getItems());
 
         final ModelAndView mav = new ModelAndView("admin/reports/list");
-        mav.addObject(
-                "pageTitle", messageSource.getMessage("page.title.adminReports", null, locale));
-        mav.addObject(
-                "pageTitleLabel", messageSource.getMessage("admin.reports.title", null, locale));
-        mav.addObject(
-                "pageDescription",
-                messageSource.getMessage("admin.reports.description", null, locale));
-        mav.addObject(
-                "reportCountLabel",
-                messageSource.getMessage(
-                        "admin.reports.count", new Object[] {result.getTotalCount()}, locale));
-        mav.addObject(
-                "emptyMessage", messageSource.getMessage("admin.reports.empty", null, locale));
+        mav.addObject("reportCount", result.getTotalCount());
         mav.addObject("reportViews", reportViews);
         mav.addObject("action", model.asMap().get("action"));
         mav.addObject(
@@ -146,16 +129,6 @@ public class ModerationAdminController {
     private ModelAndView reportDetailModelAndView(
             final ModerationReport report, final Locale locale) {
         final ModelAndView mav = new ModelAndView("admin/reports/detail");
-
-        mav.addObject(
-                "pageTitle",
-                messageSource.getMessage("page.title.adminReportDetail", null, locale));
-        mav.addObject(
-                "pageTitleLabel",
-                messageSource.getMessage("admin.reports.detail.title", null, locale));
-        mav.addObject(
-                "pageDescription",
-                messageSource.getMessage("admin.reports.detail.description", null, locale));
 
         mav.addObject("report", report);
         final ModerationTargetSummary targetSummary =

@@ -18,10 +18,10 @@ import java.util.Locale;
 import java.util.Map;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,18 +40,15 @@ public class HostParticipationController {
     private final MatchParticipationService matchParticipationService;
     private final MatchService matchService;
     private final UserService userService;
-    private final MessageSource messageSource;
 
     @Autowired
     public HostParticipationController(
             final MatchParticipationService matchParticipationService,
             final MatchService matchService,
-            final UserService userService,
-            final MessageSource messageSource) {
+            final UserService userService) {
         this.matchParticipationService = matchParticipationService;
         this.matchService = matchService;
         this.userService = userService;
-        this.messageSource = messageSource;
     }
 
     @GetMapping("/host/matches/{matchId:\\d+}/participants")
@@ -87,8 +84,6 @@ public class HostParticipationController {
         mav.addObject(
                 "requestActionsDisabledByMatchId",
                 requestActionsDisabledByMatchId(result.getItems(), user));
-        mav.addObject(
-                "emptyMessage", messageSource.getMessage("host.requests.all.empty", null, locale));
         mav.addObject("matchesUrl", "/matches");
         mav.addObject("pageNumber", result.getPage());
         mav.addObject("totalPages", result.getTotalPages());
@@ -116,7 +111,6 @@ public class HostParticipationController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
-            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User targetUser = findUserOrThrow(userId);
 
@@ -124,10 +118,9 @@ public class HostParticipationController {
             matchParticipationService.approveRequest(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "requestApproved");
         } catch (final MatchException e) {
-            final String errorKey = "event.host.requests.error." + e.getMessage();
-            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
-            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
+            redirectAttributes.addFlashAttribute(
+                    "hostActionErrorCode", "event.host.requests.error." + e.getMessage());
         }
         return redirectToMatch(matchId);
     }
@@ -137,7 +130,6 @@ public class HostParticipationController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
-            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User targetUser = findUserOrThrow(userId);
 
@@ -145,10 +137,9 @@ public class HostParticipationController {
             matchParticipationService.rejectRequest(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "requestRejected");
         } catch (final MatchParticipationException e) {
-            final String errorKey = "event.host.requests.error." + e.getMessage();
-            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
-            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
+            redirectAttributes.addFlashAttribute(
+                    "hostActionErrorCode", "event.host.requests.error." + e.getMessage());
         }
         return redirectToMatch(matchId);
     }
@@ -173,13 +164,12 @@ public class HostParticipationController {
             @PathVariable("matchId") final Long matchId,
             @Valid @ModelAttribute("inviteForm") final InviteForm inviteForm,
             final BindingResult bindingResult,
-            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
             redirectAttributes.addFlashAttribute(
-                    "hostActionError", inviteValidationErrorMessage(bindingResult, locale));
+                    "hostActionErrorCode", inviteValidationErrorCode(bindingResult));
             return redirectToMatch(matchId);
         }
 
@@ -192,11 +182,10 @@ public class HostParticipationController {
                     invitationResult.isSeriesInvitation() ? "seriesInviteSent" : "inviteSent");
             return redirectToMatch(matchId);
         } catch (final MatchException e) {
-            final String errorKey = "host.invites.error." + e.getMessage();
-            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
-            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
+            redirectAttributes.addFlashAttribute(
+                    "hostActionErrorCode", "host.invites.error." + e.getMessage());
         }
         return redirectToMatch(matchId);
     }
@@ -206,7 +195,6 @@ public class HostParticipationController {
             @AuthenticatedUser final User user,
             @PathVariable("matchId") final Long matchId,
             @PathVariable("userId") final Long userId,
-            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final User targetUser = findUserOrThrow(userId);
 
@@ -214,10 +202,9 @@ public class HostParticipationController {
             matchParticipationService.removeParticipant(matchId, user, targetUser);
             redirectAttributes.addFlashAttribute("hostAction", "participantRemoved");
         } catch (final MatchException e) {
-            final String errorKey = "event.host.participants.error." + e.getMessage();
-            final String errorMsg = messageSource.getMessage(errorKey, null, locale);
             redirectAttributes.addFlashAttribute("hostActionTarget", "participants");
-            redirectAttributes.addFlashAttribute("hostActionError", errorMsg);
+            redirectAttributes.addFlashAttribute(
+                    "hostActionErrorCode", "event.host.participants.error." + e.getMessage());
         }
         return redirectToMatch(matchId);
     }
@@ -253,12 +240,23 @@ public class HostParticipationController {
         return disabledByMatchId;
     }
 
-    private String inviteValidationErrorMessage(
-            final BindingResult bindingResult, final Locale locale) {
+    private String inviteValidationErrorCode(final BindingResult bindingResult) {
         return bindingResult.getAllErrors().stream()
                 .findFirst()
-                .map(error -> messageSource.getMessage(error, locale))
-                .orElseGet(
-                        () -> messageSource.getMessage("host.invites.error.generic", null, locale));
+                .map(ObjectError::getDefaultMessage)
+                .map(this::stripBraces)
+                .orElse("host.invites.error.generic");
+    }
+
+    private String stripBraces(final String message) {
+        if (message == null || message.isBlank()) {
+            return "host.invites.error.generic";
+        }
+
+        return message.length() >= 2
+                        && message.charAt(0) == '{'
+                        && message.charAt(message.length() - 1) == '}'
+                ? message.substring(1, message.length() - 1)
+                : message;
     }
 }

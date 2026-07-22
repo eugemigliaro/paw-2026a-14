@@ -4,6 +4,8 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="${pageTitleCode}" />
+<spring:message var="pageTitleLabel" code="${pageTitleLabelCode}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -18,6 +20,9 @@
 					<h1 class="page-heading__title">
 						<c:out value="${pageTitleLabel}" />
 					</h1>
+					<p class="page-heading__description">
+						<spring:message code="${pageDescriptionCode}" arguments="${pageDescriptionArguments}" />
+					</p>
 				</header>
 
 				<c:if test="${reportSent}">
@@ -25,9 +30,9 @@
 						<spring:message code="moderation.report.sent" />
 					</div>
 				</c:if>
-				<c:if test="${not empty reportErrorMessage}">
+				<c:if test="${not empty reportErrorMessageCode}">
 					<div class="notice notice--error">
-						<c:out value="${reportErrorMessage}" />
+						<spring:message code="${reportErrorMessageCode}" text="We could not submit the report." />
 					</div>
 				</c:if>
 

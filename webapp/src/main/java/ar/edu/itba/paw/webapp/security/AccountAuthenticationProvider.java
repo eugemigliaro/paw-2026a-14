@@ -3,8 +3,6 @@ package ar.edu.itba.paw.webapp.security;
 import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.services.AccountAuthService;
 import java.util.Locale;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,15 +14,11 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
 
     private final AccountAuthService accountAuthService;
     private final PasswordEncoder passwordEncoder;
-    private final MessageSource messageSource;
 
     public AccountAuthenticationProvider(
-            final AccountAuthService accountAuthService,
-            final PasswordEncoder passwordEncoder,
-            final MessageSource messageSource) {
+            final AccountAuthService accountAuthService, final PasswordEncoder passwordEncoder) {
         this.accountAuthService = accountAuthService;
         this.passwordEncoder = passwordEncoder;
-        this.messageSource = messageSource;
     }
 
     @Override
@@ -39,30 +33,18 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
         final UserAccount account =
                 accountAuthService
                         .findAccountByEmail(email)
-                        .orElseThrow(
-                                () ->
-                                        new BadCredentialsException(
-                                                messageSource.getMessage(
-                                                        "auth.invalid_credentials",
-                                                        null,
-                                                        LocaleContextHolder.getLocale())));
+                        .orElseThrow(() -> new BadCredentialsException("invalid"));
 
         if (!account.isEmailVerified()) {
-            throw new EmailNotVerifiedAuthenticationException(
-                    messageSource.getMessage(
-                            "auth.email_not_verified", null, LocaleContextHolder.getLocale()));
+            throw new EmailNotVerifiedAuthenticationException();
         }
 
         if (!account.hasPassword()) {
-            throw new PasswordSetupRequiredAuthenticationException(
-                    messageSource.getMessage(
-                            "auth.password_setup_required", null, LocaleContextHolder.getLocale()));
+            throw new PasswordSetupRequiredAuthenticationException();
         }
 
         if (!passwordEncoder.matches(password, account.getPasswordHash())) {
-            throw new BadCredentialsException(
-                    messageSource.getMessage(
-                            "auth.invalid_credentials", null, LocaleContextHolder.getLocale()));
+            throw new BadCredentialsException("invalid");
         }
 
         return new UsernamePasswordAuthenticationToken(
@@ -78,9 +60,7 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
 
     private String normalizeEmail(final String email) {
         if (email == null || email.isBlank()) {
-            throw new BadCredentialsException(
-                    messageSource.getMessage(
-                            "auth.invalid_credentials", null, LocaleContextHolder.getLocale()));
+            throw new BadCredentialsException("invalid");
         }
         return email.trim().toLowerCase(Locale.ROOT);
     }

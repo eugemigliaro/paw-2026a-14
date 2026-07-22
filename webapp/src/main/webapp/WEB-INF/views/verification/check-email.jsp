@@ -15,7 +15,10 @@
 	<main class="page-shell verification-shell">
 		<section class="panel verification-panel">
 			<spring:message var="defaultEyebrow" code="verification.actionRequested" />
-			<p class="eyebrow"><c:out value="${empty eyebrow ? defaultEyebrow : eyebrow}" /></p>
+			<spring:message var="eyebrow" code="${eyebrowCode}" text="${defaultEyebrow}" />
+			<spring:message var="title" code="verification.checkEmail" />
+			<spring:message var="summary" code="${summaryCode}" arguments="${summaryArguments}" />
+			<p class="eyebrow"><c:out value="${eyebrow}" /></p>
 			<h1 class="page-heading__title"><c:out value="${title}" /></h1>
 			<p class="page-heading__description"><c:out value="${summary}" /></p>
 			<c:if test="${not empty expiresAtLabel}">
@@ -25,7 +28,8 @@
 			</c:if>
 			<div class="verification-actions">
 				<c:url var="backUrl" value="${backHref}" />
-				<c:if test="${not empty actionLabel}">
+				<c:if test="${not empty actionLabelCode}">
+					<spring:message var="actionLabel" code="${actionLabelCode}" />
 					<ui:button href="${backUrl}" label="${actionLabel}" />
 				</c:if>
 			</div>

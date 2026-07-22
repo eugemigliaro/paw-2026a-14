@@ -39,7 +39,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -79,7 +78,7 @@ class PublicProfileControllerTest {
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setControllerAdvice(
-                                new AccessExceptionHandler(Mockito.mock(MessageSource.class)),
+                                new AccessExceptionHandler(),
                                 new PasswordResetExceptionHandler(),
                                 new VerificationExceptionHandler())
                         .setLocaleResolver(localeResolver())

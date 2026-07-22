@@ -4,6 +4,7 @@
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.adminReports" />
+<spring:message var="pageTitleLabel" code="admin.reports.title" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -16,7 +17,7 @@
 			<main class="page-shell page-shell--detail">
 				<header class="page-heading">
 					<h1 class="page-heading__title"><c:out value="${pageTitleLabel}" /></h1>
-					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
+					<p class="page-heading__description"><spring:message code="admin.reports.description" /></p>
 				</header>
 
 					<c:if test="${not empty action}">
@@ -114,12 +115,12 @@
 					</form>
 				</div>
 
-				<p class="report-count-label"><strong><c:out value="${reportCountLabel}" /></strong></p>
+				<p class="report-count-label"><strong><spring:message code="admin.reports.count" arguments="${reportCount}" /></strong></p>
 
 				<c:choose>
 					<c:when test="${empty reportViews}">
 						<ui:card className="report-section">
-							<p class="participation-empty-state"><c:out value="${emptyMessage}" /></p>
+							<p class="participation-empty-state"><spring:message code="admin.reports.empty" /></p>
 						</ui:card>
 					</c:when>
 					<c:otherwise>

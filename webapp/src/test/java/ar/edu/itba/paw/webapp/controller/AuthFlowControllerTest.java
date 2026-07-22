@@ -35,8 +35,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -65,13 +63,12 @@ class AuthFlowControllerTest {
         UserEmailValidator userEmailValidator = new UserEmailValidator(userService);
         UsernameValidator usernameValidator = new UsernameValidator(userService);
 
-        final MessageSource messageSource = messageSource();
         final LocalValidatorFactoryBean validator =
-                ValidatorTestUtils.validator(messageSource, userEmailValidator, usernameValidator);
+                ValidatorTestUtils.validator(userEmailValidator, usernameValidator);
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new AuthController(accountAuthService, messageSource),
+                                new AuthController(accountAuthService),
                                 new PasswordResetController(accountAuthService),
                                 new VerificationController(accountAuthService))
                         .setViewResolvers(viewResolver)
@@ -79,7 +76,7 @@ class AuthFlowControllerTest {
                         .addInterceptors(localeChangeInterceptor())
                         .setValidator(validator)
                         .setControllerAdvice(
-                                new AccessExceptionHandler(messageSource),
+                                new AccessExceptionHandler(),
                                 new PasswordResetExceptionHandler(),
                                 new VerificationExceptionHandler())
                         .build();
@@ -137,7 +134,7 @@ class AuthFlowControllerTest {
                                 .param("confirmPassword", "Password123!"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/check-email"))
-                .andExpect(model().attributeExists("summary"))
+                .andExpect(model().attributeExists("summaryCode"))
                 .andExpect(model().attributeExists("expiresAtLabel"))
                 .andReturn();
     }
@@ -234,7 +231,7 @@ class AuthFlowControllerTest {
         mockMvc.perform(post("/forgot-password").param("email", "known@test.com"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("verification/check-email"))
-                .andExpect(model().attributeExists("summary"));
+                .andExpect(model().attributeExists("summaryCode"));
     }
 
     @Test
@@ -334,14 +331,6 @@ class AuthFlowControllerTest {
                 .andExpect(model().attribute("backHref", "/forgot-password"))
                 .andExpect(model().attribute("messageCode", "verification.message.expired"))
                 .andReturn();
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        return messageSource;
     }
 
     private static SessionLocaleResolver localeResolver() {

@@ -2,10 +2,8 @@ package ar.edu.itba.paw.webapp.exception;
 
 import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
 import ar.edu.itba.paw.webapp.utils.ErrorPageViews;
-import java.util.Locale;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.context.MessageSource;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -27,17 +25,9 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class GeneralExceptionHandler {
 
-    private final MessageSource messageSource;
-
-    public GeneralExceptionHandler(final MessageSource messageSource) {
-        this.messageSource = messageSource;
-    }
-
     @ExceptionHandler(ResponseStatusException.class)
     public ModelAndView handleResponseStatusException(
-            final ResponseStatusException exception,
-            final HttpServletResponse response,
-            final Locale locale) {
+            final ResponseStatusException exception, final HttpServletResponse response) {
         exception
                 .getResponseHeaders()
                 .forEach(
@@ -47,20 +37,19 @@ public class GeneralExceptionHandler {
         if (number == null) {
             throw exception;
         }
-        return ErrorPageViews.build(messageSource, number, locale, status);
+        return ErrorPageViews.build(number, status);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     public ModelAndView handleMethodNotAllowed(
             final HttpRequestMethodNotSupportedException exception,
-            final HttpServletResponse response,
-            final Locale locale) {
+            final HttpServletResponse response) {
         final String[] supportedMethods = exception.getSupportedMethods();
         if (supportedMethods != null && supportedMethods.length > 0) {
             response.setHeader("Allow", String.join(", ", supportedMethods));
         }
-        return ErrorPageViews.build(messageSource, "405", locale);
+        return ErrorPageViews.build("405");
     }
 
     @ExceptionHandler({
@@ -74,15 +63,14 @@ public class GeneralExceptionHandler {
         TypeMismatchException.class
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ModelAndView handleBadRequest(final Exception exception, final Locale locale) {
-        return ErrorPageViews.build(messageSource, "400", locale);
+    public ModelAndView handleBadRequest(final Exception exception) {
+        return ErrorPageViews.build("400");
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ModelAndView handleNoHandlerFound(
-            final NoHandlerFoundException exception, final Locale locale) {
-        return ErrorPageViews.build(messageSource, "404", locale);
+    public ModelAndView handleNoHandlerFound(final NoHandlerFoundException exception) {
+        return ErrorPageViews.build("404");
     }
 
     @ExceptionHandler(Exception.class)

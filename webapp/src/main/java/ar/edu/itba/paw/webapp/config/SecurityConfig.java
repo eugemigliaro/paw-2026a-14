@@ -419,8 +419,7 @@ public class SecurityConfig {
             final AccountAuthService accountAuthService,
             final PasswordEncoder passwordEncoder,
             final MessageSource messageSource) {
-        return new AccountAuthenticationProvider(
-                accountAuthService, passwordEncoder, messageSource);
+        return new AccountAuthenticationProvider(accountAuthService, passwordEncoder);
     }
 
     @Bean

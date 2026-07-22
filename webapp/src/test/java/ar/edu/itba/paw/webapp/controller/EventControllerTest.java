@@ -46,8 +46,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -557,8 +555,6 @@ class EventControllerTest {
                         });
         moderationService = Mockito.mock(ModerationService.class);
 
-        final MessageSource messageSource = messageSource();
-
         final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
@@ -573,7 +569,6 @@ class EventControllerTest {
                                         matchParticipationService,
                                         playerReviewService,
                                         moderationService,
-                                        messageSource,
                                         fixedClock,
                                         true,
                                         "/assets/tiles/{z}/{x}/{y}.png",
@@ -840,7 +835,7 @@ class EventControllerTest {
         mockMvc.perform(get("/matches/52").param("reservationError", "closed"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attribute("reservationError", Matchers.nullValue()))
+                .andExpect(model().attribute("reservationErrorCode", Matchers.nullValue()))
                 .andExpect(model().attribute("seriesJoinRequestPending", true));
     }
 
@@ -1156,7 +1151,7 @@ class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attribute("reservationRequiresLogin", false))
-                .andExpect(model().attributeExists("reservationError"));
+                .andExpect(model().attributeExists("reservationErrorCode"));
     }
 
     @Test
@@ -1219,7 +1214,7 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/42/reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attributeExists("reservationError"));
+                .andExpect(model().attributeExists("reservationErrorCode"));
     }
 
     @Test
@@ -1250,7 +1245,7 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/46/recurring-reservations").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attributeExists("seriesReservationError"));
+                .andExpect(model().attributeExists("seriesReservationErrorCode"));
     }
 
     @Test
@@ -1281,7 +1276,7 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel").param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
-                .andExpect(model().attributeExists("seriesReservationError"));
+                .andExpect(model().attributeExists("seriesReservationErrorCode"));
     }
 
     private MatchActionCapabilities actionCapabilities(final Match match, final User viewer) {
@@ -1434,15 +1429,6 @@ class EventControllerTest {
                 !authenticated && capabilities.isCanReserve(),
                 !authenticated && directSeriesReservationAvailable,
                 !authenticated && seriesJoinRequestAvailable);
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 
     private static DefaultFormattingConversionService conversionService() {

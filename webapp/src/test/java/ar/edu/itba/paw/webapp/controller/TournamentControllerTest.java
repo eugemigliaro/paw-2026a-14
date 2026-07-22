@@ -45,7 +45,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -82,8 +81,7 @@ class TournamentControllerTest {
                                         "",
                                         0))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
-                        .setControllerAdvice(
-                                new AccessExceptionHandler(Mockito.mock(MessageSource.class)))
+                        .setControllerAdvice(new AccessExceptionHandler())
                         .setValidator(validator)
                         .build();
         Mockito.when(tournamentService.viewerCapabilities(Mockito.any(), Mockito.any()))

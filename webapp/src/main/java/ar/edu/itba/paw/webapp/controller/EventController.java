@@ -15,7 +15,6 @@ import java.util.Locale;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,7 +40,6 @@ public class EventController {
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
-            final MessageSource messageSource,
             final Clock clock,
             @Value("${map.picker.enabled:false}") final boolean mapPickerEnabled,
             @Value("${map.tiles.urlTemplate:}") final String mapTileUrlTemplate,
@@ -56,7 +54,6 @@ public class EventController {
                         matchParticipationService,
                         playerReviewService,
                         moderationService,
-                        messageSource,
                         clock,
                         mapPickerEnabled,
                         mapTileUrlTemplate,
@@ -88,7 +85,7 @@ public class EventController {
                 reservationError,
                 seriesReservationErrorCode,
                 flashString(model, "hostAction").orElse(hostAction),
-                flashString(model, "hostActionError").orElse(null),
+                flashString(model, "hostActionErrorCode").orElse(null),
                 flashString(model, "hostActionTarget").orElse(null),
                 flashString(model, "hostInviteEmail").orElse(""),
                 flashString(model, "joinStatus").orElse(joinStatus),
@@ -97,8 +94,7 @@ public class EventController {
                 inviteErrorCode,
                 Boolean.TRUE.equals(model.asMap().get("joinRequested")),
                 Boolean.TRUE.equals(model.asMap().get("seriesJoinRequested")),
-                seriesPage,
-                locale);
+                seriesPage);
     }
 
     @PostMapping("/matches/{matchId:\\d+}/reservations")
@@ -202,8 +198,7 @@ public class EventController {
                 null,
                 false,
                 false,
-                1,
-                locale);
+                1);
     }
 
     private ModelAndView seriesReservationErrorDetails(
@@ -227,7 +222,6 @@ public class EventController {
                 null,
                 false,
                 false,
-                1,
-                locale);
+                1);
     }
 }

@@ -15,7 +15,6 @@ import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,13 +28,10 @@ public class AuthController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthController.class);
     private final AccountAuthService accountAuthService;
-    private final MessageSource messageSource;
 
     @Autowired
-    public AuthController(
-            final AccountAuthService accountAuthService, final MessageSource messageSource) {
+    public AuthController(final AccountAuthService accountAuthService) {
         this.accountAuthService = accountAuthService;
-        this.messageSource = messageSource;
     }
 
     @ModelAttribute("registerForm")
@@ -78,8 +74,8 @@ public class AuthController {
     }
 
     @GetMapping("/register")
-    public ModelAndView showRegister(final Locale locale) {
-        return registerView(new RegisterForm(), locale);
+    public ModelAndView showRegister() {
+        return registerView(new RegisterForm());
     }
 
     @PostMapping("/register")
@@ -88,7 +84,7 @@ public class AuthController {
             final BindingResult bindingResult,
             final Locale locale) {
         if (bindingResult.hasErrors()) {
-            return registerView(registerForm, locale);
+            return registerView(registerForm);
         }
 
         final VerificationRequestResult result =
@@ -103,13 +99,11 @@ public class AuthController {
         LOGGER.info("Registration verification requested locale={}", locale);
         return checkEmailView(
                 locale,
-                messageSource.getMessage(
-                        "auth.checkEmail.registration.summary",
-                        new Object[] {result.getEmail()},
-                        locale),
+                "auth.checkEmail.registration.summary",
+                new Object[] {result.getEmail()},
                 "/login",
-                messageSource.getMessage("auth.backToLogin", null, locale),
-                messageSource.getMessage("auth.registration.requested", null, locale),
+                "auth.backToLogin",
+                "auth.registration.requested",
                 result.getExpiresAt());
     }
 
@@ -125,16 +119,17 @@ public class AuthController {
 
         return checkEmailView(
                 locale,
-                messageSource.getMessage("auth.checkEmail.resend.summary", null, locale),
+                "auth.checkEmail.resend.summary",
+                null,
                 "/login",
-                messageSource.getMessage("auth.backToLogin", null, locale),
-                messageSource.getMessage("auth.resendVerification.requested", null, locale),
+                "auth.backToLogin",
+                "auth.resendVerification.requested",
                 result.map(VerificationRequestResult::getExpiresAt).orElse(null));
     }
 
     @GetMapping("/forgot-password")
-    public ModelAndView showForgotPassword(final Locale locale) {
-        return forgotPasswordView(new ForgotPasswordForm(), locale);
+    public ModelAndView showForgotPassword() {
+        return forgotPasswordView(new ForgotPasswordForm());
     }
 
     @PostMapping("/forgot-password")
@@ -144,7 +139,7 @@ public class AuthController {
             final BindingResult bindingResult,
             final Locale locale) {
         if (bindingResult.hasErrors()) {
-            return forgotPasswordView(forgotPasswordForm, locale);
+            return forgotPasswordView(forgotPasswordForm);
         }
 
         final Optional<VerificationRequestResult> result =
@@ -152,21 +147,21 @@ public class AuthController {
         LOGGER.info("Password reset requested locale={}", locale);
         return checkEmailView(
                 locale,
-                messageSource.getMessage("auth.checkEmail.passwordReset.summary", null, locale),
+                "auth.checkEmail.passwordReset.summary",
+                null,
                 "/login",
-                messageSource.getMessage("auth.backToLogin", null, locale),
-                messageSource.getMessage("auth.passwordReset.requested", null, locale),
+                "auth.backToLogin",
+                "auth.passwordReset.requested",
                 result.map(VerificationRequestResult::getExpiresAt).orElse(null));
     }
 
-    private ModelAndView registerView(final RegisterForm registerForm, final Locale locale) {
+    private ModelAndView registerView(final RegisterForm registerForm) {
         final ModelAndView mav = new ModelAndView("auth/register");
         mav.addObject("registerForm", registerForm);
         return mav;
     }
 
-    private ModelAndView forgotPasswordView(
-            final ForgotPasswordForm forgotPasswordForm, final Locale locale) {
+    private ModelAndView forgotPasswordView(final ForgotPasswordForm forgotPasswordForm) {
         final ModelAndView mav = new ModelAndView("auth/forgot-password");
         mav.addObject("forgotPasswordForm", forgotPasswordForm);
         return mav;
@@ -174,17 +169,18 @@ public class AuthController {
 
     private ModelAndView checkEmailView(
             final Locale locale,
-            final String summary,
+            final String summaryCode,
+            final Object[] summaryArguments,
             final String backHref,
-            final String actionLabel,
-            final String eyebrow,
+            final String actionLabelCode,
+            final String eyebrowCode,
             final Instant expiresAt) {
         final ModelAndView mav = new ModelAndView("verification/check-email");
-        mav.addObject("title", messageSource.getMessage("verification.checkEmail", null, locale));
-        mav.addObject("summary", summary);
+        mav.addObject("summaryCode", summaryCode);
+        mav.addObject("summaryArguments", summaryArguments);
         mav.addObject("backHref", backHref);
-        mav.addObject("actionLabel", actionLabel);
-        mav.addObject("eyebrow", eyebrow);
+        mav.addObject("actionLabelCode", actionLabelCode);
+        mav.addObject("eyebrowCode", eyebrowCode);
         if (expiresAt != null) {
             mav.addObject(
                     "expiresAtLabel",

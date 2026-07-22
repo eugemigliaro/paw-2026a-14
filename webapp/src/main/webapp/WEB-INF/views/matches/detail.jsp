@@ -88,9 +88,9 @@
 											<icon:chevron fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 										</span>
 									</summary>
-									<c:if test="${hostActionTarget eq 'requests' && not empty hostActionErrorNotice}">
+									<c:if test="${hostActionTarget eq 'requests' && not empty hostActionErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error host-detail-accordion__notice">
-											<c:out value="${hostActionErrorNotice}" />
+											<spring:message code="${hostActionErrorCode}" />
 										</p>
 									</c:if>
 									<c:if test="${not empty hostPendingRequests}">
@@ -179,9 +179,9 @@
 											<icon:chevron fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
 										</span>
 									</summary>
-									<c:if test="${hostActionTarget eq 'invites' && not empty hostActionErrorNotice}">
+									<c:if test="${hostActionTarget eq 'invites' && not empty hostActionErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error host-detail-accordion__notice">
-											<c:out value="${hostActionErrorNotice}" />
+											<spring:message code="${hostActionErrorCode}" />
 										</p>
 									</c:if>
 									<c:url var="hostInviteAction" value="${hostInviteActionPath}" />
@@ -288,9 +288,9 @@
 								</div>
 								<span class="detail-section__meta"><ui:pluralMessage count="${fn:length(participants)}" oneCode="event.participants.one" manyCode="event.participants.many" /></span>
 							</div>
-							<c:if test="${hostActionTarget eq 'participants' && not empty hostActionErrorNotice}">
+							<c:if test="${hostActionTarget eq 'participants' && not empty hostActionErrorCode}">
 								<p class="booking-panel__notice booking-panel__notice--error">
-									<c:out value="${hostActionErrorNotice}" />
+									<spring:message code="${hostActionErrorCode}" />
 								</p>
 							</c:if>
 
@@ -634,9 +634,9 @@
 											</c:choose>
 										</p>
 									</c:if>
-									<c:if test="${not empty reservationError}">
+									<c:if test="${not empty reservationErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error">
-											<c:out value="${reservationError}" />
+											<spring:message code="reservation.error.${reservationErrorCode}" />
 										</p>
 									</c:if>
 									<c:if test="${not empty eventStateNoticeCode}">
@@ -654,9 +654,9 @@
 											<spring:message code="event.joinRequest.cancelled" />
 										</p>
 									</c:if>
-									<c:if test="${not empty joinError}">
+									<c:if test="${not empty joinErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error">
-											<c:out value="${joinError}" />
+											<spring:message code="join.error.${joinErrorCode}" />
 										</p>
 									</c:if>
 
@@ -751,9 +751,9 @@
 														<spring:message code="event.invite.accepted" />
 													</p>
 												</c:if>
-												<c:if test="${not empty inviteError}">
+												<c:if test="${not empty inviteErrorCode}">
 													<p class="booking-panel__notice booking-panel__notice--error">
-														<c:out value="${inviteError}" />
+														<spring:message code="invite.error.${inviteErrorCode}" />
 													</p>
 												</c:if>
 												<p class="booking-panel__notice booking-panel__notice--info" data-invite-refresh-notice="true">
@@ -827,9 +827,9 @@
 											<spring:message code="event.recurringReservation.joined" />
 										</p>
 									</c:if>
-									<c:if test="${not empty seriesReservationError}">
+									<c:if test="${not empty seriesReservationErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error">
-											<c:out value="${seriesReservationError}" />
+											<spring:message code="reservation.error.${seriesReservationErrorCode}" />
 										</p>
 									</c:if>
 									<c:if test="${seriesReservationEnabled and not seriesReservationJoined}">
@@ -1013,9 +1013,9 @@
 											</c:choose>
 										</p>
 									</c:if>
-									<c:if test="${not empty reservationError}">
+									<c:if test="${not empty reservationErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error">
-											<c:out value="${reservationError}" />
+											<spring:message code="reservation.error.${reservationErrorCode}" />
 										</p>
 									</c:if>
 									<c:if test="${not empty eventStateNoticeCode}">
@@ -1034,9 +1034,9 @@
 											<spring:message code="event.joinRequest.cancelled" />
 										</p>
 									</c:if>
-									<c:if test="${not empty joinError}">
+									<c:if test="${not empty joinErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error">
-											<c:out value="${joinError}" />
+											<spring:message code="join.error.${joinErrorCode}" />
 										</p>
 									</c:if>
 
@@ -1131,9 +1131,9 @@
 														<spring:message code="event.invite.accepted" />
 													</p>
 												</c:if>
-												<c:if test="${not empty inviteError}">
+												<c:if test="${not empty inviteErrorCode}">
 													<p class="booking-panel__notice booking-panel__notice--error">
-														<c:out value="${inviteError}" />
+														<spring:message code="invite.error.${inviteErrorCode}" />
 													</p>
 												</c:if>
 												<p class="booking-panel__notice booking-panel__notice--info" data-invite-refresh-notice="true">
@@ -1207,9 +1207,9 @@
 											<spring:message code="event.recurringReservation.joined" />
 										</p>
 									</c:if>
-									<c:if test="${not empty seriesReservationError}">
+									<c:if test="${not empty seriesReservationErrorCode}">
 										<p class="booking-panel__notice booking-panel__notice--error">
-											<c:out value="${seriesReservationError}" />
+											<spring:message code="reservation.error.${seriesReservationErrorCode}" />
 										</p>
 									</c:if>
 									<c:if test="${seriesReservationEnabled and not seriesReservationJoined}">

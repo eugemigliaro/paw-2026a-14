@@ -23,11 +23,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
@@ -40,7 +38,6 @@ final class EventPageSupport {
     private final MatchParticipationService matchParticipationService;
     private final PlayerReviewService playerReviewService;
     private final ModerationService moderationService;
-    private final MessageSource messageSource;
     private final Clock clock;
     private final boolean mapPickerEnabled;
     private final String mapTileUrlTemplate;
@@ -52,7 +49,6 @@ final class EventPageSupport {
             final MatchParticipationService matchParticipationService,
             final PlayerReviewService playerReviewService,
             final ModerationService moderationService,
-            final MessageSource messageSource,
             final Clock clock,
             final boolean mapPickerEnabled,
             final String mapTileUrlTemplate,
@@ -62,54 +58,11 @@ final class EventPageSupport {
         this.matchParticipationService = matchParticipationService;
         this.playerReviewService = playerReviewService;
         this.moderationService = moderationService;
-        this.messageSource = messageSource;
         this.clock = clock;
         this.mapPickerEnabled = mapPickerEnabled;
         this.mapTileUrlTemplate = mapTileUrlTemplate == null ? "" : mapTileUrlTemplate;
         this.mapAttribution = mapAttribution == null ? "" : mapAttribution;
         this.mapDefaultZoom = mapDefaultZoom;
-    }
-
-    ModelAndView showEventDetails(
-            final User currentUser,
-            final Long eventId,
-            final String reservationStatus,
-            final String reservationErrorCode,
-            final String seriesReservationErrorCode,
-            final String hostAction,
-            final String hostActionError,
-            final String hostActionTarget,
-            final String hostInviteEmail,
-            final String joinStatus,
-            final String joinErrorCode,
-            final String inviteStatus,
-            final String inviteErrorCode,
-            final boolean joinRequestedFlash,
-            final boolean seriesJoinRequestedFlash,
-            final int seriesPage,
-            final Locale locale) {
-        return showRealEventDetails(
-                currentUser,
-                eventId,
-                reservationStatus,
-                hostAction,
-                hostActionError,
-                hostActionTarget,
-                hostInviteEmail,
-                reservationErrorCode == null
-                        ? null
-                        : reservationErrorMessage(reservationErrorCode, locale),
-                seriesReservationErrorCode == null
-                        ? null
-                        : reservationErrorMessage(seriesReservationErrorCode, locale),
-                joinStatus,
-                joinRequestedFlash,
-                seriesJoinRequestedFlash,
-                joinErrorCode == null ? null : joinErrorMessage(joinErrorCode, locale),
-                inviteStatus,
-                inviteErrorCode == null ? null : inviteErrorMessage(inviteErrorCode, locale),
-                seriesPage,
-                locale);
     }
 
     boolean shouldRedirectToPlayerMatchesAfterCancellation(final Match match, final User user) {
@@ -119,24 +72,23 @@ final class EventPageSupport {
                 && !user.getId().equals(match.getHost().getId());
     }
 
-    private ModelAndView showRealEventDetails(
+    ModelAndView showEventDetails(
             final User currentUser,
             final Long eventId,
             final String reservationStatus,
+            final String reservationErrorCode,
+            final String seriesReservationErrorCode,
             final String hostAction,
-            final String hostActionError,
+            final String hostActionErrorCode,
             final String hostActionTarget,
             final String hostInviteEmail,
-            final String reservationError,
-            final String seriesReservationError,
             final String joinStatus,
+            final String joinErrorCode,
+            final String inviteStatus,
+            final String inviteErrorCode,
             final boolean joinRequestedFlash,
             final boolean seriesJoinRequestedFlash,
-            final String joinError,
-            final String inviteStatus,
-            final String inviteError,
-            final int seriesPage,
-            final Locale locale) {
+            final int seriesPage) {
         final Match match =
                 matchService
                         .findVisibleMatchById(eventId, currentUser)
@@ -238,7 +190,8 @@ final class EventPageSupport {
         mav.addObject(
                 "reservationCancellationEnabled",
                 interactionState.isReservationCancellationEnabled());
-        mav.addObject("reservationError", suppressReservationErrors ? null : reservationError);
+        mav.addObject(
+                "reservationErrorCode", suppressReservationErrors ? null : reservationErrorCode);
         mav.addObject(
                 "reservationConfirmed",
                 interactionState.isConfirmedParticipant()
@@ -264,8 +217,8 @@ final class EventPageSupport {
                 "recurringCancelled".equalsIgnoreCase(reservationStatus)
                         || "seriesCancelled".equalsIgnoreCase(reservationStatus));
         mav.addObject(
-                "seriesReservationError",
-                suppressReservationErrors ? null : seriesReservationError);
+                "seriesReservationErrorCode",
+                suppressReservationErrors ? null : seriesReservationErrorCode);
         mav.addObject("eventStateNoticeCode", eventStateNoticeCode(match));
 
         mav.addObject("joinRequestEnabled", interactionState.isJoinRequestEnabled());
@@ -284,13 +237,13 @@ final class EventPageSupport {
                 "seriesJoinRequested",
                 seriesJoinRequestedFlash || "recurringRequested".equalsIgnoreCase(joinStatus));
         mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
-        mav.addObject("joinError", joinError);
+        mav.addObject("joinErrorCode", joinErrorCode);
 
         mav.addObject("isInvitedPlayer", interactionState.isInvitedPlayer());
         mav.addObject("acceptInvitePath", "/matches/" + eventId + "/invites/accept");
         mav.addObject("declineInvitePath", "/matches/" + eventId + "/invites/decline");
         mav.addObject("inviteAccepted", "accepted".equalsIgnoreCase(inviteStatus));
-        mav.addObject("inviteError", inviteError);
+        mav.addObject("inviteErrorCode", inviteErrorCode);
 
         mav.addObject("hostViewer", isHost);
         mav.addObject("isPrivateEvent", isPrivateEvent);
@@ -306,7 +259,7 @@ final class EventPageSupport {
         mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
         mav.addObject(
                 "hostActionCode", resolvedHostAction == null ? null : resolvedHostAction.getCode());
-        mav.addObject("hostActionErrorNotice", hostActionError);
+        mav.addObject("hostActionErrorCode", hostActionErrorCode);
         mav.addObject("hostActionTarget", hostActionTarget);
         mav.addObject("hostPendingRequests", pendingHostRequests);
         mav.addObject("hostPendingRequestCount", pendingHostRequests.size());
@@ -557,28 +510,6 @@ final class EventPageSupport {
         return match.getEndsAt() != null
                 && !match.getStartsAt().isAfter(now)
                 && match.getEndsAt().isAfter(now);
-    }
-
-    private String reservationErrorMessage(final String code, final Locale locale) {
-        if (code == null) {
-            return null;
-        }
-        final String errorKey = "reservation.error." + code;
-        return messageSource.getMessage(errorKey, null, locale);
-    }
-
-    private String joinErrorMessage(final String code, final Locale locale) {
-        if (code == null) {
-            return null;
-        }
-        return messageSource.getMessage("join.error." + code, null, locale);
-    }
-
-    private String inviteErrorMessage(final String code, final Locale locale) {
-        if (code == null) {
-            return null;
-        }
-        return messageSource.getMessage("invite.error." + code, null, locale);
     }
 
     private record EventDisplayState(String key, String tone) {}

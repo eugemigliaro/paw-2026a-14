@@ -12,8 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ar.edu.itba.paw.models.exceptions.pagination.InvalidPaginationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.web.servlet.MockMvc;
@@ -58,10 +56,9 @@ class GeneralExceptionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        final MessageSource messageSource = Mockito.mock(MessageSource.class);
         mockMvc =
                 MockMvcBuilders.standaloneSetup(new ThrowingController())
-                        .setControllerAdvice(new GeneralExceptionHandler(messageSource))
+                        .setControllerAdvice(new GeneralExceptionHandler())
                         .build();
     }
 

@@ -23,8 +23,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,7 +38,6 @@ class AccountControllerTest {
     @BeforeEach
     void setUp() {
         userService = Mockito.mock(UserService.class);
-        final MessageSource messageSource = messageSource();
         final UserEmailValidator userEmailValidator =
                 new UserEmailValidator(Mockito.mock(UserService.class));
         final UsernameValidator usernameValidator =
@@ -50,8 +47,7 @@ class AccountControllerTest {
                 MockMvcBuilders.standaloneSetup(new AccountController(userService))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .setValidator(
-                                ValidatorTestUtils.validator(
-                                        messageSource, userEmailValidator, usernameValidator))
+                                ValidatorTestUtils.validator(userEmailValidator, usernameValidator))
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
                         .defaultRequest(get("/").locale(Locale.ENGLISH))
@@ -186,15 +182,6 @@ class AccountControllerTest {
                 "+1 555 123 4567",
                 null,
                 null);
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 
     private static SessionLocaleResolver localeResolver() {

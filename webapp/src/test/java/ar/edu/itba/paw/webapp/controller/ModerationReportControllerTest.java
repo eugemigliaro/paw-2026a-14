@@ -28,7 +28,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -41,7 +40,6 @@ class ModerationReportControllerTest {
     private UserService userService;
     private MatchService matchService;
     private PlayerReviewService playerReviewService;
-    private MessageSource messageSource;
 
     @BeforeEach
     void setUp() {
@@ -49,15 +47,13 @@ class ModerationReportControllerTest {
         userService = Mockito.mock(UserService.class);
         matchService = Mockito.mock(MatchService.class);
         playerReviewService = Mockito.mock(PlayerReviewService.class);
-        messageSource = Mockito.mock(MessageSource.class);
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new ModerationReportController(
                                         moderationService,
                                         userService,
                                         matchService,
-                                        playerReviewService,
-                                        messageSource))
+                                        playerReviewService))
                         .setConversionService(conversionService())
                         .build();
     }

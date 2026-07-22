@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Locale;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -36,13 +35,10 @@ public class UserModerationReportController {
     private static final int PAGE_SIZE = 4;
 
     private final ModerationService moderationService;
-    private final MessageSource messageSource;
 
     @Autowired
-    public UserModerationReportController(
-            final ModerationService moderationService, final MessageSource messageSource) {
+    public UserModerationReportController(final ModerationService moderationService) {
         this.moderationService = moderationService;
-        this.messageSource = messageSource;
     }
 
     @ModelAttribute("reportAppealForm")
@@ -65,17 +61,7 @@ public class UserModerationReportController {
         final List<ReportView> reportViews = reportViews(result.getItems());
 
         final ModelAndView mav = new ModelAndView("reports/mine/list");
-        mav.addObject("pageTitle", messageSource.getMessage("page.title.myReports", null, locale));
-        mav.addObject(
-                "pageTitleLabel", messageSource.getMessage("reports.mine.title", null, locale));
-        mav.addObject(
-                "pageDescription",
-                messageSource.getMessage("reports.mine.description", null, locale));
-        mav.addObject("emptyMessage", messageSource.getMessage("reports.mine.empty", null, locale));
-        mav.addObject(
-                "reportCountLabel",
-                messageSource.getMessage(
-                        "reports.mine.count", new Object[] {result.getTotalCount()}, locale));
+        mav.addObject("reportCount", result.getTotalCount());
         mav.addObject("reportViews", reportViews);
         mav.addObject(
                 "selectedTypes", typeFilters.stream().map(ReportTargetType::getDbValue).toList());
@@ -123,21 +109,13 @@ public class UserModerationReportController {
 
         final ModelAndView mav = new ModelAndView("reports/mine/detail");
         mav.addObject(
-                "pageTitle", messageSource.getMessage("page.title.myReportDetail", null, locale));
-        mav.addObject(
-                "pageTitleLabel",
-                messageSource.getMessage(
-                        "reports.mine.detail.title", new Object[] {report.getId()}, locale));
-        mav.addObject(
-                "pageDescription",
-                messageSource.getMessage("reports.mine.detail.description", null, locale));
-        mav.addObject(
                 "appealAllowed",
                 report.getStatus() == ReportStatus.RESOLVED && report.getAppealCount() < 1);
         mav.addObject("report", report);
         mav.addObject("targetSummary", targetSummary);
         mav.addObject("targetHref", targetHref(targetSummary));
         mav.addObject("action", model.asMap().get("action"));
+        mav.addObject("errorCode", model.asMap().get("errorCode"));
         return mav;
     }
 
@@ -151,9 +129,7 @@ public class UserModerationReportController {
             final Locale locale) {
 
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            redirectAttributes.addFlashAttribute("errorCode", "moderation.report.error.invalid");
             return new ModelAndView("redirect:/reports/mine/" + reportId);
         }
 

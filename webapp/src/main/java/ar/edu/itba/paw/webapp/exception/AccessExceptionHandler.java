@@ -3,8 +3,6 @@ package ar.edu.itba.paw.webapp.exception;
 import ar.edu.itba.paw.models.exceptions.ForbiddenException;
 import ar.edu.itba.paw.models.exceptions.NotFoundException;
 import ar.edu.itba.paw.webapp.utils.ErrorPageViews;
-import java.util.Locale;
-import org.springframework.context.MessageSource;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -17,21 +15,15 @@ import org.springframework.web.servlet.ModelAndView;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class AccessExceptionHandler {
 
-    private final MessageSource messageSource;
-
-    public AccessExceptionHandler(final MessageSource messageSource) {
-        this.messageSource = messageSource;
-    }
-
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ModelAndView notFound(final Locale locale) {
-        return ErrorPageViews.build(messageSource, "404", locale);
+    public ModelAndView notFound() {
+        return ErrorPageViews.build("404");
     }
 
     @ExceptionHandler(ForbiddenException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ModelAndView forbidden(final Locale locale) {
-        return ErrorPageViews.build(messageSource, "403", locale);
+    public ModelAndView forbidden() {
+        return ErrorPageViews.build("403");
     }
 }

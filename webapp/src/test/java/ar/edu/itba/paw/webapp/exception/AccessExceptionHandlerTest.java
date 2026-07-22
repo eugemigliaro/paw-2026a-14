@@ -9,8 +9,6 @@ import ar.edu.itba.paw.models.exceptions.ForbiddenException;
 import ar.edu.itba.paw.models.exceptions.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -36,12 +34,10 @@ class AccessExceptionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        final MessageSource messageSource = Mockito.mock(MessageSource.class);
         mockMvc =
                 MockMvcBuilders.standaloneSetup(new ThrowingController())
                         .setControllerAdvice(
-                                new AccessExceptionHandler(messageSource),
-                                new GeneralExceptionHandler(messageSource))
+                                new AccessExceptionHandler(), new GeneralExceptionHandler())
                         .build();
     }
 

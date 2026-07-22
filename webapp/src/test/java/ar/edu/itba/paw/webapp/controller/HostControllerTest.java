@@ -55,8 +55,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -87,13 +85,12 @@ class HostControllerTest {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
 
-        final MessageSource messageSource = messageSource();
         final UserEmailValidator userEmailValidator =
                 new UserEmailValidator(Mockito.mock(UserService.class));
         final UsernameValidator usernameValidator =
                 new UsernameValidator(Mockito.mock(UserService.class));
         final LocalValidatorFactoryBean validator =
-                ValidatorTestUtils.validator(messageSource, userEmailValidator, usernameValidator);
+                ValidatorTestUtils.validator(userEmailValidator, usernameValidator);
 
         realMatch =
                 MatchUtils.match(42L)
@@ -167,7 +164,7 @@ class HostControllerTest {
                         .setValidator(validator)
                         .setConversionService(formattingConversionServiceWithSportConverter())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
-                        .setControllerAdvice(new AccessExceptionHandler(messageSource))
+                        .setControllerAdvice(new AccessExceptionHandler())
                         .build();
     }
 
@@ -1203,15 +1200,6 @@ class HostControllerTest {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
         mockMvc.perform(post("/host/matches/44/cancel")).andExpect(status().isNotFound());
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setFallbackToSystemLocale(false);
-        return messageSource;
     }
 
     private static DefaultFormattingConversionService

@@ -12,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
 import javax.validation.Valid;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -28,12 +27,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class UserBanAppealController {
 
     private final ModerationService moderationService;
-    private final MessageSource messageSource;
 
-    public UserBanAppealController(
-            final ModerationService moderationService, final MessageSource messageSource) {
+    public UserBanAppealController(final ModerationService moderationService) {
         this.moderationService = moderationService;
-        this.messageSource = messageSource;
     }
 
     @ModelAttribute("reportAppealForm")
@@ -51,26 +47,17 @@ public class UserBanAppealController {
                         .orElse(null);
         final ModelAndView mav = new ModelAndView("account/banned");
         mav.addObject(
-                "pageTitle", messageSource.getMessage("page.title.accountBanned", null, locale));
-        mav.addObject("banTitle", messageSource.getMessage("account.ban.title", null, locale));
-        mav.addObject(
-                "banDescription",
-                messageSource.getMessage(
-                        report.getAppealCount() > 0
-                                ? "account.ban.description"
-                                : "account.ban.description.appeal.available",
-                        null,
-                        locale));
+                "banDescriptionCode",
+                report.getAppealCount() > 0
+                        ? "account.ban.description"
+                        : "account.ban.description.appeal.available");
         mav.addObject(
                 "banUntilLabel",
                 DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                         .withLocale(locale)
                         .withZone(PlatformTime.ZONE)
                         .format(activeBan.getBannedUntil()));
-        mav.addObject(
-                "banReason",
-                messageSource.getMessage(
-                        "moderation.reason." + report.getReason().getDbValue(), null, locale));
+        mav.addObject("banReasonCode", "moderation.reason." + report.getReason().getDbValue());
         mav.addObject("appealReason", report.getAppealReason());
         mav.addObject("appealAllowed", report.getAppealCount() < 1);
         mav.addObject("action", model.asMap().get("action"));
@@ -87,9 +74,7 @@ public class UserBanAppealController {
         final UserBan activeBan = moderationService.findActiveBan(user).orElse(null);
 
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    messageSource.getMessage("moderation.report.error.invalid", null, locale));
+            redirectAttributes.addFlashAttribute("errorCode", "moderation.report.error.invalid");
             return new ModelAndView("redirect:/account/ban");
         }
 

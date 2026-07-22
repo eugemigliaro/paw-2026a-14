@@ -32,8 +32,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -61,8 +59,7 @@ class ModerationAdminControllerTest {
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new ModerationAdminController(
-                                        moderationService, userService, messageSource()))
+                                new ModerationAdminController(moderationService, userService))
                         .setViewResolvers(viewResolver)
                         .setLocaleResolver(localeResolver())
                         .addInterceptors(localeChangeInterceptor())
@@ -83,8 +80,7 @@ class ModerationAdminControllerTest {
         mockMvc.perform(get("/admin/reports").locale(Locale.ENGLISH))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/reports/list"))
-                .andExpect(model().attributeExists("reportViews"))
-                .andExpect(model().attributeExists("emptyMessage"));
+                .andExpect(model().attributeExists("reportViews"));
     }
 
     @Test
@@ -284,14 +280,6 @@ class ModerationAdminControllerTest {
     @SuppressWarnings("unchecked")
     private static List<AdminReportView> reportViewsFrom(final MvcResult result) {
         return (List<AdminReportView>) result.getModelAndView().getModel().get("reportViews");
-    }
-
-    private static MessageSource messageSource() {
-        final ReloadableResourceBundleMessageSource messageSource =
-                new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:i18n/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        return messageSource;
     }
 
     private static SessionLocaleResolver localeResolver() {

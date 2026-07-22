@@ -31,14 +31,12 @@ import ar.edu.itba.paw.webapp.utils.UserUtils;
 import ar.edu.itba.paw.webapp.utils.ValidatorTestUtils;
 import ar.edu.itba.paw.webapp.validation.UserEmailValidator;
 import java.time.Instant;
-import java.util.Locale;
 import java.util.Optional;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -48,14 +46,12 @@ class HostParticipationControllerTest {
     private MockMvc mockMvc;
     private MatchParticipationService matchParticipationService;
     private MatchService matchService;
-    private MessageSource messageSource;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         matchParticipationService = Mockito.mock(MatchParticipationService.class);
         matchService = Mockito.mock(MatchService.class);
-        messageSource = Mockito.mock(MessageSource.class);
         userService = Mockito.mock(UserService.class);
 
         UserEmailValidator userEmailValidator = new UserEmailValidator(userService);
@@ -63,13 +59,10 @@ class HostParticipationControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new HostParticipationController(
-                                        matchParticipationService,
-                                        matchService,
-                                        userService,
-                                        messageSource))
+                                        matchParticipationService, matchService, userService))
                         .setValidator(ValidatorTestUtils.validator(userEmailValidator))
                         .setControllerAdvice(
-                                new AccessExceptionHandler(messageSource),
+                                new AccessExceptionHandler(),
                                 new PasswordResetExceptionHandler(),
                                 new VerificationExceptionHandler())
                         .build();
@@ -159,11 +152,6 @@ class HostParticipationControllerTest {
         final User requestedUser = Mockito.mock(User.class);
 
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
-        when(messageSource.getMessage(
-                        Mockito.eq("event.host.requests.error.closed"),
-                        Mockito.isNull(),
-                        Mockito.<Locale>any()))
-                .thenReturn("This event is closed.");
         Mockito.doThrow(new MatchClosedException())
                 .when(matchParticipationService)
                 .approveRequest(
@@ -173,7 +161,9 @@ class HostParticipationControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
                 .andExpect(flash().attribute("hostActionTarget", "requests"))
-                .andExpect(flash().attribute("hostActionError", "This event is closed."));
+                .andExpect(
+                        flash().attribute(
+                                        "hostActionErrorCode", "event.host.requests.error.closed"));
     }
 
     @Test
@@ -243,11 +233,6 @@ class HostParticipationControllerTest {
 
         final User requestedUser = Mockito.mock(User.class);
         when(userService.findById(9L)).thenReturn(Optional.of(requestedUser));
-        when(messageSource.getMessage(
-                        Mockito.eq("event.host.participants.error.started"),
-                        Mockito.isNull(),
-                        Mockito.<Locale>any()))
-                .thenReturn("This event has already started.");
         Mockito.doThrow(new MatchStartedException())
                 .when(matchParticipationService)
                 .removeParticipant(
@@ -257,7 +242,10 @@ class HostParticipationControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
                 .andExpect(flash().attribute("hostActionTarget", "participants"))
-                .andExpect(flash().attribute("hostActionError", "This event has already started."));
+                .andExpect(
+                        flash().attribute(
+                                        "hostActionErrorCode",
+                                        "event.host.participants.error.started"));
     }
 
     @Test

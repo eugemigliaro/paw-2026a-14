@@ -7,8 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -18,8 +16,7 @@ class ErrorPageControllerTest {
 
     @BeforeEach
     void setUp() {
-        final MessageSource messageSource = Mockito.mock(MessageSource.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new ErrorPageController(messageSource)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new ErrorPageController()).build();
     }
 
     @Test

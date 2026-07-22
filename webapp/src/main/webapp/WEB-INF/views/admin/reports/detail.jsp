@@ -4,6 +4,8 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.adminReportDetail" />
+<spring:message var="pageTitleLabel" code="admin.reports.detail.title" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -16,7 +18,7 @@
 			<main class="page-shell page-shell--detail">
 				<header class="page-heading">
 					<h1 class="page-heading__title"><c:out value="${pageTitleLabel}" /></h1>
-					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
+					<p class="page-heading__description"><spring:message code="admin.reports.detail.description" /></p>
 				</header>
 
 				<spring:message var="targetTypeLabel" code="admin.reports.targetType.${report.targetType.dbValue}" />

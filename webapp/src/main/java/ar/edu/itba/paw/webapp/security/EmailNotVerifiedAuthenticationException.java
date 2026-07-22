@@ -4,7 +4,7 @@ import org.springframework.security.core.AuthenticationException;
 
 public class EmailNotVerifiedAuthenticationException extends AuthenticationException {
 
-    public EmailNotVerifiedAuthenticationException(final String message) {
-        super(message);
+    public EmailNotVerifiedAuthenticationException() {
+        super("verify");
     }
 }

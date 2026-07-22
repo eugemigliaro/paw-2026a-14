@@ -5,6 +5,7 @@ import java.util.Map;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorFactory;
 import org.springframework.context.MessageSource;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public final class ValidatorTestUtils {
@@ -13,15 +14,8 @@ public final class ValidatorTestUtils {
 
     public static LocalValidatorFactoryBean validator(
             final ConstraintValidator<?, ?>... validators) {
-        return validator(null, validators);
-    }
-
-    public static LocalValidatorFactoryBean validator(
-            final MessageSource messageSource, final ConstraintValidator<?, ?>... validators) {
         final LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-        if (messageSource != null) {
-            validator.setValidationMessageSource(messageSource);
-        }
+        validator.setValidationMessageSource(messageSource());
         validator.setConstraintValidatorFactory(validatorFactory(validators));
         validator.afterPropertiesSet();
         return validator;
@@ -50,5 +44,14 @@ public final class ValidatorTestUtils {
             @Override
             public void releaseInstance(final ConstraintValidator<?, ?> instance) {}
         };
+    }
+
+    private static MessageSource messageSource() {
+        final ReloadableResourceBundleMessageSource messageSource =
+                new ReloadableResourceBundleMessageSource();
+        messageSource.setBasename("classpath:i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setFallbackToSystemLocale(false);
+        return messageSource;
     }
 }

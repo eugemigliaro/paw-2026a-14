@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.accountBanned" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -13,9 +14,9 @@
 
 			<main class="page-shell account-shell">
 				<section class="panel account-panel">
-					<h1 class="page-heading__title account-panel__title"><c:out value="${banTitle}" /></h1>
+					<h1 class="page-heading__title account-panel__title"><spring:message code="account.ban.title" /></h1>
 					<p class="page-heading__description account-panel__description">
-						<c:out value="${banDescription}" />
+						<spring:message code="${banDescriptionCode}" />
 					</p>
 
 						<c:if test="${action eq 'appealed'}">
@@ -23,9 +24,12 @@
 								<spring:message code="account.ban.appeal.sent" />
 							</p>
 					</c:if>
-					<c:if test="${not empty param.error}">
+					<c:if test="${not empty errorCode or not empty param.error}">
 						<p class="auth-notice auth-notice--error">
 							<c:choose>
+								<c:when test="${not empty errorCode}">
+									<spring:message code="${errorCode}" />
+								</c:when>
 								<c:when test="${param.error eq 'appeal_limit'}">
 									<spring:message code="account.ban.appeal.limit" />
 								</c:when>
@@ -52,11 +56,12 @@
 						</label>
 						<label class="field" for="account-ban-reason">
 							<span class="field__label"><spring:message code="account.ban.reason" /></span>
+							<spring:message var="banReasonLabel" code="${banReasonCode}" />
 							<input
 								id="account-ban-reason"
 								type="text"
 								class="field__control account-readonly-control"
-								value="<c:out value='${banReason}' />"
+								value="<c:out value='${banReasonLabel}' />"
 								readonly="readonly"
 								aria-readonly="true" />
 						</label>

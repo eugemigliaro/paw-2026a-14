@@ -18,14 +18,11 @@ import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
-import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -38,17 +35,9 @@ class UserBanAppealControllerTest {
     @BeforeEach
     void setUp() {
         moderationService = Mockito.mock(ModerationService.class);
-        final MessageSource messageSource = Mockito.mock(MessageSource.class);
-        Mockito.when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc =
-                MockMvcBuilders.standaloneSetup(
-                                new UserBanAppealController(moderationService, messageSource))
+                MockMvcBuilders.standaloneSetup(new UserBanAppealController(moderationService))
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
     }
@@ -70,7 +59,7 @@ class UserBanAppealControllerTest {
         mockMvc.perform(get("/account/ban"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/banned"))
-                .andExpect(model().attribute("banReason", "moderation.reason.spam"));
+                .andExpect(model().attribute("banReasonCode", "moderation.reason.spam"));
     }
 
     @Test
@@ -83,6 +72,18 @@ class UserBanAppealControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/account/ban"))
                 .andExpect(flash().attribute("action", "appealed"));
+    }
+
+    @Test
+    void postAppealRedirectsWithLocalizedInvalidErrorCode() throws Exception {
+        AuthenticationUtils.authenticateUser(7L);
+        Mockito.when(moderationService.findActiveBan(UserUtils.getUser(7L)))
+                .thenReturn(Optional.of(sampleBan()));
+
+        mockMvc.perform(post("/account/ban/appeal").param("details", "invalid∞"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/account/ban"))
+                .andExpect(flash().attribute("errorCode", "moderation.report.error.invalid"));
     }
 
     private static UserBan sampleBan() {

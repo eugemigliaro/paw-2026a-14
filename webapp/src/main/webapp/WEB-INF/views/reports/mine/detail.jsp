@@ -3,6 +3,8 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="tf" uri="http://paw.itba.edu.ar/tags/time-functions" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
+<spring:message var="pageTitle" code="page.title.myReportDetail" />
+<spring:message var="pageTitleLabel" code="reports.mine.detail.title" arguments="${report.id}" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -15,19 +17,20 @@
 			<main class="page-shell page-shell--detail">
 				<header class="page-heading">
 					<h1 class="page-heading__title"><c:out value="${pageTitleLabel}" /></h1>
-					<p class="page-heading__description"><c:out value="${pageDescription}" /></p>
+					<p class="page-heading__description"><spring:message code="reports.mine.detail.description" /></p>
 				</header>
 
 					<c:if test="${action eq 'appealed'}">
 						<div class="notice notice--success"><spring:message code="reports.mine.action.appealed" /></div>
 					</c:if>
-				<c:if test="${not empty param.error}">
+					<c:if test="${not empty errorCode or not empty param.error}">
 					<div class="notice notice--error">
-						<c:choose>
-							<c:when test="${param.error eq 'appeal_limit'}"><spring:message code="reports.mine.error.appeal_limit" /></c:when>
-							<c:when test="${param.error eq 'appeal_rejected'}"><spring:message code="reports.mine.error.appeal_rejected" /></c:when>
-							<c:otherwise><spring:message code="reports.mine.error.generic" /></c:otherwise>
-						</c:choose>
+							<c:choose>
+								<c:when test="${not empty errorCode}"><spring:message code="${errorCode}" /></c:when>
+								<c:when test="${param.error eq 'appeal_limit'}"><spring:message code="reports.mine.error.appeal_limit" /></c:when>
+								<c:when test="${param.error eq 'appeal_rejected'}"><spring:message code="reports.mine.error.appeal_rejected" /></c:when>
+								<c:otherwise><spring:message code="reports.mine.error.generic" /></c:otherwise>
+							</c:choose>
 					</div>
 				</c:if>
 

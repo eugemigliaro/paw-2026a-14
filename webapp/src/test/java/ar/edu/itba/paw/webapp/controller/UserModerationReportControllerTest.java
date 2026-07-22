@@ -23,15 +23,12 @@ import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.UserUtils;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
-import org.springframework.context.MessageSource;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,18 +43,10 @@ class UserModerationReportControllerTest {
     @BeforeEach
     void setUp() {
         moderationService = Mockito.mock(ModerationService.class);
-        final MessageSource messageSource = Mockito.mock(MessageSource.class);
-        Mockito.when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
-                                new UserModerationReportController(
-                                        moderationService, messageSource))
+                                new UserModerationReportController(moderationService))
                         .setConversionService(conversionService())
                         .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                         .build();
@@ -176,6 +165,16 @@ class UserModerationReportControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/reports/mine/90"))
                 .andExpect(flash().attribute("action", "appealed"));
+    }
+
+    @Test
+    void postAppealRedirectsWithInvalidErrorCode() throws Exception {
+        AuthenticationUtils.authenticateUser(7L);
+
+        mockMvc.perform(post("/reports/mine/90/appeal").param("details", "invalid😀"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/reports/mine/90"))
+                .andExpect(flash().attribute("errorCode", "moderation.report.error.invalid"));
     }
 
     @Test
