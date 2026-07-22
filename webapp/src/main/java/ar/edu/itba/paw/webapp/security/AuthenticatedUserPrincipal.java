@@ -5,15 +5,13 @@ import ar.edu.itba.paw.models.UserAccount;
 import ar.edu.itba.paw.models.types.UserRole;
 import ar.edu.itba.paw.services.security.AuthenticatedPrincipal;
 import java.io.Serial;
-import java.io.Serializable;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-public class AuthenticatedUserPrincipal
-        implements Principal, UserDetails, AuthenticatedPrincipal, Serializable {
+public class AuthenticatedUserPrincipal implements Principal, UserDetails, AuthenticatedPrincipal {
 
     @Serial private static final long serialVersionUID = 1L;
 
