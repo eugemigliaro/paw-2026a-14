@@ -750,13 +750,14 @@ public class TournamentRegistrationServiceImplTest {
         Mockito.when(tournamentTeamDataService.findByTournamentUnordered(10L))
                 .thenReturn(List.of(bravo));
         Mockito.when(tournamentTeamDataService.findMembersByTournament(10L))
+                .thenReturn(List.of(member(70L, bravo, UserUtils.getUser(200L))))
                 .thenReturn(
-                        List.of(member(70L, bravo, UserUtils.getUser(200L))),
                         List.of(
                                 member(70L, bravo, UserUtils.getUser(200L)),
                                 member(71L, bravo, first.getUser())));
         Mockito.when(tournamentSoloEntryDao.findActiveByTournament(10L))
-                .thenReturn(List.of(first, second, third), List.of(second, third));
+                .thenReturn(List.of(first, second, third))
+                .thenReturn(List.of(second, third));
         Mockito.when(tournamentTeamDataService.countByTournament(10L)).thenReturn(1L);
         final List<TournamentTeam> createdTeams = recordCreatedSoloTeams(tournament);
 
@@ -808,7 +809,8 @@ public class TournamentRegistrationServiceImplTest {
         final TournamentSoloEntry foxtrotEntry =
                 soloEntry(81L, tournament, foxtrotUser, TournamentSoloEntryStatus.IN_POOL);
         Mockito.when(tournamentSoloEntryDao.findActiveByTournament(10L))
-                .thenReturn(List.of(), List.of(echoEntry, foxtrotEntry));
+                .thenReturn(List.of())
+                .thenReturn(List.of(echoEntry, foxtrotEntry));
         Mockito.when(tournamentTeamDataService.countByTournament(10L)).thenReturn(1L);
         final List<TournamentTeam> createdTeams = recordCreatedSoloTeams(tournament);
 
