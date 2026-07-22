@@ -176,7 +176,9 @@ public class SecurityServiceImpl implements SecurityService {
         if (match == null) {
             return false;
         }
-        return isHost(match, current) && isApprovalRequired(match) && !hasStarted(match);
+        return (isHost(match, current) || canActAsAdminMod(current))
+                && isApprovalRequired(match)
+                && !hasStarted(match);
     }
 
     @Override

@@ -96,7 +96,7 @@ player pending join requests
 
 .participation-panel {
 	padding: 0;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .participation-empty-panel {
