@@ -31,17 +31,14 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.MessageSource;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -50,7 +47,6 @@ public class MatchServiceImplTest {
 
     @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDataService matchParticipantDataService;
-    @Mock private MessageSource messageSource;
     @Mock private Clock clock;
     @Mock private SecurityService securityService;
     @Mock private MatchParticipationService matchParticipationService;
@@ -80,14 +76,6 @@ public class MatchServiceImplTest {
                         clock);
         Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
         Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-        Mockito.lenient()
-                .when(
-                        messageSource.getMessage(
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.isNull(),
-                                ArgumentMatchers.anyString(),
-                                ArgumentMatchers.any(Locale.class)))
-                .thenAnswer(invocation -> invocation.getArgument(2));
     }
 
     private void useMatchNotificationService(
