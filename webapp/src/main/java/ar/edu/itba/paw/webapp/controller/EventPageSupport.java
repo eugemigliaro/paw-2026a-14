@@ -7,6 +7,7 @@ import static ar.edu.itba.paw.webapp.utils.ViewFormatUtils.mediaClassFor;
 import ar.edu.itba.paw.models.Match;
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -18,11 +19,13 @@ import ar.edu.itba.paw.services.MatchParticipationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
+import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -33,6 +36,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 final class EventPageSupport {
     private static final int SERIES_PAGE_SIZE = 5;
+    private static final int NEARBY_PAGE_SIZE = 4;
 
     private final MatchService matchService;
     private final MatchParticipationService matchParticipationService;
@@ -88,7 +92,8 @@ final class EventPageSupport {
             final String inviteErrorCode,
             final boolean joinRequestedFlash,
             final boolean seriesJoinRequestedFlash,
-            final int seriesPage) {
+            final int seriesPage,
+            final Locale locale) {
         final Match match =
                 matchService
                         .findVisibleMatchById(eventId, currentUser)
@@ -150,7 +155,7 @@ final class EventPageSupport {
         mav.addObject("reportMatchCanSubmit", reportMatchVisible && !reportMatchAlreadySubmitted);
         mav.addObject("reservationRequiresLogin", interactionState.isReservationRequiresLogin());
         addRealEventPageAttributes(
-                mav, match, confirmedParticipants, seriesOccurrences, currentUser);
+                mav, match, confirmedParticipants, seriesOccurrences, currentUser, locale);
         mav.addObject(
                 "userProfileImageUrls",
                 userProfileImageUrls(
@@ -293,7 +298,8 @@ final class EventPageSupport {
             final Match match,
             final List<User> confirmedParticipants,
             final List<Match> seriesOccurrences,
-            final User currentUser) {
+            final User currentUser,
+            final Locale locale) {
         final User host = match.getHost();
         mav.addObject("event", match);
         mav.addObject("eventMediaClass", mediaClassFor(match.getSport()));
@@ -304,7 +310,14 @@ final class EventPageSupport {
         mav.addObject("hostProfileImageUrl", profileUrlFor(host));
         mav.addObject("participants", confirmedParticipants);
         mav.addObject("aboutParagraphs", buildAboutParagraphs(match));
-        mav.addObject("nearbyEvents", List.of());
+        final List<Match> nearby = findNearbyEvents(match);
+        mav.addObject("nearbyEvents", nearby);
+        if (!nearby.isEmpty()) {
+            mav.addObject(
+                    "nearbyDistanceLabels",
+                    EventCardAttributeUtils.matchDistanceLabels(
+                            nearby, match.getLatitude(), match.getLongitude(), locale));
+        }
         mav.addObject("occurrences", seriesOccurrences);
         mav.addObject(
                 "occurrenceVisibleHrefs", occurrenceVisibleHrefs(seriesOccurrences, currentUser));
@@ -319,6 +332,29 @@ final class EventPageSupport {
         mav.addObject("mapTileUrlTemplate", mapTileUrlTemplate);
         mav.addObject("mapAttribution", mapAttribution);
         mav.addObject("mapZoom", mapDefaultZoom);
+    }
+
+    private List<Match> findNearbyEvents(final Match match) {
+        if (!match.hasCoordinates()) {
+            return List.of();
+        }
+        final PaginatedResult<Match> result =
+                matchService.searchPublicMatches(
+                        null,
+                        null,
+                        null,
+                        null,
+                        EventSort.DISTANCE,
+                        1,
+                        NEARBY_PAGE_SIZE + 1,
+                        null,
+                        null,
+                        match.getLatitude(),
+                        match.getLongitude());
+        return result.getItems().stream()
+                .filter(m -> !m.getId().equals(match.getId()))
+                .limit(NEARBY_PAGE_SIZE)
+                .toList();
     }
 
     private static String buildSeriesScheduleUrl(final Long eventId, final int page) {

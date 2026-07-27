@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationAl
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationNotJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesAlreadyJoinedException;
 import ar.edu.itba.paw.models.exceptions.matchParticipation.MatchParticipationSeriesNotJoinedException;
+import ar.edu.itba.paw.models.query.EventSort;
 import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventStatus;
 import ar.edu.itba.paw.models.types.EventVisibility;
@@ -273,6 +274,17 @@ class EventControllerTest {
                         .joinPolicy(EventJoinPolicy.APPROVAL_REQUIRED)
                         .joinedPlayers(1)
                         .build();
+        final Match nearby =
+                MatchUtils.match(60L)
+                        .sport(Sport.PADEL)
+                        .address("Nearby Padel Court")
+                        .coords(-34.62, -58.39)
+                        .title("Nearby Padel Game")
+                        .startsAt(Instant.parse("2026-04-10T10:00:00Z"))
+                        .endsAt(Instant.parse("2026-04-10T12:00:00Z"))
+                        .maxPlayers(8)
+                        .joinedPlayers(3)
+                        .build();
 
         matchService = Mockito.mock(MatchService.class);
 
@@ -412,6 +424,29 @@ class EventControllerTest {
                             final List<Match> seriesOccurrences = invocation.getArgument(1);
                             final User viewer = invocation.getArgument(2);
                             return interactionState(match, seriesOccurrences, viewer);
+                        });
+
+        Mockito.when(
+                        matchService.searchPublicMatches(
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.eq(EventSort.DISTANCE),
+                                ArgumentMatchers.anyInt(),
+                                ArgumentMatchers.anyInt(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any(),
+                                ArgumentMatchers.any()))
+                .thenAnswer(
+                        invocation -> {
+                            final Double lat = invocation.getArgument(9);
+                            final Double lon = invocation.getArgument(10);
+                            if (lat == null || lon == null) {
+                                return new PaginatedResult<>(List.of(), 0, 1, 4);
+                            }
+                            return new PaginatedResult<>(List.of(nearby), 1, 1, 4);
                         });
 
         matchReservationService = Mockito.mock(MatchReservationService.class);
@@ -1277,6 +1312,45 @@ class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("matches/detail"))
                 .andExpect(model().attributeExists("seriesReservationErrorCode"));
+    }
+
+    @Test
+    void getMatchDetailsShowsNearbyEventsWhenMatchHasCoordinates() throws Exception {
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("nearbyEvents"))
+                .andExpect(
+                        model().attribute(
+                                        "nearbyEvents",
+                                        Matchers.hasItem(
+                                                Matchers.hasProperty("id", Matchers.is(60L)))));
+    }
+
+    @Test
+    void getMatchDetailsShowsNearbyDistanceLabels() throws Exception {
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("nearbyDistanceLabels"));
+    }
+
+    @Test
+    void getMatchDetailsExcludesCurrentMatchFromNearbyEvents() throws Exception {
+        mockMvc.perform(get("/matches/42"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        model().attribute(
+                                        "nearbyEvents",
+                                        Matchers.not(
+                                                Matchers.hasItem(
+                                                        Matchers.hasProperty(
+                                                                "id", Matchers.is(42L))))));
+    }
+
+    @Test
+    void getMatchDetailsShowsEmptyNearbyEventsWhenMatchHasNoCoordinates() throws Exception {
+        mockMvc.perform(get("/matches/43"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("nearbyEvents", Matchers.empty()));
     }
 
     private MatchActionCapabilities actionCapabilities(final Match match, final User viewer) {

@@ -94,7 +94,8 @@ public class EventController {
                 inviteErrorCode,
                 Boolean.TRUE.equals(model.asMap().get("joinRequested")),
                 Boolean.TRUE.equals(model.asMap().get("seriesJoinRequested")),
-                seriesPage);
+                seriesPage,
+                locale);
     }
 
     @PostMapping("/matches/{matchId:\\d+}/reservations")
@@ -198,7 +199,8 @@ public class EventController {
                 null,
                 false,
                 false,
-                1);
+                1,
+                locale);
     }
 
     private ModelAndView seriesReservationErrorDetails(
@@ -222,6 +224,7 @@ public class EventController {
                 null,
                 false,
                 false,
-                1);
+                1,
+                locale);
     }
 }

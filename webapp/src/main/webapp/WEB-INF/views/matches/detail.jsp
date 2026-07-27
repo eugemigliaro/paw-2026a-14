@@ -1372,6 +1372,7 @@
 					</section>
 				</c:if>
 
+			<c:if test="${not empty nearbyEvents}">
 				<section class="detail-recommendations">
 					<div class="section-head">
 						<div>
@@ -1394,10 +1395,11 @@
 							var="event"
 							items="${nearbyEvents}"
 						>
-							<ui:eventCard match="${event}" headingLevel="h3" />
+							<ui:eventCard match="${event}" headingLevel="h3" distanceLabel="${nearbyDistanceLabels[event.id]}" />
 						</c:forEach>
 					</div>
 				</section>
+			</c:if>
 			</main>
 		</div>
 	</body>
