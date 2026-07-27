@@ -46,24 +46,23 @@ public class AuthController {
 
     @GetMapping("/login")
     public ModelAndView showLogin(
-            @RequestParam(value = "error", required = false) final String error,
+            @RequestParam(value = "error", required = false) final LoginErrorCode loginErrorCode,
             @RequestParam(value = "email", required = false) final String email,
-            @RequestParam(value = "verified", required = false) final String verified,
-            @RequestParam(value = "reset", required = false) final String reset,
-            @RequestParam(value = "logout", required = false) final String logout,
-            @RequestParam(value = "continue", required = false) final String continueFlag,
+            @RequestParam(value = "verified", required = false) final Boolean verified,
+            @RequestParam(value = "reset", required = false) final Boolean reset,
+            @RequestParam(value = "logout", required = false) final Boolean logout,
+            @RequestParam(value = "continue", required = false) final Boolean continueFlag,
             final HttpServletResponse response,
             final Locale locale) {
         disableBrowserCaching(response);
         final ModelAndView mav = new ModelAndView("auth/login");
         mav.addObject("loginEmail", email == null ? "" : email);
-        final String loginErrorCode = loginErrorCode(error);
-        mav.addObject("loginErrorCode", loginErrorCode);
-        mav.addObject("showResendVerification", "verify".equals(loginErrorCode));
-        mav.addObject("verificationConfirmed", isTruthyFlag(verified));
-        mav.addObject("passwordResetCompleted", isTruthyFlag(reset));
-        mav.addObject("loggedOut", isTruthyFlag(logout));
-        mav.addObject("loginContinue", continueFlag != null);
+        mav.addObject("loginErrorCode", loginErrorCode == null ? null : loginErrorCode.getCode());
+        mav.addObject("showResendVerification", LoginErrorCode.VERIFY.equals(loginErrorCode));
+        mav.addObject("verificationConfirmed", Boolean.TRUE.equals(verified));
+        mav.addObject("passwordResetCompleted", Boolean.TRUE.equals(reset));
+        mav.addObject("loggedOut", Boolean.TRUE.equals(logout));
+        mav.addObject("loginContinue", Boolean.TRUE.equals(continueFlag));
         return mav;
     }
 
@@ -188,22 +187,5 @@ public class AuthController {
                             .format(expiresAt.atZone(PlatformTime.ZONE)));
         }
         return mav;
-    }
-
-    private static boolean isTruthyFlag(final String flag) {
-        return "1".equals(flag) || "true".equalsIgnoreCase(flag);
-    }
-
-    private static String loginErrorCode(final String error) {
-        if ("verify".equalsIgnoreCase(error)) {
-            return "verify";
-        }
-        if ("passwordSetup".equalsIgnoreCase(error)) {
-            return "passwordSetup";
-        }
-        if ("invalid".equalsIgnoreCase(error)) {
-            return "invalid";
-        }
-        return null;
     }
 }

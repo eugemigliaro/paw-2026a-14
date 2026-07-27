@@ -16,6 +16,6 @@ public class ContinueFlagLoginEntryPoint extends LoginUrlAuthenticationEntryPoin
             final HttpServletRequest request,
             final HttpServletResponse response,
             final AuthenticationException authException) {
-        return "/login?continue";
+        return "/login?continue=true";
     }
 }

@@ -27,7 +27,7 @@ public class LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
         }
 
         if (request.getParameter("continue") != null) {
-            builder.queryParam("continue", "");
+            builder.queryParam("continue", "true");
         }
 
         getRedirectStrategy()

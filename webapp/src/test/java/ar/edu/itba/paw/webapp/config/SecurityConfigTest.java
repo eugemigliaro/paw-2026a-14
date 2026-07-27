@@ -94,7 +94,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/new"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -104,7 +104,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments/new/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -143,7 +143,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/matches/new"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -153,7 +153,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/matches/new/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -171,7 +171,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/matches"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -189,7 +189,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/tournaments"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -207,7 +207,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/matches/new").with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -226,7 +226,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/tournaments").with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -297,7 +297,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/reports/mine"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -315,7 +315,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(get("/reports/users/player"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
@@ -347,7 +347,7 @@ class SecurityConfigTest {
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/matches/42/invites/accept").with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login?continue"));
+                .andExpect(redirectedUrl("/login?continue=true"));
     }
 
     @Test
