@@ -358,13 +358,7 @@ public class MatchJpaDao implements MatchDao {
     public Optional<Match> findById(final Long matchId) {
         final Match match = em.find(Match.class, matchId);
 
-        if (match == null) {
-            return Optional.empty();
-        }
-
-        enrichMatchReadModel(match);
-
-        return Optional.of(match);
+        return Optional.ofNullable(match);
     }
 
     @Override
@@ -382,24 +376,11 @@ public class MatchJpaDao implements MatchDao {
 
     @Override
     public List<Match> findSeriesOccurrences(final Long seriesId) {
-        final List<Match> matches =
-                em.createQuery(
-                                "FROM Match m WHERE m.series.id = :seriesId ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
-                                Match.class)
-                        .setParameter("seriesId", seriesId)
-                        .getResultList();
-
-        if (matches.isEmpty()) {
-            return matches;
-        }
-
-        for (final Match match : matches) {
-            if (match != null) {
-                enrichMatchReadModel(match);
-            }
-        }
-
-        return matches;
+        return em.createQuery(
+                        "FROM Match m WHERE m.series.id = :seriesId ORDER BY m.startsAt ASC, m.seriesOccurrenceIndex ASC",
+                        Match.class)
+                .setParameter("seriesId", seriesId)
+                .getResultList();
     }
 
     private static final int DEFAULT_SERIES_PAGE_SIZE = 5;
@@ -440,12 +421,6 @@ public class MatchJpaDao implements MatchDao {
                                 Match.class)
                         .setParameter("ids", ids)
                         .getResultList();
-
-        for (final Match match : matches) {
-            if (match != null) {
-                enrichMatchReadModel(match);
-            }
-        }
 
         return new PaginatedResult<>(matches, totalCount, safePage, safePageSize);
     }
@@ -674,13 +649,6 @@ public class MatchJpaDao implements MatchDao {
         }
 
         return matchesQuery.getResultList().stream()
-                .map(
-                        m -> {
-                            if (m != null) {
-                                enrichMatchReadModel(m);
-                            }
-                            return m;
-                        })
                 .sorted(Comparator.comparingInt(match -> order.get(match.getId())))
                 .toList();
     }
@@ -693,28 +661,6 @@ public class MatchJpaDao implements MatchDao {
         setCommonParams(countQuery);
         setParams(countQuery, parts.params);
         return countQuery.getSingleResult().intValue();
-    }
-
-    private int countJoinedPlayers(final Match match) {
-        return em.createQuery(
-                        "SELECT COUNT(mp.id) FROM MatchParticipant mp"
-                                + " WHERE mp.match = :match AND mp.status IN :activeStatuses",
-                        Long.class)
-                .setParameter("match", match)
-                .setParameter("activeStatuses", ACTIVE_PARTICIPANT_STATUSES)
-                .getSingleResult()
-                .intValue();
-    }
-
-    private void enrichMatchReadModel(final Match match) {
-        match.setJoinedPlayers(countJoinedPlayers(match));
-        if (match.getStoredStatus() == EventStatus.OPEN) {
-            final Instant effectiveEnd =
-                    match.getEndsAt() == null ? match.getStartsAt() : match.getEndsAt();
-            if (!effectiveEnd.isAfter(Instant.now())) {
-                match.setDerivedStatus(EventStatus.COMPLETED);
-            }
-        }
     }
 
     private static QueryParts joinedParts(final Long userId) {

@@ -210,7 +210,8 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(EventStatus.OPEN, found.getStoredStatus());
         em.flush();
         em.clear();
-        Assertions.assertEquals(EventStatus.OPEN, em.find(Match.class, match.getId()).getStatus());
+        Assertions.assertEquals(
+                EventStatus.COMPLETED, em.find(Match.class, match.getId()).getStatus());
     }
 
     @Test
@@ -240,7 +241,8 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(EventStatus.OPEN, found.getStoredStatus());
         em.flush();
         em.clear();
-        Assertions.assertEquals(EventStatus.OPEN, em.find(Match.class, match.getId()).getStatus());
+        Assertions.assertEquals(
+                EventStatus.COMPLETED, em.find(Match.class, match.getId()).getStatus());
     }
 
     @Test

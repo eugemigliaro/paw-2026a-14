@@ -28,6 +28,7 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.Version;
+import org.hibernate.annotations.Formula;
 
 @Entity
 @Table(name = "matches")
@@ -89,9 +90,9 @@ public class Match {
     @Convert(converter = EventStatusConverter.class)
     private EventStatus status;
 
-    @Transient private int joinedPlayers;
-
-    @Transient private EventStatus derivedStatus;
+    @Formula(
+            "(SELECT COUNT(mp.id) FROM match_participants mp WHERE mp.match_id = id AND mp.status IN ('joined', 'checked_in', 'invited'))")
+    private int joinedPlayers;
 
     @Transient private Double distanceKmFromViewer;
 
@@ -252,7 +253,13 @@ public class Match {
     }
 
     public EventStatus getStatus() {
-        return derivedStatus == null ? status : derivedStatus;
+        if (status == EventStatus.OPEN) {
+            final Instant effectiveEnd = endsAt == null ? startsAt : endsAt;
+            if (!effectiveEnd.isAfter(Instant.now())) {
+                return EventStatus.COMPLETED;
+            }
+        }
+        return status;
     }
 
     public Double getDistanceKmFromViewer() {
@@ -365,11 +372,6 @@ public class Match {
 
     public void setStatus(final EventStatus status) {
         this.status = status;
-        this.derivedStatus = null;
-    }
-
-    public void setDerivedStatus(final EventStatus derivedStatus) {
-        this.derivedStatus = derivedStatus;
     }
 
     public void setDistanceKmFromViewer(final Double distanceKmFromViewer) {
