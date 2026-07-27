@@ -860,7 +860,7 @@ class HostControllerTest {
                                                         Matchers.is(EventJoinPolicy.DIRECT)),
                                                 Matchers.hasProperty(
                                                         "endDate",
-                                                        Matchers.is(LocalDate.of(2026, 4, 6))),
+                                                        Matchers.is(LocalDate.of(2099, 1, 6))),
                                                 Matchers.hasProperty(
                                                         "endTime",
                                                         Matchers.is(LocalTime.of(9, 0))))));

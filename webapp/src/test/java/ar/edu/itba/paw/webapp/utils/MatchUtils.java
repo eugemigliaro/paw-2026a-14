@@ -27,8 +27,8 @@ public class MatchUtils {
         private Double longitude = null;
         private String title = "Title";
         private String description = "Desc";
-        private Instant startsAt = Instant.parse("2026-04-06T10:00:00Z");
-        private Instant endsAt = Instant.parse("2026-04-06T12:00:00Z");
+        private Instant startsAt = Instant.parse("2099-01-06T10:00:00Z");
+        private Instant endsAt = Instant.parse("2099-01-06T12:00:00Z");
         private int maxPlayers = 8;
         private BigDecimal pricePerPlayer = null;
         private EventVisibility visibility = EventVisibility.PUBLIC;

@@ -57,7 +57,7 @@ public class MatchServiceImplTest {
     private MatchNotificationService matchNotificationService;
     private MatchServiceImpl matchService;
 
-    private static final Instant FIXED_NOW = Instant.parse("2026-04-05T00:00:00Z");
+    private static final Instant FIXED_NOW = Instant.parse("2099-01-01T00:00:00Z");
 
     @BeforeEach
     public void setUp() {
@@ -684,8 +684,8 @@ public class MatchServiceImplTest {
     @Test
     public void testCreateRecurringMatchGeneratesWeeklyOccurrences() {
         // 1. Arrange
-        final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
-        final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
+        final Instant startsAt = Instant.parse("2099-01-10T18:00:00Z");
+        final Instant endsAt = Instant.parse("2099-01-10T19:30:00Z");
         final User host = UserUtils.getUser(1L);
         final MatchSeries series = MatchUtils.getMatchSeries(77L, host);
         final Match firstOccurrence =
@@ -723,8 +723,8 @@ public class MatchServiceImplTest {
                         null,
                         "Weekly Padel",
                         "Test Description",
-                        Instant.parse("2026-04-17T18:00:00Z"),
-                        Instant.parse("2026-04-17T19:30:00Z"),
+                        Instant.parse("2099-01-17T18:00:00Z"),
+                        Instant.parse("2099-01-17T19:30:00Z"),
                         8,
                         BigDecimal.ZERO,
                         EventVisibility.PUBLIC,
@@ -748,8 +748,8 @@ public class MatchServiceImplTest {
                         null,
                         "Weekly Padel",
                         "Test Description",
-                        Instant.parse("2026-04-24T18:00:00Z"),
-                        Instant.parse("2026-04-24T19:30:00Z"),
+                        Instant.parse("2099-01-24T18:00:00Z"),
+                        Instant.parse("2099-01-24T19:30:00Z"),
                         8,
                         BigDecimal.ZERO,
                         EventVisibility.PUBLIC,
@@ -869,9 +869,9 @@ public class MatchServiceImplTest {
     @Test
     public void testCreateRecurringMatchGeneratesOccurrencesUntilDate() {
         // 1. Arrange
-        final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
-        final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
-        final LocalDate untilDate = java.time.LocalDate.of(2026, 4, 17);
+        final Instant startsAt = Instant.parse("2099-01-10T18:00:00Z");
+        final Instant endsAt = Instant.parse("2099-01-10T19:30:00Z");
+        final LocalDate untilDate = java.time.LocalDate.of(2099, 1, 17);
         final User host = UserUtils.getUser(1L);
         final MatchSeries series = MatchUtils.getMatchSeries(88L, host);
         final Match firstOccurrence =
@@ -909,8 +909,8 @@ public class MatchServiceImplTest {
                         null,
                         "Weekly Padel",
                         "Test Description",
-                        Instant.parse("2026-04-17T18:00:00Z"),
-                        Instant.parse("2026-04-17T19:30:00Z"),
+                        Instant.parse("2099-01-17T18:00:00Z"),
+                        Instant.parse("2099-01-17T19:30:00Z"),
                         8,
                         BigDecimal.ZERO,
                         EventVisibility.PUBLIC,
@@ -1009,8 +1009,8 @@ public class MatchServiceImplTest {
     @Test
     public void testCreateRecurringMatchRejectsUntilDateWithoutRepeatedOccurrence() {
         // 1. Arrange
-        final Instant startsAt = Instant.parse("2026-04-10T18:00:00Z");
-        final Instant endsAt = Instant.parse("2026-04-10T19:30:00Z");
+        final Instant startsAt = Instant.parse("2099-01-10T18:00:00Z");
+        final Instant endsAt = Instant.parse("2099-01-10T19:30:00Z");
 
         // 2. Exercise & 3. Assert
         Assertions.assertThrows(
@@ -1036,7 +1036,7 @@ public class MatchServiceImplTest {
                                         new CreateRecurrenceRequest(
                                                 RecurrenceFrequency.WEEKLY,
                                                 RecurrenceEndMode.UNTIL_DATE,
-                                                java.time.LocalDate.of(2026, 4, 12),
+                                                java.time.LocalDate.of(2099, 1, 12),
                                                 null))));
     }
 
@@ -2810,7 +2810,7 @@ public class MatchServiceImplTest {
                 null,
                 title,
                 "Test Description",
-                Instant.now(),
+                FIXED_NOW.plusSeconds(3600),
                 null,
                 10,
                 BigDecimal.ZERO,

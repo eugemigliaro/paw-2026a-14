@@ -30,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class MatchReservationServiceImplTest {
 
-    private static final Instant FIXED_NOW = Instant.parse("2026-04-05T18:00:00Z");
+    private static final Instant FIXED_NOW = Instant.parse("2099-01-01T18:00:00Z");
 
     @Mock private MatchDataService matchDataService;
     @Mock private MatchParticipantDataService matchParticipantDataService;
