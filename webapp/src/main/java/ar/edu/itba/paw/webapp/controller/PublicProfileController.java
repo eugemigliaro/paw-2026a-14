@@ -69,7 +69,7 @@ public class PublicProfileController {
     public ModelAndView showPublicProfile(
             @CurrentUser final User user,
             @PathVariable("username") final String username,
-            @RequestParam(value = "reviewForm", required = false) final String reviewForm,
+            @RequestParam(value = "reviewForm", required = false) final Boolean reviewForm,
             @RequestParam(value = "reviewFilter", required = false, defaultValue = "both")
                     final PlayerReviewFilter reviewFilter,
             @RequestParam(value = "reviewPage", defaultValue = "1") final int reviewPage,
@@ -78,7 +78,7 @@ public class PublicProfileController {
 
         final ModelAndView mav = new ModelAndView("users/profile");
         mav.addObject("reviewStatus", model.asMap().get("reviewStatus"));
-        mav.addObject("reportStatus", model.asMap().get("reportStatus"));
+        mav.addObject("reportSent", Boolean.TRUE.equals(model.asMap().get("reportSent")));
         mav.addObject("targetUser", targetUser);
         mav.addObject("profileImageUrl", ImageUrlHelper.profileUrlFor(targetUser));
         addReviewModel(mav, targetUser, user, reviewForm, reviewFilter, reviewPage);
@@ -153,7 +153,7 @@ public class PublicProfileController {
             final ModelAndView mav,
             final User targetUser,
             final User currentUser,
-            final String reviewForm,
+            final Boolean reviewForm,
             final PlayerReviewFilter reviewFilter,
             final int reviewPage) {
         final PlayerReviewSummary summary = playerReviewService.findSummaryForUser(targetUser);
@@ -195,25 +195,25 @@ public class PublicProfileController {
                 "reviewPreviousPageHref",
                 reviewResult.hasPrevious()
                         ? buildReviewPageUrl(
-                                targetUser, reviewFilter, reviewResult.getPage() - 1, null)
+                                targetUser, reviewFilter, reviewResult.getPage() - 1, false)
                         : null);
         mav.addObject(
                 "reviewNextPageHref",
                 reviewResult.hasNext()
                         ? buildReviewPageUrl(
-                                targetUser, reviewFilter, reviewResult.getPage() + 1, null)
+                                targetUser, reviewFilter, reviewResult.getPage() + 1, false)
                         : null);
         mav.addObject("reviewCanSubmit", reviewCanSubmit);
-        mav.addObject("reviewFormVisible", reviewCanSubmit && "open".equals(reviewForm));
+        mav.addObject("reviewFormVisible", reviewCanSubmit && Boolean.TRUE.equals(reviewForm));
         mav.addObject("viewerReview", viewerReview.orElse(null));
         mav.addObject("reviewActionPath", profilePath + "/reviews");
         mav.addObject("reviewDeletePath", profilePath + "/reviews/delete");
         mav.addObject(
                 "reviewFormPath",
-                buildReviewPageUrl(targetUser, reviewFilter, reviewResult.getPage(), "open"));
+                buildReviewPageUrl(targetUser, reviewFilter, reviewResult.getPage(), true));
         mav.addObject(
                 "reviewSectionPath",
-                buildReviewPageUrl(targetUser, reviewFilter, reviewResult.getPage(), null));
+                buildReviewPageUrl(targetUser, reviewFilter, reviewResult.getPage(), false));
         if (reviewCanSubmit) {
             mav.addObject("reviewCommentPromptCode", "profile.reviews.commentPrompt");
         }
@@ -244,7 +244,7 @@ public class PublicProfileController {
             final PlayerReviewFilter selectedFilter) {
         return new FilterOptionViewModel(
                 "profile.reviews.filter." + filter.getQueryValue(),
-                buildReviewPageUrl(user, filter, 1, null),
+                buildReviewPageUrl(user, filter, 1, false),
                 null,
                 null,
                 filter == selectedFilter);
@@ -289,7 +289,7 @@ public class PublicProfileController {
             final int currentPage) {
         return new PaginationItemViewModel(
                 Integer.toString(page),
-                buildReviewPageUrl(user, selectedFilter, page, null),
+                buildReviewPageUrl(user, selectedFilter, page, false),
                 page == currentPage,
                 false);
     }
@@ -298,13 +298,13 @@ public class PublicProfileController {
             final User user,
             final PlayerReviewFilter selectedFilter,
             final int page,
-            final String reviewForm) {
+            final boolean reviewForm) {
         final UriComponentsBuilder builder =
                 UriComponentsBuilder.fromPath("/users/" + user.getUsername())
                         .queryParam("reviewFilter", selectedFilter.getQueryValue())
                         .queryParam("reviewPage", page);
-        if (reviewForm != null && !reviewForm.isBlank()) {
-            builder.queryParam("reviewForm", reviewForm);
+        if (reviewForm) {
+            builder.queryParam("reviewForm", "true");
         }
         return builder.fragment("reviews").build().toUriString();
     }

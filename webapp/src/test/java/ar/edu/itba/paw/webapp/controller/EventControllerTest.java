@@ -713,7 +713,7 @@ class EventControllerTest {
                                                 Matchers.hasEntry(
                                                         3L,
                                                         "/users/"
-                                                                + "user3?reviewForm=open#reviews"))));
+                                                                + "user3?reviewForm=true#reviews"))));
     }
 
     @Test

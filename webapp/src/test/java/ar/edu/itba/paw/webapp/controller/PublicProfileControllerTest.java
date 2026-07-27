@@ -215,7 +215,7 @@ class PublicProfileControllerTest {
                 .andExpect(
                         model().attribute(
                                         "reviewFormPath",
-                                        "/users/second-player?reviewFilter=both&reviewPage=1&reviewForm=open#reviews"))
+                                        "/users/second-player?reviewFilter=both&reviewPage=1&reviewForm=true#reviews"))
                 .andExpect(model().attributeExists("viewerReview"))
                 .andExpect(
                         model().attribute(
@@ -307,7 +307,7 @@ class PublicProfileControllerTest {
                         get("/users/second-player")
                                 .param("reviewFilter", "positive")
                                 .param("reviewPage", "2")
-                                .param("reviewForm", "open"))
+                                .param("reviewForm", "true"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("users/profile"))
                 .andExpect(model().attribute("reviewCanSubmit", true))

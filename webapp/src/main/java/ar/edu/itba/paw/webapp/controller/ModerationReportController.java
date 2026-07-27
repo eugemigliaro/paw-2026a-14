@@ -54,13 +54,14 @@ public class ModerationReportController {
     @GetMapping("/reports/users/{username}")
     public ModelAndView showUserReportPage(
             @PathVariable("username") final String username,
-            @RequestParam(value = "report", required = false) final String reportStatus,
+            @RequestParam(value = "report", required = false) final Boolean reportSent,
             @RequestParam(value = "reportError", required = false) final String reportErrorCode,
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model) {
         final User reportedUser = userService.findByUsername(username).orElse(null);
         return baseReportView(
-                model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
+                Boolean.TRUE.equals(reportSent)
+                        || Boolean.TRUE.equals(model.asMap().get("reportSent")),
                 reportErrorCode,
                 "page.title.reportUser",
                 "report.page.user.description",
@@ -76,7 +77,7 @@ public class ModerationReportController {
     @GetMapping("/reports/reviews/{reviewId}")
     public ModelAndView showReviewReportPage(
             @PathVariable("reviewId") final Long reviewId,
-            @RequestParam(value = "report", required = false) final String reportStatus,
+            @RequestParam(value = "report", required = false) final Boolean reportSent,
             @RequestParam(value = "reportError", required = false) final String reportErrorCode,
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model) {
@@ -84,7 +85,8 @@ public class ModerationReportController {
         final User author = review.getReviewer();
         final User reviewedUser = review.getReviewed();
         return baseReportView(
-                model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
+                Boolean.TRUE.equals(reportSent)
+                        || Boolean.TRUE.equals(model.asMap().get("reportSent")),
                 reportErrorCode,
                 "page.title.reportReview",
                 "report.page.review.description",
@@ -100,13 +102,14 @@ public class ModerationReportController {
     @GetMapping("/reports/matches/{matchId}")
     public ModelAndView showMatchReportPage(
             @PathVariable("matchId") final Long matchId,
-            @RequestParam(value = "report", required = false) final String reportStatus,
+            @RequestParam(value = "report", required = false) final Boolean reportSent,
             @RequestParam(value = "reportError", required = false) final String reportErrorCode,
             @ModelAttribute("reportForm") final ReportForm form,
             final Model model) {
         final Match match = matchService.findMatchById(matchId).orElse(null);
         return baseReportView(
-                model.asMap().get("reportSent") == Boolean.TRUE ? "sent" : reportStatus,
+                Boolean.TRUE.equals(reportSent)
+                        || Boolean.TRUE.equals(model.asMap().get("reportSent")),
                 reportErrorCode,
                 "page.title.reportMatch",
                 "report.page.match.descriptionText",
@@ -135,7 +138,7 @@ public class ModerationReportController {
                     username,
                     form.getReason(),
                     errors.getAllErrors());
-            return showUserReportPage(username, null, null, form, new ExtendedModelMap());
+            return showUserReportPage(username, false, null, form, new ExtendedModelMap());
         }
 
         try {
@@ -150,11 +153,11 @@ public class ModerationReportController {
                     reportedUser.getId(),
                     form.getReason(),
                     form.getDetails());
-            return redirectToReportUser(username, null, "sent", redirectAttributes);
+            return redirectToReportUser(username, null, true, redirectAttributes);
         } catch (final ModerationException e) {
             final String errorMsg = "moderation.report.error." + e.getMessage();
             errors.reject(errorMsg);
-            return showUserReportPage(username, null, null, form, new ExtendedModelMap())
+            return showUserReportPage(username, false, null, form, new ExtendedModelMap())
                     .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
         }
     }
@@ -175,7 +178,7 @@ public class ModerationReportController {
                     reviewId,
                     form.getReason(),
                     errors.getAllErrors());
-            return showReviewReportPage(reviewId, null, null, form, new ExtendedModelMap());
+            return showReviewReportPage(reviewId, false, null, form, new ExtendedModelMap());
         }
 
         try {
@@ -190,11 +193,11 @@ public class ModerationReportController {
                     review.getId(),
                     form.getReason(),
                     form.getDetails());
-            return redirectToReportReview(review.getId(), null, "sent", redirectAttributes);
+            return redirectToReportReview(review.getId(), null, true, redirectAttributes);
         } catch (final ModerationException e) {
             final String errorMsg = "moderation.report.error." + e.getMessage();
             errors.reject(errorMsg);
-            return showReviewReportPage(reviewId, null, null, form, new ExtendedModelMap())
+            return showReviewReportPage(reviewId, false, null, form, new ExtendedModelMap())
                     .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
         }
     }
@@ -215,7 +218,7 @@ public class ModerationReportController {
                     matchId,
                     form.getReason(),
                     errors.getAllErrors());
-            return showMatchReportPage(matchId, null, null, form, new ExtendedModelMap());
+            return showMatchReportPage(matchId, false, null, form, new ExtendedModelMap());
         }
 
         try {
@@ -230,17 +233,17 @@ public class ModerationReportController {
                     match.getId(),
                     form.getReason(),
                     form.getDetails());
-            return redirectToReportMatch(match.getId(), null, "sent", redirectAttributes);
+            return redirectToReportMatch(match.getId(), null, true, redirectAttributes);
         } catch (final ModerationException e) {
             final String errorMsg = "moderation.report.error." + e.getMessage();
             errors.reject(errorMsg);
-            return showMatchReportPage(matchId, null, null, form, new ExtendedModelMap())
+            return showMatchReportPage(matchId, false, null, form, new ExtendedModelMap())
                     .addObject(BindingResult.MODEL_KEY_PREFIX + "reportForm", errors);
         }
     }
 
     private ModelAndView baseReportView(
-            final String reportStatus,
+            final boolean reportSent,
             final String reportErrorCode,
             final String pageTitleCode,
             final String pageDescriptionCode,
@@ -263,7 +266,7 @@ public class ModerationReportController {
                 "targetUserProfileImageUrl", targetUser == null ? null : profileUrlFor(targetUser));
         mav.addObject("targetReview", targetReview);
         mav.addObject("targetMatch", targetMatch);
-        mav.addObject("reportSent", "sent".equalsIgnoreCase(reportStatus));
+        mav.addObject("reportSent", reportSent);
         mav.addObject(
                 "reportErrorMessageCode",
                 reportErrorCode == null ? null : "moderation.report.error." + reportErrorCode);
@@ -271,13 +274,13 @@ public class ModerationReportController {
     }
 
     private ModelAndView redirectToReportUser(
-            final String username, final String errorCode, final String status) {
+            final String username, final String errorCode, final boolean reportSent) {
         final StringBuilder redirect =
                 new StringBuilder("redirect:/reports/users/").append(username);
         if (errorCode != null) {
             redirect.append("?reportError=").append(errorCode);
-        } else if (status != null) {
-            redirect.append("?report=").append(status);
+        } else if (reportSent) {
+            redirect.append("?report=true");
         }
         return new ModelAndView(redirect.toString());
     }
@@ -285,23 +288,23 @@ public class ModerationReportController {
     private ModelAndView redirectToReportUser(
             final String username,
             final String errorCode,
-            final String status,
+            final boolean reportSent,
             final RedirectAttributes redirectAttributes) {
-        if (status != null) {
+        if (reportSent) {
             redirectAttributes.addFlashAttribute("reportSent", true);
             return new ModelAndView("redirect:/reports/users/" + username);
         }
-        return redirectToReportUser(username, errorCode, null);
+        return redirectToReportUser(username, errorCode, false);
     }
 
     private ModelAndView redirectToReportReview(
-            final Long reviewId, final String errorCode, final String status) {
+            final Long reviewId, final String errorCode, final boolean reportSent) {
         final StringBuilder redirect =
                 new StringBuilder("redirect:/reports/reviews/").append(reviewId);
         if (errorCode != null) {
             redirect.append("?reportError=").append(errorCode);
-        } else if (status != null) {
-            redirect.append("?report=").append(status);
+        } else if (reportSent) {
+            redirect.append("?report=true");
         }
         return new ModelAndView(redirect.toString());
     }
@@ -309,23 +312,23 @@ public class ModerationReportController {
     private ModelAndView redirectToReportReview(
             final Long reviewId,
             final String errorCode,
-            final String status,
+            final boolean reportSent,
             final RedirectAttributes redirectAttributes) {
-        if (status != null) {
+        if (reportSent) {
             redirectAttributes.addFlashAttribute("reportSent", true);
             return new ModelAndView("redirect:/reports/reviews/" + reviewId);
         }
-        return redirectToReportReview(reviewId, errorCode, null);
+        return redirectToReportReview(reviewId, errorCode, false);
     }
 
     private ModelAndView redirectToReportMatch(
-            final Long matchId, final String errorCode, final String status) {
+            final Long matchId, final String errorCode, final boolean reportSent) {
         final StringBuilder redirect =
                 new StringBuilder("redirect:/reports/matches/").append(matchId);
         if (errorCode != null) {
             redirect.append("?reportError=").append(errorCode);
-        } else if (status != null) {
-            redirect.append("?report=").append(status);
+        } else if (reportSent) {
+            redirect.append("?report=true");
         }
         return new ModelAndView(redirect.toString());
     }
@@ -333,12 +336,12 @@ public class ModerationReportController {
     private ModelAndView redirectToReportMatch(
             final Long matchId,
             final String errorCode,
-            final String status,
+            final boolean reportSent,
             final RedirectAttributes redirectAttributes) {
-        if (status != null) {
+        if (reportSent) {
             redirectAttributes.addFlashAttribute("reportSent", true);
             return new ModelAndView("redirect:/reports/matches/" + matchId);
         }
-        return redirectToReportMatch(matchId, errorCode, null);
+        return redirectToReportMatch(matchId, errorCode, false);
     }
 }

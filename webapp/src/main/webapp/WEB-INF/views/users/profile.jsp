@@ -173,7 +173,7 @@
 							</c:choose>
 							</div>
 						</c:if>
-							<c:if test="${reportStatus eq 'sent'}">
+							<c:if test="${reportSent}">
 								<div class="notice notice--success">
 									<spring:message code="moderation.report.sent" />
 								</div>

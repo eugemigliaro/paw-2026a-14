@@ -426,7 +426,7 @@ final class EventPageSupport {
                     && reviewableUserIds.contains(participant.getId())) {
                 hrefs.put(
                         participant.getId(),
-                        "/users/" + participant.getUsername() + "?reviewForm=open#reviews");
+                        "/users/" + participant.getUsername() + "?reviewForm=true#reviews");
             }
         }
         return hrefs;
