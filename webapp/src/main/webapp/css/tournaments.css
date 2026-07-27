@@ -203,12 +203,6 @@
 	gap: 0.5rem;
 }
 
-.tournament-bracket-match__round {
-	color: var(--text-secondary);
-	font-size: 0.72rem;
-	font-weight: 700;
-}
-
 .tournament-bracket-match__status {
 	border-radius: 999px;
 	display: inline-block;

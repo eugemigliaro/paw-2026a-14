@@ -146,18 +146,16 @@
 											<article class="tournament-schedule-match">
 												<div class="tournament-bracket-match__header">
 													<p class="tournament-bracket-match__label">
-														<spring:message code="tournament.bracket.match.label" arguments="${schedule.matchNumber}" />
-													</p>
-													<span class="tournament-bracket-match__round">
 														<c:choose>
 															<c:when test="${schedule.roundNumber == bracketRoundCount}">
 																<spring:message code="tournament.bracket.round.final" />
 															</c:when>
 															<c:otherwise>
 																<spring:message code="tournament.bracket.round.number" arguments="${schedule.roundNumber}" />
+																- <spring:message code="tournament.bracket.match.label" arguments="${schedule.matchNumber}" />
 															</c:otherwise>
 														</c:choose>
-													</span>
+													</p>
 												</div>
 												<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
 													<label class="field" for="match-start-date-${scheduleStatus.index}">
@@ -213,18 +211,16 @@
 													<article class="tournament-bracket-match">
 														<div class="tournament-bracket-match__header">
 															<p class="tournament-bracket-match__label">
-																<spring:message code="tournament.bracket.match.label" arguments="${match.matchIndex + 1}" />
-															</p>
-															<span class="tournament-bracket-match__round">
 																<c:choose>
 																	<c:when test="${round.key == bracketRoundCount}">
 																		<spring:message code="tournament.bracket.round.final" />
 																	</c:when>
 																	<c:otherwise>
 																		<spring:message code="tournament.bracket.round.number" arguments="${round.key}" />
+																		- <spring:message code="tournament.bracket.match.label" arguments="${match.matchIndex + 1}" />
 																	</c:otherwise>
 																</c:choose>
-															</span>
+															</p>
 														</div>
 														<div class="tournament-bracket-match__teams">
 															<span>
