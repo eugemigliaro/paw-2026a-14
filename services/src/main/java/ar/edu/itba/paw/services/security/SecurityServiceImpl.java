@@ -225,6 +225,12 @@ public class SecurityServiceImpl implements SecurityService {
         if (current == null || username == null) {
             return false;
         }
+
+        final User reportedUser = userService.findByUsername(username).orElse(null);
+        if (reportedUser == null) {
+            return false;
+        }
+
         return !username.equals(current.getUsername());
     }
 
