@@ -9,6 +9,10 @@ import ar.edu.itba.paw.webapp.config.converters.StringToEventJoinPolicyConverter
 import ar.edu.itba.paw.webapp.config.converters.StringToEventStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventTypeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToEventVisibilityConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToHostActionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToHostActionTargetConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToInviteStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToJoinStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToLoginErrorCodeConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToMatchSortConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToPlayerReviewFilterConverter;
@@ -18,6 +22,7 @@ import ar.edu.itba.paw.webapp.config.converters.StringToRecurrenceFrequencyConve
 import ar.edu.itba.paw.webapp.config.converters.StringToReportReasonConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToReportTargetTypeConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToReservationStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToSportConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentMatchStatusConverter;
 import ar.edu.itba.paw.webapp.config.converters.StringToTournamentPairingStrategyConverter;
@@ -221,6 +226,11 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addConverter(new StringToEventCategoryConverter());
         registry.addConverter(new StringToTournamentMatchStatusConverter());
         registry.addConverter(new StringToLoginErrorCodeConverter());
+        registry.addConverter(new StringToReservationStatusConverter());
+        registry.addConverter(new StringToHostActionConverter());
+        registry.addConverter(new StringToHostActionTargetConverter());
+        registry.addConverter(new StringToJoinStatusConverter());
+        registry.addConverter(new StringToInviteStatusConverter());
     }
 
     @Override

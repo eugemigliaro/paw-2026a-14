@@ -116,9 +116,9 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.approveRequest(matchId, user, targetUser);
-            redirectAttributes.addFlashAttribute("hostAction", "requestApproved");
+            redirectAttributes.addFlashAttribute("hostAction", HostAction.REQUEST_APPROVED);
         } catch (final MatchException e) {
-            redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
+            redirectAttributes.addFlashAttribute("hostActionTarget", HostActionTarget.REQUESTS);
             redirectAttributes.addFlashAttribute(
                     "hostActionErrorCode", "event.host.requests.error." + e.getMessage());
         }
@@ -135,9 +135,9 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.rejectRequest(matchId, user, targetUser);
-            redirectAttributes.addFlashAttribute("hostAction", "requestRejected");
+            redirectAttributes.addFlashAttribute("hostAction", HostAction.REQUEST_REJECTED);
         } catch (final MatchParticipationException e) {
-            redirectAttributes.addFlashAttribute("hostActionTarget", "requests");
+            redirectAttributes.addFlashAttribute("hostActionTarget", HostActionTarget.REQUESTS);
             redirectAttributes.addFlashAttribute(
                     "hostActionErrorCode", "event.host.requests.error." + e.getMessage());
         }
@@ -166,7 +166,7 @@ public class HostParticipationController {
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
+            redirectAttributes.addFlashAttribute("hostActionTarget", HostActionTarget.INVITES);
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
             redirectAttributes.addFlashAttribute(
                     "hostActionErrorCode", inviteValidationErrorCode(bindingResult));
@@ -179,10 +179,12 @@ public class HostParticipationController {
                             matchId, user, inviteForm.getEmail(), inviteForm.isInviteSeries());
             redirectAttributes.addFlashAttribute(
                     "hostAction",
-                    invitationResult.isSeriesInvitation() ? "seriesInviteSent" : "inviteSent");
+                    invitationResult.isSeriesInvitation()
+                            ? HostAction.SERIES_INVITE_SENT
+                            : HostAction.INVITE_SENT);
             return redirectToMatch(matchId);
         } catch (final MatchException e) {
-            redirectAttributes.addFlashAttribute("hostActionTarget", "invites");
+            redirectAttributes.addFlashAttribute("hostActionTarget", HostActionTarget.INVITES);
             redirectAttributes.addFlashAttribute("hostInviteEmail", inviteForm.getEmail());
             redirectAttributes.addFlashAttribute(
                     "hostActionErrorCode", "host.invites.error." + e.getMessage());
@@ -200,9 +202,9 @@ public class HostParticipationController {
 
         try {
             matchParticipationService.removeParticipant(matchId, user, targetUser);
-            redirectAttributes.addFlashAttribute("hostAction", "participantRemoved");
+            redirectAttributes.addFlashAttribute("hostAction", HostAction.PARTICIPANT_REMOVED);
         } catch (final MatchException e) {
-            redirectAttributes.addFlashAttribute("hostActionTarget", "participants");
+            redirectAttributes.addFlashAttribute("hostActionTarget", HostActionTarget.PARTICIPANTS);
             redirectAttributes.addFlashAttribute(
                     "hostActionErrorCode", "event.host.participants.error." + e.getMessage());
         }

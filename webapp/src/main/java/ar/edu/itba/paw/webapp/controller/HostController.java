@@ -176,7 +176,7 @@ public class HostController {
 
         try {
             matchService.updateMatch(matchId, user, request);
-            redirectAttributes.addFlashAttribute("hostAction", "updated");
+            redirectAttributes.addFlashAttribute("hostAction", HostAction.UPDATED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchUpdateCapacityBelowConfirmedException e) {
             bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
@@ -216,7 +216,7 @@ public class HostController {
 
         try {
             matchService.updateSeriesFromOccurrence(matchId, user, request);
-            redirectAttributes.addFlashAttribute("hostAction", "seriesUpdated");
+            redirectAttributes.addFlashAttribute("hostAction", HostAction.SERIES_UPDATED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchUpdateCapacityBelowConfirmedException e) {
             bindingResult.rejectValue("maxPlayers", "match.update.error." + e.getMessage());
@@ -234,7 +234,7 @@ public class HostController {
             @PathVariable("matchId") final Long matchId,
             final RedirectAttributes redirectAttributes) {
         matchService.cancelMatch(matchId, user);
-        redirectAttributes.addFlashAttribute("hostAction", "cancelled");
+        redirectAttributes.addFlashAttribute("hostAction", HostAction.CANCELLED);
         return new ModelAndView("redirect:/matches/" + matchId);
     }
 
@@ -249,7 +249,7 @@ public class HostController {
         } catch (final MatchNotRecurringException exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        redirectAttributes.addFlashAttribute("hostAction", "seriesCancelled");
+        redirectAttributes.addFlashAttribute("hostAction", HostAction.SERIES_CANCELLED);
         return new ModelAndView("redirect:/matches/" + matchId);
     }
 

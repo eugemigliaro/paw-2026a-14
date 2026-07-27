@@ -62,7 +62,7 @@ public class PlayerParticipationController {
             final RedirectAttributes redirectAttributes) {
         try {
             matchParticipationService.cancelJoinRequest(matchId, user);
-            redirectAttributes.addFlashAttribute("joinStatus", "cancelled");
+            redirectAttributes.addFlashAttribute("joinStatus", JoinStatus.CANCELLED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
             final String errorCode = e.getMessage();
@@ -77,7 +77,7 @@ public class PlayerParticipationController {
             final RedirectAttributes redirectAttributes) {
         try {
             matchParticipationService.acceptInvite(matchId, user);
-            redirectAttributes.addFlashAttribute("inviteStatus", "accepted");
+            redirectAttributes.addFlashAttribute("inviteStatus", InviteStatus.ACCEPTED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
             final String errorCode = e.getMessage();

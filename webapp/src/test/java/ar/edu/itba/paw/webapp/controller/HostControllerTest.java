@@ -909,7 +909,7 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "updated"));
+                .andExpect(flash().attribute("hostAction", HostAction.UPDATED));
     }
 
     @Test
@@ -949,7 +949,7 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/47"))
-                .andExpect(flash().attribute("hostAction", "seriesUpdated"));
+                .andExpect(flash().attribute("hostAction", HostAction.SERIES_UPDATED));
     }
 
     @Test
@@ -991,7 +991,7 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "updated"));
+                .andExpect(flash().attribute("hostAction", HostAction.UPDATED));
     }
 
     @Test
@@ -1030,7 +1030,7 @@ class HostControllerTest {
                                 .param("pricePerPlayer", "0"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/51"))
-                .andExpect(flash().attribute("hostAction", "updated"));
+                .andExpect(flash().attribute("hostAction", HostAction.UPDATED));
     }
 
     @Test
@@ -1163,7 +1163,7 @@ class HostControllerTest {
         mockMvc.perform(post("/host/matches/42/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "cancelled"));
+                .andExpect(flash().attribute("hostAction", HostAction.CANCELLED));
     }
 
     @Test
@@ -1175,7 +1175,7 @@ class HostControllerTest {
         mockMvc.perform(post("/host/matches/47/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/47"))
-                .andExpect(flash().attribute("hostAction", "cancelled"));
+                .andExpect(flash().attribute("hostAction", HostAction.CANCELLED));
     }
 
     @Test
@@ -1185,7 +1185,7 @@ class HostControllerTest {
         mockMvc.perform(post("/host/matches/47/series/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/47"))
-                .andExpect(flash().attribute("hostAction", "seriesCancelled"));
+                .andExpect(flash().attribute("hostAction", HostAction.SERIES_CANCELLED));
     }
 
     @Test

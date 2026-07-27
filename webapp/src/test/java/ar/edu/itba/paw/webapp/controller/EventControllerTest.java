@@ -29,6 +29,11 @@ import ar.edu.itba.paw.services.MatchReservationService;
 import ar.edu.itba.paw.services.MatchService;
 import ar.edu.itba.paw.services.ModerationService;
 import ar.edu.itba.paw.services.PlayerReviewService;
+import ar.edu.itba.paw.webapp.config.converters.StringToHostActionConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToHostActionTargetConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToInviteStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToJoinStatusConverter;
+import ar.edu.itba.paw.webapp.config.converters.StringToReservationStatusConverter;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUserArgumentResolver;
 import ar.edu.itba.paw.webapp.utils.AuthenticationUtils;
 import ar.edu.itba.paw.webapp.utils.MatchUtils;
@@ -1108,7 +1113,10 @@ class EventControllerTest {
     void getRealMatchDetailsRouteUnderSpanishLocaleExposesHostActionCode() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "updated").param("lang", "es"))
+        mockMvc.perform(
+                        get("/matches/42")
+                                .flashAttr("hostAction", HostAction.UPDATED)
+                                .param("lang", "es"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostActionCode", "updated"));
     }
@@ -1117,7 +1125,7 @@ class EventControllerTest {
     void getRecurringMatchDetailsRouteExposesSeriesHostActionCode() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/46").flashAttr("hostAction", "seriesUpdated"))
+        mockMvc.perform(get("/matches/46").flashAttr("hostAction", HostAction.SERIES_UPDATED))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostActionCode", "seriesUpdated"));
     }
@@ -1126,7 +1134,7 @@ class EventControllerTest {
     void getRealMatchDetailsRouteOpensRequestsForRequestHostAction() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "requestApproved"))
+        mockMvc.perform(get("/matches/42").flashAttr("hostAction", HostAction.REQUEST_APPROVED))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostActionCode", "requestApproved"))
                 .andExpect(model().attribute("hostPendingRequestsOpen", true));
@@ -1136,7 +1144,7 @@ class EventControllerTest {
     void getRealMatchDetailsRouteOpensInvitesForInviteHostAction() throws Exception {
         AuthenticationUtils.authenticateUser(7L, "host@test.com", "host-player");
 
-        mockMvc.perform(get("/matches/42").flashAttr("hostAction", "seriesInviteSent"))
+        mockMvc.perform(get("/matches/42").flashAttr("hostAction", HostAction.SERIES_INVITE_SENT))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("hostActionCode", "seriesInviteSent"))
                 .andExpect(model().attribute("hostPendingInvitesOpen", true));
@@ -1172,7 +1180,7 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/42/reservations"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("reservationStatus", "confirmed"));
+                .andExpect(flash().attribute("reservationStatus", ReservationStatus.CONFIRMED));
     }
 
     @Test
@@ -1202,7 +1210,7 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/42/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("reservationStatus", "cancelled"));
+                .andExpect(flash().attribute("reservationStatus", ReservationStatus.CANCELLED));
     }
 
     @Test
@@ -1227,7 +1235,7 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/46/reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/46"))
-                .andExpect(flash().attribute("reservationStatus", "cancelled"));
+                .andExpect(flash().attribute("reservationStatus", ReservationStatus.CANCELLED));
     }
 
     @Test
@@ -1267,7 +1275,10 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/46/recurring-reservations"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/46"))
-                .andExpect(flash().attribute("reservationStatus", "recurringConfirmed"));
+                .andExpect(
+                        flash().attribute(
+                                        "reservationStatus",
+                                        ReservationStatus.RECURRING_CONFIRMED));
     }
 
     @Test
@@ -1297,7 +1308,10 @@ class EventControllerTest {
         mockMvc.perform(post("/matches/46/recurring-reservations/cancel"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/46"))
-                .andExpect(flash().attribute("reservationStatus", "recurringCancelled"));
+                .andExpect(
+                        flash().attribute(
+                                        "reservationStatus",
+                                        ReservationStatus.RECURRING_CANCELLED));
     }
 
     @Test
@@ -1506,7 +1520,13 @@ class EventControllerTest {
     }
 
     private static DefaultFormattingConversionService conversionService() {
-        return new DefaultFormattingConversionService();
+        final DefaultFormattingConversionService cs = new DefaultFormattingConversionService();
+        cs.addConverter(new StringToReservationStatusConverter());
+        cs.addConverter(new StringToHostActionConverter());
+        cs.addConverter(new StringToHostActionTargetConverter());
+        cs.addConverter(new StringToJoinStatusConverter());
+        cs.addConverter(new StringToInviteStatusConverter());
+        return cs;
     }
 
     private static SessionLocaleResolver localeResolver() {

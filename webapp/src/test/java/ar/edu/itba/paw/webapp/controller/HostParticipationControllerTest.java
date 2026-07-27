@@ -142,7 +142,7 @@ class HostParticipationControllerTest {
         mockMvc.perform(post("/host/matches/42/requests/9/approve"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "requestApproved"));
+                .andExpect(flash().attribute("hostAction", HostAction.REQUEST_APPROVED));
     }
 
     @Test
@@ -160,7 +160,7 @@ class HostParticipationControllerTest {
         mockMvc.perform(post("/host/matches/42/requests/9/approve"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostActionTarget", "requests"))
+                .andExpect(flash().attribute("hostActionTarget", HostActionTarget.REQUESTS))
                 .andExpect(
                         flash().attribute(
                                         "hostActionErrorCode", "event.host.requests.error.closed"));
@@ -192,7 +192,7 @@ class HostParticipationControllerTest {
         mockMvc.perform(post("/host/matches/42/requests/9/reject"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "requestRejected"));
+                .andExpect(flash().attribute("hostAction", HostAction.REQUEST_REJECTED));
     }
 
     @Test
@@ -211,7 +211,7 @@ class HostParticipationControllerTest {
         mockMvc.perform(post("/host/matches/42/invites").param("email", "test@test.com"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "inviteSent"));
+                .andExpect(flash().attribute("hostAction", HostAction.INVITE_SENT));
     }
 
     @Test
@@ -224,7 +224,7 @@ class HostParticipationControllerTest {
         mockMvc.perform(post("/host/matches/42/participants/9/remove"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostAction", "participantRemoved"));
+                .andExpect(flash().attribute("hostAction", HostAction.PARTICIPANT_REMOVED));
     }
 
     @Test
@@ -241,7 +241,7 @@ class HostParticipationControllerTest {
         mockMvc.perform(post("/host/matches/42/participants/9/remove"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/matches/42"))
-                .andExpect(flash().attribute("hostActionTarget", "participants"))
+                .andExpect(flash().attribute("hostActionTarget", HostActionTarget.PARTICIPANTS))
                 .andExpect(
                         flash().attribute(
                                         "hostActionErrorCode",

@@ -79,16 +79,16 @@ final class EventPageSupport {
     ModelAndView showEventDetails(
             final User currentUser,
             final Long eventId,
-            final String reservationStatus,
+            final ReservationStatus reservationStatus,
             final String reservationErrorCode,
             final String seriesReservationErrorCode,
-            final String hostAction,
+            final HostAction hostAction,
             final String hostActionErrorCode,
-            final String hostActionTarget,
+            final HostActionTarget hostActionTarget,
             final String hostInviteEmail,
-            final String joinStatus,
+            final JoinStatus joinStatus,
             final String joinErrorCode,
-            final String inviteStatus,
+            final InviteStatus inviteStatus,
             final String inviteErrorCode,
             final boolean joinRequestedFlash,
             final boolean seriesJoinRequestedFlash,
@@ -136,7 +136,6 @@ final class EventPageSupport {
         final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
         final MatchInteractionState interactionState =
                 matchService.getMatchInteractionState(match, seriesOccurrences, currentUser);
-        final HostAction resolvedHostAction = HostAction.fromCode(hostAction).orElse(null);
         final boolean suppressReservationErrors =
                 interactionState.hasPendingJoinRequest()
                         || interactionState.isSeriesJoinRequestPending();
@@ -200,8 +199,8 @@ final class EventPageSupport {
         mav.addObject(
                 "reservationConfirmed",
                 interactionState.isConfirmedParticipant()
-                        && "confirmed".equalsIgnoreCase(reservationStatus));
-        mav.addObject("reservationCancelled", "cancelled".equalsIgnoreCase(reservationStatus));
+                        && reservationStatus == ReservationStatus.CONFIRMED);
+        mav.addObject("reservationCancelled", reservationStatus == ReservationStatus.CANCELLED);
         mav.addObject("seriesReservationPath", "/matches/" + eventId + "/recurring-reservations");
         mav.addObject(
                 "seriesReservationCancelPath",
@@ -215,12 +214,12 @@ final class EventPageSupport {
         mav.addObject(
                 "seriesReservationConfirmed",
                 interactionState.isSeriesReservationJoined()
-                        && ("recurringConfirmed".equalsIgnoreCase(reservationStatus)
-                                || "seriesConfirmed".equalsIgnoreCase(reservationStatus)));
+                        && (reservationStatus == ReservationStatus.RECURRING_CONFIRMED
+                                || reservationStatus == ReservationStatus.SERIES_CONFIRMED));
         mav.addObject(
                 "seriesReservationCancelled",
-                "recurringCancelled".equalsIgnoreCase(reservationStatus)
-                        || "seriesCancelled".equalsIgnoreCase(reservationStatus));
+                reservationStatus == ReservationStatus.RECURRING_CANCELLED
+                        || reservationStatus == ReservationStatus.SERIES_CANCELLED);
         mav.addObject(
                 "seriesReservationErrorCode",
                 suppressReservationErrors ? null : seriesReservationErrorCode);
@@ -236,18 +235,17 @@ final class EventPageSupport {
                 interactionState.isSeriesJoinRequestRequiresLogin());
         mav.addObject("cancelJoinRequestPath", "/matches/" + eventId + "/join-requests/cancel");
         mav.addObject("hasPendingJoinRequest", interactionState.hasPendingJoinRequest());
-        mav.addObject(
-                "joinRequested", joinRequestedFlash || "requested".equalsIgnoreCase(joinStatus));
+        mav.addObject("joinRequested", joinRequestedFlash || joinStatus == JoinStatus.REQUESTED);
         mav.addObject(
                 "seriesJoinRequested",
-                seriesJoinRequestedFlash || "recurringRequested".equalsIgnoreCase(joinStatus));
-        mav.addObject("joinCancelled", "cancelled".equalsIgnoreCase(joinStatus));
+                seriesJoinRequestedFlash || joinStatus == JoinStatus.RECURRING_REQUESTED);
+        mav.addObject("joinCancelled", joinStatus == JoinStatus.CANCELLED);
         mav.addObject("joinErrorCode", joinErrorCode);
 
         mav.addObject("isInvitedPlayer", interactionState.isInvitedPlayer());
         mav.addObject("acceptInvitePath", "/matches/" + eventId + "/invites/accept");
         mav.addObject("declineInvitePath", "/matches/" + eventId + "/invites/decline");
-        mav.addObject("inviteAccepted", "accepted".equalsIgnoreCase(inviteStatus));
+        mav.addObject("inviteAccepted", inviteStatus == InviteStatus.ACCEPTED);
         mav.addObject("inviteErrorCode", inviteErrorCode);
 
         mav.addObject("hostViewer", isHost);
@@ -262,17 +260,17 @@ final class EventPageSupport {
         mav.addObject("hostCancelPath", "/host/matches/" + eventId + "/cancel");
         mav.addObject("hostSeriesEditPath", "/host/matches/" + eventId + "/series/edit");
         mav.addObject("hostSeriesCancelPath", "/host/matches/" + eventId + "/series/cancel");
-        mav.addObject(
-                "hostActionCode", resolvedHostAction == null ? null : resolvedHostAction.getCode());
+        mav.addObject("hostActionCode", hostAction == null ? null : hostAction.getCode());
         mav.addObject("hostActionErrorCode", hostActionErrorCode);
-        mav.addObject("hostActionTarget", hostActionTarget);
+        mav.addObject(
+                "hostActionTarget", hostActionTarget == null ? null : hostActionTarget.getCode());
         mav.addObject("hostPendingRequests", pendingHostRequests);
         mav.addObject("hostPendingRequestCount", pendingHostRequests.size());
         mav.addObject(
                 "hostPendingRequestsOpen",
                 !pendingHostRequests.isEmpty()
-                        || (resolvedHostAction != null && resolvedHostAction.targetsRequests())
-                        || "requests".equalsIgnoreCase(hostActionTarget));
+                        || (hostAction != null && hostAction.targetsRequests())
+                        || hostActionTarget == HostActionTarget.REQUESTS);
         mav.addObject("hostPendingInvites", pendingHostInvites);
         mav.addObject("hostDeclinedInvites", declinedHostInvites);
         mav.addObject("hostPendingInviteCount", pendingHostInvites.size());
@@ -280,8 +278,8 @@ final class EventPageSupport {
                 "hostPendingInvitesOpen",
                 !pendingHostInvites.isEmpty()
                         || !declinedHostInvites.isEmpty()
-                        || (resolvedHostAction != null && resolvedHostAction.targetsInvites())
-                        || "invites".equalsIgnoreCase(hostActionTarget));
+                        || (hostAction != null && hostAction.targetsInvites())
+                        || hostActionTarget == HostActionTarget.INVITES);
         mav.addObject("hostInviteActionPath", "/host/matches/" + eventId + "/invites");
         mav.addObject("hostInviteEmail", hostInviteEmail);
         mav.addObject("hostSeriesInviteAvailable", match.isRecurringOccurrence());

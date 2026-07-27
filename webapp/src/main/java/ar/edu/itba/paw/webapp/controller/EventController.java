@@ -65,15 +65,16 @@ public class EventController {
     public ModelAndView showEventDetails(
             @CurrentUser final User user,
             @PathVariable("eventId") final Long eventId,
-            @RequestParam(value = "reservation", required = false) final String reservationStatus,
+            @RequestParam(value = "reservation", required = false)
+                    final ReservationStatus reservationStatus,
             @RequestParam(value = "reservationError", required = false)
                     final String reservationError,
             @RequestParam(value = "seriesReservationError", required = false)
                     final String seriesReservationErrorCode,
-            @RequestParam(value = "hostAction", required = false) final String hostAction,
-            @RequestParam(value = "join", required = false) final String joinStatus,
+            @RequestParam(value = "hostAction", required = false) final HostAction hostAction,
+            @RequestParam(value = "join", required = false) final JoinStatus joinStatus,
             @RequestParam(value = "joinError", required = false) final String joinErrorCode,
-            @RequestParam(value = "invite", required = false) final String inviteStatus,
+            @RequestParam(value = "invite", required = false) final InviteStatus inviteStatus,
             @RequestParam(value = "inviteError", required = false) final String inviteErrorCode,
             @RequestParam(value = "seriesPage", defaultValue = "1") final int seriesPage,
             final Model model,
@@ -81,16 +82,17 @@ public class EventController {
         return eventPageSupport.showEventDetails(
                 user,
                 eventId,
-                flashString(model, "reservationStatus").orElse(reservationStatus),
+                flashAttribute(model, "reservationStatus", ReservationStatus.class)
+                        .orElse(reservationStatus),
                 reservationError,
                 seriesReservationErrorCode,
-                flashString(model, "hostAction").orElse(hostAction),
-                flashString(model, "hostActionErrorCode").orElse(null),
-                flashString(model, "hostActionTarget").orElse(null),
-                flashString(model, "hostInviteEmail").orElse(""),
-                flashString(model, "joinStatus").orElse(joinStatus),
+                flashAttribute(model, "hostAction", HostAction.class).orElse(hostAction),
+                flashAttribute(model, "hostActionErrorCode", String.class).orElse(null),
+                flashAttribute(model, "hostActionTarget", HostActionTarget.class).orElse(null),
+                flashAttribute(model, "hostInviteEmail", String.class).orElse(""),
+                flashAttribute(model, "joinStatus", JoinStatus.class).orElse(joinStatus),
                 joinErrorCode,
-                flashString(model, "inviteStatus").orElse(inviteStatus),
+                flashAttribute(model, "inviteStatus", InviteStatus.class).orElse(inviteStatus),
                 inviteErrorCode,
                 Boolean.TRUE.equals(model.asMap().get("joinRequested")),
                 Boolean.TRUE.equals(model.asMap().get("seriesJoinRequested")),
@@ -107,7 +109,7 @@ public class EventController {
 
         try {
             matchReservationService.reserveSpot(matchId, user);
-            redirectAttributes.addFlashAttribute("reservationStatus", "confirmed");
+            redirectAttributes.addFlashAttribute("reservationStatus", ReservationStatus.CONFIRMED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
             return reservationErrorDetails(user, matchId, e.getMessage(), locale);
@@ -128,7 +130,7 @@ public class EventController {
                     cancellationContext, user)) {
                 return new ModelAndView("redirect:/matches");
             }
-            redirectAttributes.addFlashAttribute("reservationStatus", "cancelled");
+            redirectAttributes.addFlashAttribute("reservationStatus", ReservationStatus.CANCELLED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
             return reservationErrorDetails(user, matchId, e.getMessage(), locale);
@@ -147,7 +149,8 @@ public class EventController {
 
         try {
             matchReservationService.reserveSeries(matchId, user);
-            redirectAttributes.addFlashAttribute("reservationStatus", "recurringConfirmed");
+            redirectAttributes.addFlashAttribute(
+                    "reservationStatus", ReservationStatus.RECURRING_CONFIRMED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
             return seriesReservationErrorDetails(user, matchId, e.getMessage(), locale);
@@ -166,16 +169,19 @@ public class EventController {
 
         try {
             matchReservationService.cancelSeriesReservations(matchId, user);
-            redirectAttributes.addFlashAttribute("reservationStatus", "recurringCancelled");
+            redirectAttributes.addFlashAttribute(
+                    "reservationStatus", ReservationStatus.RECURRING_CANCELLED);
             return new ModelAndView("redirect:/matches/" + matchId);
         } catch (final MatchException e) {
             return seriesReservationErrorDetails(user, matchId, e.getMessage(), locale);
         }
     }
 
-    private static Optional<String> flashString(final Model model, final String name) {
+    @SuppressWarnings("unchecked")
+    private static <T> Optional<T> flashAttribute(
+            final Model model, final String name, final Class<T> type) {
         final Object value = model.asMap().get(name);
-        return value instanceof String ? Optional.of((String) value) : Optional.empty();
+        return type.isInstance(value) ? Optional.of((T) value) : Optional.empty();
     }
 
     private ModelAndView reservationErrorDetails(
