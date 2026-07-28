@@ -38,6 +38,8 @@ public class SecurityConfig {
 
     private static final String REMEMBER_ME_COOKIE_NAME = "remember-me";
     private static final String REMEMBER_ME_PARAMETER_NAME = "remember-me";
+    private static final String ROLE_USER = "USER";
+    private static final String ROLE_ADMIN_MOD = "ADMIN_MOD";
     static final int REMEMBER_ME_TOKEN_VALIDITY_SECONDS = 14 * 24 * 60 * 60;
     private final MvcRequestMatcher.Builder mvc;
     private final DefaultHttpSecurityExpressionHandler expressionHandler;
@@ -76,26 +78,17 @@ public class SecurityConfig {
                         authorize ->
                                 authorize
                                         .requestMatchers(
-                                                mvc.pattern("/"),
-                                                mvc.pattern("/errors/**"),
-                                                mvc.pattern(
-                                                        "/.well-known/appspecific/com.chrome.devtools.json"))
-                                        .permitAll()
-                                        .requestMatchers(
                                                 mvc.pattern(HttpMethod.GET, "/login"),
                                                 mvc.pattern(HttpMethod.GET, "/register"),
                                                 mvc.pattern(HttpMethod.GET, "/forgot-password"),
-                                                mvc.pattern(HttpMethod.GET, "/password-reset/**"))
-                                        .anonymous()
-                                        .requestMatchers(
+                                                mvc.pattern(HttpMethod.GET, "/password-reset/**"),
                                                 mvc.pattern(HttpMethod.POST, "/register"),
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/register/resend-verification"),
                                                 mvc.pattern(HttpMethod.POST, "/forgot-password"),
-                                                mvc.pattern(HttpMethod.POST, "/password-reset/**"))
-                                        .anonymous()
-                                        .requestMatchers(mvc.pattern("/verifications/**"))
+                                                mvc.pattern(HttpMethod.POST, "/password-reset/**"),
+                                                mvc.pattern("/verifications/**"))
                                         .anonymous()
                                         .requestMatchers(
                                                 mvc.pattern(HttpMethod.GET, "/matches"),
@@ -103,18 +96,7 @@ public class SecurityConfig {
                                                 mvc.pattern(HttpMethod.GET, "/matches/new"),
                                                 mvc.pattern(HttpMethod.GET, "/tournaments/new"),
                                                 mvc.pattern(HttpMethod.POST, "/matches/new"),
-                                                mvc.pattern(HttpMethod.POST, "/tournaments"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(
-                                                mvc.pattern(HttpMethod.GET, "/matches/**"),
-                                                mvc.pattern(HttpMethod.GET, "/tournaments/**"),
-                                                mvc.pattern(HttpMethod.GET, "/images/**"),
-                                                mvc.pattern(HttpMethod.GET, "/users/**"))
-                                        .permitAll()
-                                        .requestMatchers(
-                                                mvc.pattern(HttpMethod.POST, "/explore/location"))
-                                        .permitAll()
-                                        .requestMatchers(
+                                                mvc.pattern(HttpMethod.POST, "/tournaments"),
                                                 mvc.pattern(
                                                         HttpMethod.POST, "/matches/*/reservations"),
                                                 mvc.pattern(
@@ -149,17 +131,13 @@ public class SecurityConfig {
                                                         "/matches/*/invites/accept"),
                                                 mvc.pattern(
                                                         HttpMethod.POST,
-                                                        "/matches/*/invites/decline"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(
+                                                        "/matches/*/invites/decline"),
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/tournaments/*/solo-entry"),
                                                 mvc.pattern(
                                                         HttpMethod.POST,
-                                                        "/tournaments/*/solo-entry/leave"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(
+                                                        "/tournaments/*/solo-entry/leave"),
                                                 mvc.pattern(
                                                         HttpMethod.POST, "/tournaments/*/teams"),
                                                 mvc.pattern(
@@ -167,8 +145,23 @@ public class SecurityConfig {
                                                         "/tournaments/*/teams/*/join"),
                                                 mvc.pattern(
                                                         HttpMethod.POST,
-                                                        "/tournaments/*/teams/leave"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                                        "/tournaments/*/teams/leave"),
+                                                mvc.pattern("/host/matches/new"),
+                                                mvc.pattern(
+                                                        HttpMethod.GET, "/host/tournaments/new"),
+                                                mvc.pattern(HttpMethod.POST, "/host/tournaments"))
+                                        .hasAnyRole(ROLE_USER, ROLE_ADMIN_MOD)
+                                        .requestMatchers(
+                                                mvc.pattern("/"),
+                                                mvc.pattern("/errors/**"),
+                                                mvc.pattern(
+                                                        "/.well-known/appspecific/com.chrome.devtools.json"),
+                                                mvc.pattern(HttpMethod.GET, "/matches/**"),
+                                                mvc.pattern(HttpMethod.GET, "/tournaments/**"),
+                                                mvc.pattern(HttpMethod.GET, "/images/**"),
+                                                mvc.pattern(HttpMethod.GET, "/users/**"),
+                                                mvc.pattern(HttpMethod.POST, "/explore/location"))
+                                        .permitAll()
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
@@ -203,19 +196,15 @@ public class SecurityConfig {
                                                 check(
                                                         "@securityService.canAppealReport(#reportId)"))
                                         .requestMatchers(mvc.pattern("/reports/**"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                        .hasAnyRole(ROLE_USER, ROLE_ADMIN_MOD)
                                         .requestMatchers(
-                                                mvc.pattern(HttpMethod.GET, "/account/ban"))
-                                        .access(check("@securityService.canAppealBan()"))
-                                        .requestMatchers(
+                                                mvc.pattern(HttpMethod.GET, "/account/ban"),
                                                 mvc.pattern(HttpMethod.POST, "/account/ban/appeal"))
                                         .access(check("@securityService.canAppealBan()"))
                                         .requestMatchers(
                                                 mvc.pattern("/admin/**"),
                                                 mvc.pattern("/moderation/**"))
-                                        .hasRole("ADMIN_MOD")
-                                        .requestMatchers(mvc.pattern("/host/matches/new"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
+                                        .hasRole(ROLE_ADMIN_MOD)
                                         .requestMatchers(
                                                 mvc.pattern("/host/matches/{matchId}/edit"))
                                         .access(check("@securityService.canEditMatch(#matchId)"))
@@ -272,13 +261,6 @@ public class SecurityConfig {
                                         .access(
                                                 check(
                                                         "@securityService.canManageParticipants(#matchId)"))
-                                        .requestMatchers(
-                                                mvc.pattern(
-                                                        HttpMethod.GET, "/host/tournaments/new"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
-                                        .requestMatchers(
-                                                mvc.pattern(HttpMethod.POST, "/host/tournaments"))
-                                        .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         "/host/tournaments/{tournamentId}/edit"))
