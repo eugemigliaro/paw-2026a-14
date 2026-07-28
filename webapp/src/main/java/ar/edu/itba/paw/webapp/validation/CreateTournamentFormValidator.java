@@ -182,6 +182,9 @@ public class CreateTournamentFormValidator
     }
 
     private static LocalDateTime toLocalDateTime(final LocalDate date, final LocalTime time) {
+        if (date == null || time == null) {
+            return null;
+        }
         return date.atTime(time);
     }
 
