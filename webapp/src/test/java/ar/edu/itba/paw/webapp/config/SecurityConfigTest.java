@@ -82,7 +82,7 @@ class SecurityConfigTest {
 
     @BeforeEach
     void setUp() {
-        Mockito.reset(moderationService, accountAuthService, passwordEncoder);
+        Mockito.reset(moderationService, securityService, accountAuthService, passwordEncoder);
         Mockito.when(moderationService.findActiveBan(any(User.class))).thenReturn(Optional.empty());
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
@@ -329,6 +329,16 @@ class SecurityConfigTest {
     }
 
     @Test
+    void reportReviewRouteAllowsWhenSecurityServiceAllowsReviewId() throws Exception {
+        // 1. Arrange
+        Mockito.when(securityService.canReportReview(55L)).thenReturn(true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/reports/reviews/55").with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void bannedUserIsRedirectedBySecurityFilterForProtectedRoute() throws Exception {
         // 1. Arrange
         Mockito.when(moderationService.findActiveBan(UserUtils.getUser(1L)))
@@ -530,6 +540,26 @@ class SecurityConfigTest {
         Mockito.when(securityService.canViewOwnReport(90L)).thenReturn(true);
 
         mockMvc.perform(get("/reports/mine/90").with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void hostEditRouteAllowsWhenSecurityServiceAllowsMatchId() throws Exception {
+        // 1. Arrange
+        Mockito.when(securityService.canEditMatch(42L)).thenReturn(true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/host/matches/42/edit").with(authenticatedUser()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void hostSeriesEditRouteAllowsWhenSecurityServiceAllowsMatchId() throws Exception {
+        // 1. Arrange
+        Mockito.when(securityService.canEditMatchSeries(42L)).thenReturn(true);
+
+        // 2. Exercise + 3. Assert
+        mockMvc.perform(get("/host/matches/42/series/edit").with(authenticatedUser()))
                 .andExpect(status().isOk());
     }
 
@@ -772,10 +802,28 @@ class SecurityConfigTest {
             return "report-" + username;
         }
 
+        @GetMapping("/reports/reviews/{reviewId}")
+        @ResponseBody
+        String reportReview(@PathVariable("reviewId") final Long reviewId) {
+            return "report-review-" + reviewId;
+        }
+
         @GetMapping("/users/{username}/reviews/delete")
         @ResponseBody
         String deleteReview(@PathVariable("username") final String username) {
             return "delete-review-" + username;
+        }
+
+        @GetMapping("/host/matches/{matchId}/edit")
+        @ResponseBody
+        String editMatch(@PathVariable("matchId") final Long matchId) {
+            return "edit-match-" + matchId;
+        }
+
+        @GetMapping("/host/matches/{matchId}/series/edit")
+        @ResponseBody
+        String editMatchSeries(@PathVariable("matchId") final Long matchId) {
+            return "edit-match-series-" + matchId;
         }
 
         @PostMapping("/matches/{matchId}/invites/accept")

@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.config;
 
 import ar.edu.itba.paw.services.AccountAuthService;
 import ar.edu.itba.paw.services.ModerationService;
-import ar.edu.itba.paw.services.SecurityService;
 import ar.edu.itba.paw.webapp.security.AccountAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.AccountUserDetailsService;
 import ar.edu.itba.paw.webapp.security.BannedAccountAuthorizationFilter;
@@ -11,16 +10,19 @@ import ar.edu.itba.paw.webapp.security.LoginFailureHandler;
 import ar.edu.itba.paw.webapp.security.RememberMeKey;
 import ar.edu.itba.paw.webapp.security.RememberMeLoginSuccessHandler;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.expression.DefaultHttpSecurityExpressionHandler;
+import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
@@ -38,21 +40,21 @@ public class SecurityConfig {
     private static final String REMEMBER_ME_PARAMETER_NAME = "remember-me";
     static final int REMEMBER_ME_TOKEN_VALIDITY_SECONDS = 14 * 24 * 60 * 60;
     private final MvcRequestMatcher.Builder mvc;
+    private final DefaultHttpSecurityExpressionHandler expressionHandler;
 
-    public SecurityConfig(final HandlerMappingIntrospector introspector) {
+    public SecurityConfig(
+            final HandlerMappingIntrospector introspector,
+            final ApplicationContext applicationContext) {
         this.mvc = new MvcRequestMatcher.Builder(introspector);
+        this.expressionHandler = new DefaultHttpSecurityExpressionHandler();
+        this.expressionHandler.setApplicationContext(applicationContext);
     }
 
-    private static Long longVar(RequestAuthorizationContext ctx, String name) {
-        return Long.parseLong(ctx.getVariables().get(name));
-    }
-
-    private static String strVar(RequestAuthorizationContext ctx, String name) {
-        return ctx.getVariables().get(name);
-    }
-
-    private static AuthorizationDecision allow(boolean granted) {
-        return new AuthorizationDecision(granted);
+    private AuthorizationManager<RequestAuthorizationContext> check(final String expression) {
+        final WebExpressionAuthorizationManager manager =
+                new WebExpressionAuthorizationManager(expression);
+        manager.setExpressionHandler(expressionHandler);
+        return manager;
     }
 
     @Bean
@@ -63,8 +65,7 @@ public class SecurityConfig {
             final RememberMeLoginSuccessHandler rememberMeLoginSuccessHandler,
             final TokenBasedRememberMeServices rememberMeServices,
             final RememberMeKey rememberMeKey,
-            final BannedAccountAuthorizationFilter bannedAccountAuthorizationFilter,
-            final SecurityService security)
+            final BannedAccountAuthorizationFilter bannedAccountAuthorizationFilter)
             throws Exception {
 
         final HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
@@ -172,64 +173,43 @@ public class SecurityConfig {
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/users/{username}/reviews"))
-                                        .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canReviewUser(
-                                                                        strVar(ctx, "username"))))
+                                        .access(check("@securityService.canReviewUser(#username)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/users/{username}/reviews/delete"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canDeleteReview(
-                                                                        strVar(ctx, "username"))))
-                                        .requestMatchers(
-                                                mvc.pattern("/reports/users/{username}"),
-                                                mvc.pattern("/reports/reviews/{reviewId}"),
-                                                mvc.pattern("/reports/matches/{matchId}"))
+                                                check(
+                                                        "@securityService.canDeleteReview(#username)"))
+                                        .requestMatchers(mvc.pattern("/reports/users/{username}"))
+                                        .access(check("@securityService.canReportUser(#username)"))
+                                        .requestMatchers(mvc.pattern("/reports/reviews/{reviewId}"))
                                         .access(
-                                                (auth, ctx) -> {
-                                                    String uri = ctx.getRequest().getRequestURI();
-                                                    if (uri.contains("/users/"))
-                                                        return allow(
-                                                                security.canReportUser(
-                                                                        strVar(ctx, "username")));
-                                                    if (uri.contains("/reviews/"))
-                                                        return allow(
-                                                                security.canReportReview(
-                                                                        longVar(ctx, "reviewId")));
-                                                    return allow(
-                                                            security.canReportMatch(
-                                                                    longVar(ctx, "matchId")));
-                                                })
+                                                check(
+                                                        "@securityService.canReportReview(#reviewId)"))
+                                        .requestMatchers(mvc.pattern("/reports/matches/{matchId}"))
+                                        .access(check("@securityService.canReportMatch(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.GET, "/reports/mine/{reportId}"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canViewOwnReport(
-                                                                        longVar(ctx, "reportId"))))
+                                                check(
+                                                        "@securityService.canViewOwnReport(#reportId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/reports/mine/{reportId}/appeal"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canAppealReport(
-                                                                        longVar(ctx, "reportId"))))
+                                                check(
+                                                        "@securityService.canAppealReport(#reportId)"))
                                         .requestMatchers(mvc.pattern("/reports/**"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
                                                 mvc.pattern(HttpMethod.GET, "/account/ban"))
-                                        .access((auth, ctx) -> allow(security.canAppealBan()))
+                                        .access(check("@securityService.canAppealBan()"))
                                         .requestMatchers(
                                                 mvc.pattern(HttpMethod.POST, "/account/ban/appeal"))
-                                        .access((auth, ctx) -> allow(security.canAppealBan()))
+                                        .access(check("@securityService.canAppealBan()"))
                                         .requestMatchers(
                                                 mvc.pattern("/admin/**"),
                                                 mvc.pattern("/moderation/**"))
@@ -237,55 +217,39 @@ public class SecurityConfig {
                                         .requestMatchers(mvc.pattern("/host/matches/new"))
                                         .hasAnyRole("USER", "ADMIN_MOD")
                                         .requestMatchers(
-                                                mvc.pattern("/host/matches/{matchId}/edit"),
+                                                mvc.pattern("/host/matches/{matchId}/edit"))
+                                        .access(check("@securityService.canEditMatch(#matchId)"))
+                                        .requestMatchers(
                                                 mvc.pattern("/host/matches/{matchId}/series/edit"))
                                         .access(
-                                                (auth, ctx) -> {
-                                                    String uri = ctx.getRequest().getRequestURI();
-                                                    if (uri.contains("/series/edit"))
-                                                        return allow(
-                                                                security.canEditMatchSeries(
-                                                                        longVar(ctx, "matchId")));
-                                                    return allow(
-                                                            security.canEditMatch(
-                                                                    longVar(ctx, "matchId")));
-                                                })
+                                                check(
+                                                        "@securityService.canEditMatchSeries(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
-                                                        "/host/matches/{matchId}/cancel"),
+                                                        "/host/matches/{matchId}/cancel"))
+                                        .access(check("@securityService.canCancelMatch(#matchId)"))
+                                        .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/host/matches/{matchId}/series/cancel"))
                                         .access(
-                                                (auth, ctx) -> {
-                                                    String uri = ctx.getRequest().getRequestURI();
-                                                    if (uri.contains("/series/cancel"))
-                                                        return allow(
-                                                                security.canCancelMatchSeries(
-                                                                        longVar(ctx, "matchId")));
-                                                    return allow(
-                                                            security.canCancelMatch(
-                                                                    longVar(ctx, "matchId")));
-                                                })
+                                                check(
+                                                        "@securityService.canCancelMatchSeries(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.GET,
                                                         "/host/matches/{matchId}/participants"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canViewParticipants(
-                                                                        longVar(ctx, "matchId"))))
+                                                check(
+                                                        "@securityService.canViewParticipants(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.GET,
                                                         "/host/matches/{matchId}/requests"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canApproveJoinRequests(
-                                                                        longVar(ctx, "matchId"))))
+                                                check(
+                                                        "@securityService.canApproveJoinRequests(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
@@ -294,26 +258,20 @@ public class SecurityConfig {
                                                         HttpMethod.POST,
                                                         "/host/matches/{matchId}/requests/{userId}/reject"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canApproveJoinRequests(
-                                                                        longVar(ctx, "matchId"))))
+                                                check(
+                                                        "@securityService.canApproveJoinRequests(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern("/host/matches/{matchId}/invites"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canInviteParticipants(
-                                                                        longVar(ctx, "matchId"))))
+                                                check(
+                                                        "@securityService.canInviteParticipants(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/host/matches/{matchId}/participants/{userId}/remove"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canManageParticipants(
-                                                                        longVar(ctx, "matchId"))))
+                                                check(
+                                                        "@securityService.canManageParticipants(#matchId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.GET, "/host/tournaments/new"))
@@ -325,12 +283,8 @@ public class SecurityConfig {
                                                 mvc.pattern(
                                                         "/host/tournaments/{tournamentId}/edit"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canEditTournament(
-                                                                        longVar(
-                                                                                ctx,
-                                                                                "tournamentId"))))
+                                                check(
+                                                        "@securityService.canEditTournament(#tournamentId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
@@ -339,12 +293,8 @@ public class SecurityConfig {
                                                         HttpMethod.POST,
                                                         "/host/tournaments/{tournamentId}/cancel"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canCloseRegistration(
-                                                                        longVar(
-                                                                                ctx,
-                                                                                "tournamentId"))))
+                                                check(
+                                                        "@securityService.canCloseRegistration(#tournamentId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         "/host/tournaments/{tournamentId}/bracket/strategy"),
@@ -357,23 +307,15 @@ public class SecurityConfig {
                                                 mvc.pattern(
                                                         "/host/tournaments/{tournamentId}/bracket/setup"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canManageBracket(
-                                                                        longVar(
-                                                                                ctx,
-                                                                                "tournamentId"))))
+                                                check(
+                                                        "@securityService.canManageBracket(#tournamentId)"))
                                         .requestMatchers(
                                                 mvc.pattern(
                                                         HttpMethod.POST,
                                                         "/host/tournaments/{tournamentId}/matches/{matchId}/winner"))
                                         .access(
-                                                (auth, ctx) ->
-                                                        allow(
-                                                                security.canReportMatchWinner(
-                                                                        longVar(
-                                                                                ctx,
-                                                                                "tournamentId"))))
+                                                check(
+                                                        "@securityService.canReportMatchWinner(#tournamentId)"))
                                         .anyRequest()
                                         .authenticated())
                 .formLogin(
