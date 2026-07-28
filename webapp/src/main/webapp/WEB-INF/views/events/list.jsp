@@ -526,14 +526,45 @@
 						<section class="matches-list-content">
 							<c:choose>
 								<c:when test="${empty events}">
-									<spring:message var="emptyResultsMessage" code="feed.empty.message" />
 									<div class="matches-empty-state">
 										<div class="matches-empty-state__art" aria-hidden="true">
 											<icon:emptyState />
 										</div>
-										<p class="matches-empty-state__copy">
-											<c:out value="${emptyResultsMessage}" />
-										</p>
+										<c:choose>
+											<c:when test="${hasActiveFilters}">
+												<spring:message var="emptyResultsMessage" code="feed.empty.message" />
+												<p class="matches-empty-state__copy">
+													<c:out value="${emptyResultsMessage}" />
+												</p>
+											</c:when>
+											<c:otherwise>
+												<c:choose>
+													<c:when test="${eventType.dbValue eq 'tournament_match'}">
+														<spring:message var="emptyMessage" code="events.empty.tournamentMatches" />
+														<spring:message var="emptyCtaLabel" code="events.empty.tournamentMatches.cta" />
+														<c:url var="exploreHref" value="/">
+															<c:param name="type" value="tournament" />
+														</c:url>
+													</c:when>
+													<c:when test="${eventType.dbValue eq 'tournament'}">
+														<spring:message var="emptyMessage" code="events.empty.tournaments" />
+														<spring:message var="emptyCtaLabel" code="events.empty.tournaments.cta" />
+														<c:url var="exploreHref" value="/">
+															<c:param name="type" value="tournament" />
+														</c:url>
+													</c:when>
+													<c:otherwise>
+														<spring:message var="emptyMessage" code="events.empty.matches" />
+														<spring:message var="emptyCtaLabel" code="events.empty.matches.cta" />
+														<c:url var="exploreHref" value="/" />
+													</c:otherwise>
+												</c:choose>
+												<p class="matches-empty-state__copy">
+													<c:out value="${emptyMessage}" />
+												</p>
+												<ui:button label="${emptyCtaLabel}" href="${exploreHref}" variant="primary" />
+											</c:otherwise>
+										</c:choose>
 									</div>
 								</c:when>
 

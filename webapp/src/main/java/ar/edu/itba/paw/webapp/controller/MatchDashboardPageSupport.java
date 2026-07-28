@@ -167,6 +167,7 @@ final class MatchDashboardPageSupport {
                         selectedVisibilityStr,
                         selectedCategories,
                         pageResult));
+        mav.addObject("hasActiveFilters", hasActiveFilters(searchForm));
         return mav;
     }
 
@@ -238,6 +239,7 @@ final class MatchDashboardPageSupport {
                         selectedTmStatuses,
                         involvement,
                         result));
+        mav.addObject("hasActiveFilters", hasActiveTournamentMatchFilters(searchForm));
         return mav;
     }
 
@@ -1110,6 +1112,27 @@ final class MatchDashboardPageSupport {
 
     private static String formatNullablePriceValue(final BigDecimal price) {
         return price == null ? "" : price.stripTrailingZeros().toPlainString();
+    }
+
+    private static boolean hasActiveFilters(final SearchForm searchForm) {
+        final String q = searchForm.getQ();
+        return (q != null && !q.isEmpty())
+                || !searchForm.getSport().isEmpty()
+                || !searchForm.getStatus().isEmpty()
+                || !searchForm.getCategory().isEmpty()
+                || !searchForm.getVisibility().isEmpty()
+                || searchForm.getMinPrice() != null
+                || searchForm.getMaxPrice() != null
+                || searchForm.getFilter() != EventFilter.UPCOMING;
+    }
+
+    private static boolean hasActiveTournamentMatchFilters(final SearchForm searchForm) {
+        final String q = searchForm.getQ();
+        return (q != null && !q.isEmpty())
+                || !searchForm.getSport().isEmpty()
+                || !searchForm.getTmStatus().isEmpty()
+                || searchForm.getInvolvement() != InvolvementScope.ALL
+                || searchForm.getFilter() != EventFilter.UPCOMING;
     }
 
     private record DateRangeBounds(String minDate, String maxDate) {}
