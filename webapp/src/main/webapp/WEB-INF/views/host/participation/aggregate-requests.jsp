@@ -43,9 +43,14 @@
 									<c:forEach var="req" items="${pendingRequests}">
 										<li class="participant-manage-list__item">
 											<div class="participant-manage-list__info">
-												<span class="participant-list__avatar" aria-hidden="true">
-													<c:out value="${fn:toUpperCase(fn:substring(req.user.username, 0, 1))}" />
-												</span>
+												<c:url var="requestProfileImageSrc" value="${userProfileImageUrls[req.user.id]}" />
+												<img
+													class="participant-list__avatar"
+													src="${requestProfileImageSrc}"
+													alt=""
+													aria-hidden="true"
+													loading="lazy"
+													decoding="async" />
 												<div class="participant-manage-list__details">
 													<strong class="participant-manage-list__name">
 														<c:out value="${req.user.username}" />

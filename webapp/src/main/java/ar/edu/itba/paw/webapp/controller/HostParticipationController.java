@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import static ar.edu.itba.paw.webapp.utils.ImageUrlHelper.profileUrlFor;
+
 import ar.edu.itba.paw.models.PaginatedResult;
 import ar.edu.itba.paw.models.PendingJoinRequest;
 import ar.edu.itba.paw.models.User;
@@ -13,6 +15,7 @@ import ar.edu.itba.paw.webapp.form.InviteForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -85,6 +88,7 @@ public class HostParticipationController {
                 "requestActionsDisabledByMatchId",
                 requestActionsDisabledByMatchId(result.getItems(), user));
         mav.addObject("matchesUrl", "/matches");
+        mav.addObject("userProfileImageUrls", userProfileImageUrls(result.getItems()));
         mav.addObject("pageNumber", result.getPage());
         mav.addObject("totalPages", result.getTotalPages());
         mav.addObject("hasPreviousPage", result.hasPrevious());
@@ -104,6 +108,17 @@ public class HostParticipationController {
                 .build()
                 .encode()
                 .toUriString();
+    }
+
+    private Map<Long, String> userProfileImageUrls(final List<PendingJoinRequest> joinRequests) {
+        final Map<Long, String> urls = new LinkedHashMap<>();
+        for (final PendingJoinRequest request : joinRequests) {
+            final User user = request.getUser();
+            if (user.getId() != null) {
+                urls.put(user.getId(), profileUrlFor(user));
+            }
+        }
+        return urls;
     }
 
     @PostMapping("/host/matches/{matchId:\\d+}/requests/{userId:\\d+}/approve")
