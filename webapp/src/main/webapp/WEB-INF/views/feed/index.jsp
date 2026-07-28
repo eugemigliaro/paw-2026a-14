@@ -181,11 +181,8 @@
 												</c:choose>
 											</c:forEach>
 											<div class="filter-dropdown__actions">
-													<ui:button label="${clearFilterLabel}" href="${clearFilterHref}"
+												<ui:button label="${clearFilterLabel}" href="${clearFilterHref}"
 													variant="secondary" size="sm" className="filter-dropdown__action" />
-													<ui:button label="${seeResultsLabel}" type="button"
-													variant="primary" size="sm"
-													className="filter-dropdown__action filter-dropdown__close" />
 											</div>
 										</div>
 										<c:set var="hasSelectedFilterOptions" value="${false}" />
