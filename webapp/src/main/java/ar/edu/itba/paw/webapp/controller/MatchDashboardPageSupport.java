@@ -224,6 +224,9 @@ final class MatchDashboardPageSupport {
                                 result.getItems().stream()
                                         .map(m -> m.getTournament().getId())
                                         .toList())));
+        mav.addObject(
+                "tournamentRoundCount",
+                tournamentRoundCountFromMatches(result.getItems(), tournamentService));
         mav.addObject("pageResult", result);
         mav.addObject("pageHasPrevious", result.hasPrevious());
         mav.addObject("pageHasNext", result.hasNext());
@@ -1133,6 +1136,42 @@ final class MatchDashboardPageSupport {
                 || !searchForm.getTmStatus().isEmpty()
                 || searchForm.getInvolvement() != InvolvementScope.ALL
                 || searchForm.getFilter() != EventFilter.UPCOMING;
+    }
+
+    private static Map<Long, Integer> tournamentRoundCountFromMatches(
+            final List<TournamentMatch> matches, final TournamentService tournamentService) {
+        if (matches == null || matches.isEmpty()) {
+            return Map.of();
+        }
+
+        final Set<Long> tournamentIds = new LinkedHashSet<>();
+        for (final TournamentMatch match : matches) {
+            if (match.getTournament() != null && match.getTournament().getId() != null) {
+                tournamentIds.add(match.getTournament().getId());
+            }
+        }
+        if (tournamentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        final List<TournamentTeam> allBracketTeams =
+                tournamentService.findBracketTeams(tournamentIds);
+
+        final Map<Long, Integer> teamCountByTournament = new HashMap<>();
+        for (final TournamentTeam team : allBracketTeams) {
+            if (team.getTournament() != null && team.getTournament().getId() != null) {
+                teamCountByTournament.merge(team.getTournament().getId(), 1, Integer::sum);
+            }
+        }
+
+        final Map<Long, Integer> tournamentRoundCount = new HashMap<>();
+        for (final long tournamentId : tournamentIds) {
+            final int teams = teamCountByTournament.getOrDefault(tournamentId, 0);
+            final int rounds = teams <= 1 ? 0 : 32 - Integer.numberOfLeadingZeros(teams - 1);
+            tournamentRoundCount.put(tournamentId, rounds);
+        }
+
+        return tournamentRoundCount;
     }
 
     private record DateRangeBounds(String minDate, String maxDate) {}

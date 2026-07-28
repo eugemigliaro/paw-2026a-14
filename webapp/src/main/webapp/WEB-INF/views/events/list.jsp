@@ -578,6 +578,7 @@
 														badgeCode="${eventBadgeCodes[event.id]}"
 														relationshipBadgeCodes="${eventRelationshipBadgeCodes[event.id]}"
 														teamDisplayNumbers="${tournamentTeamDisplayNumbers}"
+														tournamentRoundCount="${tournamentRoundCount[event.tournament.id]}"
 														headingLevel="h2" />
 												</c:forEach>
 											</c:when>

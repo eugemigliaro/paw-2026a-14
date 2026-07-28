@@ -9,6 +9,7 @@
 <%@ attribute name="relationshipBadgeCodes" required="false" rtexprvalue="true" type="java.util.List" %>
 <%@ attribute name="teamDisplayNumbers" required="false" rtexprvalue="true" type="java.util.Map" %>
 <%@ attribute name="headingLevel" required="false" rtexprvalue="true" %>
+<%@ attribute name="tournamentRoundCount" required="false" rtexprvalue="true" %>
 
 <c:set var="resolvedHeadingLevel" value="${empty headingLevel ? 'h3' : headingLevel}" />
 <c:set var="tournamentHref" value="/tournaments/${match.tournament.id}" />
@@ -48,7 +49,15 @@
 
 		<div class="event-card__meta">
 			<span class="event-card__meta-item">
-				<spring:message code="tournament.bracket.round.number" arguments="${match.roundNumber}" />
+				<c:choose>
+					<c:when test="${match.roundNumber == tournamentRoundCount}">
+						<spring:message code="tournament.bracket.round.final" />
+					</c:when>
+					<c:otherwise>
+						<spring:message code="tournament.bracket.round.number" arguments="${match.roundNumber}" />
+						- <spring:message code="tournament.bracket.match.label" arguments="${match.matchIndex + 1}" />
+					</c:otherwise>
+				</c:choose>
 			</span>
 			<span class="event-card__meta-item">
 				<c:choose>
