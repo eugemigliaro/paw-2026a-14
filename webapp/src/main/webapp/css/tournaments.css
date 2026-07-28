@@ -566,6 +566,16 @@
 	border-bottom: none;
 }
 
+.tournament-roster-member-link {
+	color: var(--color-primary);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.tournament-roster-member-link:hover {
+	text-decoration: underline;
+}
+
 @media (max-width: 720px) {
 	.tournament-facts__grid {
 		grid-template-columns: 1fr;

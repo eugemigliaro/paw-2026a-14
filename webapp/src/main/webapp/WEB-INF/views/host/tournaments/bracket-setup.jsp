@@ -69,7 +69,9 @@
 										<c:choose>
 											<c:when test="${not empty bracketMembersByTeamId[team.id]}">
 												<c:forEach var="memberUsername" items="${bracketMembersByTeamId[team.id]}" varStatus="memberStatus">
-													<c:if test="${not memberStatus.first}">, </c:if><c:out value="${memberUsername}" />
+													<c:url var="memberUrl" value="/users/${memberUsername}" />
+													<!-- Leave this next line as is so that there's no space between the links and commas -->
+													<a href="${memberUrl}" class="tournament-roster-member-link"><c:out value="${memberUsername}" /></a><c:if test="${not memberStatus.last}">, </c:if>
 												</c:forEach>
 											</c:when>
 											<c:otherwise><c:out value="${rosterEmptyLabel}" /></c:otherwise>
