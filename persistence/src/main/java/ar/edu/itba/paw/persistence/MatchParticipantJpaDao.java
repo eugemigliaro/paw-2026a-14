@@ -271,12 +271,16 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     @Override
     public PaginatedResult<PendingJoinRequest> findPendingRequestsForHost(
             final User host, final int page, final int pageSize) {
+        final Instant now = Instant.now();
+
         final String whereClause =
                 "FROM MatchParticipant mp"
                         + " JOIN mp.match m"
                         + " JOIN mp.user u"
                         + " WHERE m.host.id = :hostUserId"
                         + " AND m.joinPolicy = :joinPolicy"
+                        + " AND m.status = :openStatus"
+                        + " AND m.startsAt > :now"
                         + " AND mp.status = :status"
                         + " AND (mp.scope = :matchScope OR m.startsAt = ("
                         + "   SELECT MIN(m2.startsAt) FROM MatchParticipant mp2"
@@ -291,6 +295,8 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                                         .setParameter("hostUserId", host.getId())
                                         .setParameter(
                                                 "joinPolicy", EventJoinPolicy.APPROVAL_REQUIRED)
+                                        .setParameter("openStatus", EventStatus.OPEN)
+                                        .setParameter("now", now)
                                         .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
                                         .setParameter("matchScope", ParticipantScope.MATCH)
                                         .setParameter("seriesScope", ParticipantScope.SERIES)
@@ -309,6 +315,8 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
                                 Long.class)
                         .setParameter("hostUserId", host.getId())
                         .setParameter("joinPolicy", EventJoinPolicy.APPROVAL_REQUIRED)
+                        .setParameter("openStatus", EventStatus.OPEN)
+                        .setParameter("now", now)
                         .setParameter("status", ParticipantStatus.PENDING_APPROVAL)
                         .setParameter("matchScope", ParticipantScope.MATCH)
                         .setParameter("seriesScope", ParticipantScope.SERIES)

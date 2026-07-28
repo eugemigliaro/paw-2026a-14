@@ -175,6 +175,46 @@ public class MatchParticipantJpaDaoTest {
     }
 
     @Test
+    public void testFindPendingRequestsForHostExcludesStartedMatch() {
+        final Match pastMatch =
+                createMatch(
+                        host,
+                        "Past",
+                        "PastMatch",
+                        Instant.now().minusSeconds(3600),
+                        5,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
+        createParticipant(pastMatch, player, ParticipantStatus.PENDING_APPROVAL);
+        flushAndClear();
+
+        final PaginatedResult<PendingJoinRequest> result =
+                matchParticipantDao.findPendingRequestsForHost(host, 1, 10);
+
+        Assertions.assertTrue(result.getItems().isEmpty());
+    }
+
+    @Test
+    public void testFindPendingRequestsForHostExcludesNonOpenMatch() {
+        final Instant future = Instant.now().plusSeconds(86400);
+        final Match cancelledMatch =
+                createMatch(
+                        host,
+                        "Cancelled",
+                        "CancelledMatch",
+                        future,
+                        5,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
+        cancelledMatch.setStatus(EventStatus.CANCELLED);
+        createParticipant(cancelledMatch, player, ParticipantStatus.PENDING_APPROVAL);
+        flushAndClear();
+
+        final PaginatedResult<PendingJoinRequest> result =
+                matchParticipantDao.findPendingRequestsForHost(host, 1, 10);
+
+        Assertions.assertTrue(result.getItems().isEmpty());
+    }
+
+    @Test
     public void testCreateSeriesJoinRequestIfSpaceInsertsSingleSeriesRequest() {
         final Instant now = Instant.now();
         final MatchSeries series = createSeries(host);
