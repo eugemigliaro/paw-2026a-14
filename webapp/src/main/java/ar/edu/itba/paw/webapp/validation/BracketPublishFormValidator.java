@@ -72,6 +72,25 @@ public class BracketPublishFormValidator
                 valid = false;
             }
 
+            final Instant tournamentStart = form.getTournamentStart();
+            final Instant tournamentEnd = form.getTournamentEnd();
+            if (tournamentStart != null && startsAt != null && startsAt.isBefore(tournamentStart)) {
+                reject(
+                        context,
+                        "schedules[" + index + "].startDate",
+                        "{tournament.bracket.schedule.validation.beforeTournament}");
+                reject(context, "{tournament.bracket.schedule.validation.beforeTournament}");
+                valid = false;
+            }
+            if (tournamentEnd != null && endsAt != null && endsAt.isAfter(tournamentEnd)) {
+                reject(
+                        context,
+                        "schedules[" + index + "].endDate",
+                        "{tournament.bracket.schedule.validation.afterTournament}");
+                reject(context, "{tournament.bracket.schedule.validation.afterTournament}");
+                valid = false;
+            }
+
             final int roundNumber = schedule.getRoundNumber();
             if (previousRoundNumber == null || previousRoundNumber.intValue() != roundNumber) {
                 previousRoundNumber = roundNumber;

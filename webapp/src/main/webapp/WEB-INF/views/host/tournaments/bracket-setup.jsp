@@ -139,6 +139,8 @@
 							<spring:message var="publishingLabel" code="tournament.bracket.publishing" />
 							<form method="post" action="${publishAction}" class="tournament-schedule-form" data-submit-guard="true" data-submit-loading-label="${publishingLabel}">
 								<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+								<input type="hidden" name="tournamentStart" value="${bracketPublishForm.tournamentStart}" />
+								<input type="hidden" name="tournamentEnd" value="${bracketPublishForm.tournamentEnd}" />
 
 								<spring:message var="bracketGridLabel" code="tournament.bracket.grid.label" />
 								<section class="panel tournament-bracket-shell" aria-label="${bracketGridLabel}">

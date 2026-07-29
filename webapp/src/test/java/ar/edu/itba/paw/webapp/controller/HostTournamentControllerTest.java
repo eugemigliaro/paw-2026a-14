@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import ar.edu.itba.paw.models.PlatformTime;
 import ar.edu.itba.paw.models.Tournament;
 import ar.edu.itba.paw.models.TournamentMatch;
 import ar.edu.itba.paw.models.TournamentTeam;
@@ -480,13 +479,13 @@ class HostTournamentControllerTest {
                         FIXED_NOW,
                         FIXED_NOW);
         Mockito.when(tournamentService.findTournamentForHost(77L, host))
-                .thenReturn(java.util.Optional.of(tournament));
+                .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentBracketService.getBracket(77L, host))
                 .thenReturn(
                         new TournamentBracketView(
                                 tournament,
-                                java.util.List.of(firstTeam, secondTeam),
-                                java.util.List.of(match),
+                                List.of(firstTeam, secondTeam),
+                                List.of(match),
                                 null,
                                 match,
                                 teamMembers));
@@ -520,7 +519,7 @@ class HostTournamentControllerTest {
                         member(firstTeam, UserUtils.getUser(12L)),
                         member(secondTeam, UserUtils.getUser(13L)));
         Mockito.when(tournamentService.findTournamentForHost(77L, host))
-                .thenReturn(java.util.Optional.of(tournament));
+                .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentBracketService.getBracket(77L, host))
                 .thenThrow(new TournamentBracketNotGeneratedException());
         Mockito.when(tournamentBracketService.listTeamsForSetup(77L, host))
@@ -549,20 +548,28 @@ class HostTournamentControllerTest {
         final TournamentMatch roundOneMatch = bracketMatch(10L, tournament, 1);
         final TournamentMatch roundTwoMatch = bracketMatch(11L, tournament, 2);
         Mockito.when(tournamentService.findTournamentForHost(77L, host))
-                .thenReturn(java.util.Optional.of(tournament));
+                .thenReturn(Optional.of(tournament));
         Mockito.when(tournamentBracketService.getBracket(77L, host))
                 .thenReturn(
                         new TournamentBracketView(
                                 tournament,
-                                java.util.List.of(
+                                List.of(
                                         roundOneMatch.getTeamA(),
                                         roundOneMatch.getTeamB(),
                                         roundTwoMatch.getTeamA(),
                                         roundTwoMatch.getTeamB()),
-                                java.util.List.of(roundOneMatch, roundTwoMatch),
+                                List.of(roundOneMatch, roundTwoMatch),
                                 null,
                                 roundOneMatch));
-        final LocalDate expectedDate = LocalDate.now(PlatformTime.ZONE).plusDays(1);
+
+        final LocalDate expectedDate = tournament.getStartsAtDateTime().toLocalDate();
+        final LocalTime expectedStartTime = tournament.getStartsAtDateTime().toLocalTime();
+        final LocalTime expectedEndTime = expectedStartTime.plusHours(2);
+
+        final LocalDate finalMatchDate = tournament.getEndsAtDateTime().toLocalDate();
+        final LocalTime finalMatchStartTime =
+                tournament.getEndsAtDateTime().toLocalTime().minusHours(2);
+        final LocalTime finalMatchEndTime = tournament.getEndsAtDateTime().toLocalTime();
 
         // 2. Exercise
         final var result = mockMvc.perform(get("/host/tournaments/77/bracket/setup")).andReturn();
@@ -571,20 +578,26 @@ class HostTournamentControllerTest {
         final BracketPublishForm bracketPublishForm =
                 (BracketPublishForm) result.getModelAndView().getModel().get("bracketPublishForm");
         Assertions.assertNotNull(bracketPublishForm);
+
+        // Round 1
         Assertions.assertEquals(
                 expectedDate, bracketPublishForm.getSchedules().get(0).getStartDate());
         Assertions.assertEquals(
-                LocalTime.of(18, 0), bracketPublishForm.getSchedules().get(0).getStartTime());
+                expectedStartTime, bracketPublishForm.getSchedules().get(0).getStartTime());
         Assertions.assertEquals(
                 expectedDate, bracketPublishForm.getSchedules().get(0).getEndDate());
-        Assertions.assertNull(bracketPublishForm.getSchedules().get(0).getEndTime());
         Assertions.assertEquals(
-                expectedDate, bracketPublishForm.getSchedules().get(1).getStartDate());
+                expectedEndTime, bracketPublishForm.getSchedules().get(0).getEndTime());
+
+        // Round 2 (final)
         Assertions.assertEquals(
-                LocalTime.of(19, 0), bracketPublishForm.getSchedules().get(1).getStartTime());
+                finalMatchDate, bracketPublishForm.getSchedules().get(1).getStartDate());
         Assertions.assertEquals(
-                expectedDate, bracketPublishForm.getSchedules().get(1).getEndDate());
-        Assertions.assertNull(bracketPublishForm.getSchedules().get(1).getEndTime());
+                finalMatchStartTime, bracketPublishForm.getSchedules().get(1).getStartTime());
+        Assertions.assertEquals(
+                finalMatchDate, bracketPublishForm.getSchedules().get(1).getEndDate());
+        Assertions.assertEquals(
+                finalMatchEndTime, bracketPublishForm.getSchedules().get(1).getEndTime());
     }
 
     @Test
@@ -634,12 +647,12 @@ class HostTournamentControllerTest {
                 .thenReturn(
                         new TournamentBracketView(
                                 tournament,
-                                java.util.List.of(match.getTeamA(), match.getTeamB()),
-                                java.util.List.of(match),
+                                List.of(match.getTeamA(), match.getTeamB()),
+                                List.of(match),
                                 null,
                                 match));
         Mockito.when(tournamentService.findTournamentForHost(77L, host))
-                .thenReturn(java.util.Optional.of(tournament));
+                .thenReturn(Optional.of(tournament));
 
         // 2. Exercise + 3. Assert
         mockMvc.perform(post("/host/tournaments/77/bracket/publish"))
@@ -852,7 +865,9 @@ class HostTournamentControllerTest {
                 .param("schedules[1].longitude", "-58.4")
                 .param("schedules[1].matchId", "11")
                 .param("schedules[1].roundNumber", "1")
-                .param("schedules[1].matchNumber", "2");
+                .param("schedules[1].matchNumber", "2")
+                .param("tournamentStart", "2030-04-10T15:00:00Z")
+                .param("tournamentEnd", "2030-04-10T23:00:00Z");
     }
 
     private static Tournament tournament(
@@ -861,8 +876,8 @@ class HostTournamentControllerTest {
                 id,
                 host,
                 status,
-                Instant.parse("2030-04-10T18:00:00Z"),
-                Instant.parse("2030-04-10T21:00:00Z"));
+                Instant.parse("2030-04-10T15:00:00Z"),
+                Instant.parse("2030-04-10T23:00:00Z"));
     }
 
     private static Tournament tournament(

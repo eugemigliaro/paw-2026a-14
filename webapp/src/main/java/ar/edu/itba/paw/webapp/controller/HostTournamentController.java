@@ -27,6 +27,7 @@ import ar.edu.itba.paw.webapp.form.CreateTournamentForm;
 import ar.edu.itba.paw.webapp.security.annotation.AuthenticatedUser;
 import ar.edu.itba.paw.webapp.utils.ImageUrlHelper;
 import ar.edu.itba.paw.webapp.utils.MultipartImageUpload;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -61,6 +62,7 @@ public class HostTournamentController {
     private static final double DEFAULT_MAP_LONGITUDE = -58.3816;
     private static final int DEFAULT_MAP_ZOOM = 14;
     private static final String HOST_CANCELLED_REASON = "host_cancelled";
+    private static final Duration DEFAULT_MATCH_DURATION = Duration.ofHours(2);
 
     private final TournamentService tournamentService;
     private final TournamentRegistrationService tournamentRegistrationService;
@@ -501,37 +503,62 @@ public class HostTournamentController {
     private BracketPublishForm createBracketPublishForm(final TournamentBracketView bracketView) {
         final BracketPublishForm form = new BracketPublishForm();
         final List<BracketPublishScheduleForm> schedules = new ArrayList<>();
+        final Tournament tournament = bracketView.getTournament();
         final Map<Integer, List<TournamentMatch>> matchesByRound =
                 matchesByRound(bracketView.getMatches());
+        final int totalRounds = matchesByRound.size();
+
         for (final Map.Entry<Integer, List<TournamentMatch>> round : matchesByRound.entrySet()) {
+            final int roundNumber = round.getKey();
             for (final TournamentMatch match : round.getValue()) {
                 final BracketPublishScheduleForm schedule = new BracketPublishScheduleForm();
                 schedule.setMatchId(match.getId());
-                schedule.setRoundNumber(round.getKey());
+                schedule.setRoundNumber(roundNumber);
                 schedule.setMatchNumber(match.getMatchIndex() + 1);
-                schedule.setStartDate(
-                        match.getScheduledStartsAt() == null
-                                ? defaultScheduleDate()
-                                : scheduleDate(match.getScheduledStartsAtDateTime()));
-                schedule.setStartTime(
-                        match.getScheduledStartsAt() == null
-                                ? defaultScheduleStartTime(round.getKey())
-                                : scheduleTime(match.getScheduledStartsAtDateTime()));
-                schedule.setEndDate(
-                        match.getScheduledEndsAt() == null
-                                ? defaultScheduleDate()
-                                : scheduleDate(match.getScheduledEndsAtDateTime()));
-                schedule.setEndTime(
-                        match.getScheduledEndsAt() == null
-                                ? null
-                                : scheduleTime(match.getScheduledEndsAtDateTime()));
-                schedule.setAddress(scheduleAddress(bracketView.getTournament(), match));
-                schedule.setLatitude(scheduleLatitude(bracketView.getTournament(), match));
-                schedule.setLongitude(scheduleLongitude(bracketView.getTournament(), match));
+                final boolean hasSchedule = match.getScheduledStartsAt() != null;
+                final LocalDate startDate =
+                        hasSchedule
+                                ? scheduleDate(match.getScheduledStartsAtDateTime())
+                                : defaultScheduleDate(tournament, roundNumber, totalRounds);
+                final LocalTime startTime =
+                        hasSchedule
+                                ? scheduleTime(match.getScheduledStartsAtDateTime())
+                                : defaultScheduleStartTime(tournament, roundNumber);
+                schedule.setStartDate(startDate);
+                schedule.setStartTime(startTime);
+                final boolean hasEndSchedule = match.getScheduledEndsAt() != null;
+                final LocalTime endTime =
+                        hasEndSchedule
+                                ? scheduleTime(match.getScheduledEndsAtDateTime())
+                                : startTime != null ? startTime.plus(DEFAULT_MATCH_DURATION) : null;
+                final LocalDate endDate =
+                        hasEndSchedule
+                                ? scheduleDate(match.getScheduledEndsAtDateTime())
+                                : endTime != null
+                                                && startTime != null
+                                                && endTime.isBefore(startTime)
+                                        ? startDate.plusDays(1)
+                                        : startDate;
+                schedule.setEndDate(endDate);
+                schedule.setEndTime(endTime);
+                schedule.setAddress(scheduleAddress(tournament, match));
+                schedule.setLatitude(scheduleLatitude(tournament, match));
+                schedule.setLongitude(scheduleLongitude(tournament, match));
                 schedules.add(schedule);
             }
         }
+
+        final BracketPublishScheduleForm finalMatchSchedule = schedules.getLast();
+        final OffsetDateTime finalMatchEnd = tournament.getEndsAtDateTime();
+        final OffsetDateTime finalMatchStart = finalMatchEnd.minus(DEFAULT_MATCH_DURATION);
+        finalMatchSchedule.setStartDate(finalMatchStart.toLocalDate());
+        finalMatchSchedule.setStartTime(finalMatchStart.toLocalTime());
+        finalMatchSchedule.setEndDate(finalMatchEnd.toLocalDate());
+        finalMatchSchedule.setEndTime(finalMatchEnd.toLocalTime());
+
         form.setSchedules(schedules);
+        form.setTournamentStart(tournament.getStartsAt());
+        form.setTournamentEnd(tournament.getEndsAt());
         return form;
     }
 
@@ -676,12 +703,38 @@ public class HostTournamentController {
                                         Collectors.toList()));
     }
 
-    private static LocalTime defaultScheduleStartTime(final int roundNumber) {
-        return LocalTime.of(18, 0).plusHours(Math.max(0, roundNumber - 1));
+    private static LocalTime defaultScheduleStartTime(
+            final Tournament tournament, final int roundNumber) {
+        final OffsetDateTime startsAt = tournament.getStartsAtDateTime();
+        final LocalTime baseTime = startsAt != null ? startsAt.toLocalTime() : LocalTime.of(18, 0);
+        return baseTime.plus(DEFAULT_MATCH_DURATION.multipliedBy(roundNumber - 1));
     }
 
-    private static LocalDate defaultScheduleDate() {
-        return LocalDate.now(PlatformTime.ZONE).plusDays(1);
+    private static LocalDate defaultScheduleDate(
+            final Tournament tournament, final int roundNumber, final int totalRounds) {
+        final OffsetDateTime tournamentStart = tournament.getStartsAtDateTime();
+        final OffsetDateTime tournamentEnd = tournament.getEndsAtDateTime();
+
+        if (tournamentStart == null || tournamentEnd == null) {
+            return LocalDate.now(PlatformTime.ZONE);
+        }
+
+        if (totalRounds <= 1) {
+            return tournamentStart.toLocalDate();
+        }
+
+        final Duration timeDisplacement = DEFAULT_MATCH_DURATION.multipliedBy(totalRounds);
+        final OffsetDateTime effectiveEnd = tournamentEnd.minus(timeDisplacement);
+        final Duration effectiveDuration = Duration.between(tournamentStart, effectiveEnd);
+
+        if (effectiveDuration.isNegative() || effectiveDuration.isZero()) {
+            return tournamentStart.toLocalDate();
+        }
+
+        final Duration offset =
+                effectiveDuration.multipliedBy(roundNumber - 1).dividedBy(totalRounds - 1);
+
+        return tournamentStart.plus(offset).toLocalDate();
     }
 
     private static LocalDate scheduleDate(final OffsetDateTime dateTime) {
