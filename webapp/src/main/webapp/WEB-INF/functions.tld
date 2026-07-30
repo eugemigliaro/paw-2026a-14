@@ -22,6 +22,11 @@
         <function-signature>java.lang.String cardDate(java.time.temporal.TemporalAccessor)</function-signature>
     </function>
     <function>
+        <name>shortDate</name>
+        <function-class>ar.edu.itba.paw.webapp.utils.JspTimeFunctions</function-class>
+        <function-signature>java.lang.String shortDate(java.time.temporal.TemporalAccessor)</function-signature>
+    </function>
+    <function>
         <name>time</name>
         <function-class>ar.edu.itba.paw.webapp.utils.JspTimeFunctions</function-class>
         <function-signature>java.lang.String time(java.time.temporal.TemporalAccessor)</function-signature>

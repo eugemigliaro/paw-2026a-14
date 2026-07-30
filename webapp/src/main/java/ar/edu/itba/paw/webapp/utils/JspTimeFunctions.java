@@ -12,6 +12,10 @@ public final class JspTimeFunctions {
         return ViewFormatUtils.formatDate(temporal, LocaleContextHolder.getLocale());
     }
 
+    public static String shortDate(final TemporalAccessor temporal) {
+        return ViewFormatUtils.formatShortDate(temporal, LocaleContextHolder.getLocale());
+    }
+
     public static String dateTime(final TemporalAccessor temporal) {
         return ViewFormatUtils.formatDateTime(temporal, LocaleContextHolder.getLocale());
     }

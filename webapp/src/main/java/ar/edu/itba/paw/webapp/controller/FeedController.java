@@ -18,6 +18,7 @@ import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.security.annotation.CurrentUser;
 import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.ViewFormatUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.SelectOptionViewModel;
@@ -146,6 +147,14 @@ public class FeedController {
                 searchForm.getStartDate() != null ? searchForm.getStartDate().toString() : null;
         String selectedEndDateValue =
                 searchForm.getEndDate() != null ? searchForm.getEndDate().toString() : null;
+        String selectedStartDateDisplay =
+                searchForm.getStartDate() != null
+                        ? ViewFormatUtils.formatShortDate(searchForm.getStartDate(), locale)
+                        : null;
+        String selectedEndDateDisplay =
+                searchForm.getEndDate() != null
+                        ? ViewFormatUtils.formatShortDate(searchForm.getEndDate(), locale)
+                        : null;
 
         final ModelAndView mav = new ModelAndView("feed/index");
         mav.addObject("selectedType", selectedTypeValue);
@@ -158,6 +167,8 @@ public class FeedController {
         mav.addObject("selectedDateMinValue", LocalDate.now(PlatformTime.ZONE).toString());
         mav.addObject("selectedStartDateValue", selectedStartDateValue);
         mav.addObject("selectedEndDateValue", selectedEndDateValue);
+        mav.addObject("selectedStartDateDisplay", selectedStartDateDisplay);
+        mav.addObject("selectedEndDateDisplay", selectedEndDateDisplay);
         mav.addObject(
                 "sortOptions",
                 buildSortOptions(

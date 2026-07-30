@@ -23,6 +23,7 @@
 <c:url var="cssEventPageHref" value="/css/event-page.css" />
 <c:url var="cssReportsHref" value="/css/reports.css" />
 <c:url var="cssTournamentsHref" value="/css/tournaments.css?v=20260610" />
+<c:url var="cssDatePickerHref" value="/css/date-picker.css?v=20260730" />
 <c:url var="formSubmitGuardHref" value="/js/form-submit-guard.js" />
 <c:url var="accountEditFormHref" value="/js/account-edit-form.js" />
 <c:url var="fileUploadPreviewHref" value="/js/file-upload-preview.js" />
@@ -43,6 +44,7 @@
 <c:url var="reportDropdownsHref" value="/js/report-dropdowns.js" />
 <c:url var="reportFiltersHref" value="/js/report-filters.js" />
 <c:url var="bracketSetupHref" value="/js/bracket-setup.js" />
+<c:url var="datePickerJsHref" value="/js/date-picker.js?v=20260730" />
 <link rel="icon" type="image/png" href="${faviconHref}" />
 <link rel="stylesheet" href="${cssComponentsHref}" />
 <link rel="stylesheet" href="${cssBaseHref}" />
@@ -59,8 +61,10 @@
 <link rel="stylesheet" href="${cssEventPageHref}" />
 <link rel="stylesheet" href="${cssReportsHref}" />
 <link rel="stylesheet" href="${cssTournamentsHref}" />
+<link rel="stylesheet" href="${cssDatePickerHref}" />
 <link rel="stylesheet" href="${leafletCssHref}" />
 <script defer src="${leafletJsHref}"></script>
+<script defer src="${datePickerJsHref}"></script>
 <script defer src="${formSubmitGuardHref}"></script>
 <script defer src="${accountEditFormHref}"></script>
 <script defer src="${fileUploadPreviewHref}"></script>

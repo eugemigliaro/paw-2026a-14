@@ -5,6 +5,8 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ui" tagdir="/WEB-INF/tags" %>
 <spring:message var="pageTitle" code="page.title.hostTournamentBracketSetup" arguments="${bracketTournament.title}" />
+<spring:message var="bracketStartDateLabel" code="tournament.bracket.schedule.startDate" />
+<spring:message var="bracketEndDateLabel" code="tournament.bracket.schedule.endDate" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -162,18 +164,16 @@
 													</p>
 												</div>
 												<div class="tournament-schedule-match__grid tournament-schedule-match__date-time-grid">
-													<label class="field" for="match-start-date-${scheduleStatus.index}">
-														<span class="field__label"><spring:message code="tournament.bracket.schedule.startDate" /></span>
-														<input class="field__control" id="match-start-date-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].startDate" type="date" value="${schedule.startDate}" required="required" />
-													</label>
+													<ui:datePicker name="schedules[${scheduleStatus.index}].startDate"
+														id="match-start-date-${scheduleStatus.index}"
+														label="${bracketStartDateLabel}" value="${schedule.startDate}" required="true" />
 													<label class="field" for="match-start-time-${scheduleStatus.index}">
 														<span class="field__label"><spring:message code="tournament.bracket.schedule.startTime" /></span>
 														<input class="field__control" id="match-start-time-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].startTime" type="time" value="${schedule.startTime}" required="required" />
 													</label>
-													<label class="field" for="match-end-date-${scheduleStatus.index}">
-														<span class="field__label"><spring:message code="tournament.bracket.schedule.endDate" /></span>
-														<input class="field__control" id="match-end-date-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].endDate" type="date" value="${schedule.endDate}" required="required" />
-													</label>
+													<ui:datePicker name="schedules[${scheduleStatus.index}].endDate"
+														id="match-end-date-${scheduleStatus.index}"
+														label="${bracketEndDateLabel}" value="${schedule.endDate}" required="true" />
 													<label class="field" for="match-end-time-${scheduleStatus.index}">
 														<span class="field__label"><spring:message code="tournament.bracket.schedule.endTime" /></span>
 														<input class="field__control" id="match-end-time-${scheduleStatus.index}" name="schedules[${scheduleStatus.index}].endTime" type="time" value="${schedule.endTime}" required="required" />

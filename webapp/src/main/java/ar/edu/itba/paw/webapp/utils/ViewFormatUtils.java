@@ -34,6 +34,10 @@ public final class ViewFormatUtils {
         return temporal == null ? "" : cardDateFormatter(locale).format(temporal);
     }
 
+    public static String formatShortDate(final TemporalAccessor temporal, final Locale locale) {
+        return temporal == null ? "" : shortDateFormatter(locale).format(temporal);
+    }
+
     public static String mediaClassFor(final Sport sport) {
         switch (sport) {
             case FOOTBALL:
@@ -64,6 +68,12 @@ public final class ViewFormatUtils {
         return DateTimeFormatter.ofPattern("EEE, MMM d", resolvedLocale(locale));
     }
 
+    public static DateTimeFormatter shortDateFormatter(final Locale locale) {
+        final Locale resolved = resolvedLocale(locale);
+        final String pattern = isSpanish(resolved) ? "dd/MM/yyyy" : "MM/dd/yyyy";
+        return DateTimeFormatter.ofPattern(pattern, resolved);
+    }
+
     public static DateTimeFormatter timeFormatter(final Locale locale) {
         return DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
                 .withLocale(resolvedLocale(locale));
@@ -71,5 +81,9 @@ public final class ViewFormatUtils {
 
     public static Locale resolvedLocale(final Locale locale) {
         return locale == null ? Locale.ENGLISH : locale;
+    }
+
+    private static boolean isSpanish(final Locale locale) {
+        return "es".equals(locale.getLanguage());
     }
 }

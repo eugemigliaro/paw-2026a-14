@@ -16,6 +16,13 @@
 		return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 	}
 
+	function normalizeDate(value) {
+		if (!value) return null;
+		var parts = value.split('-');
+		if (parts.length !== 3) return null;
+		return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+	}
+
 	function validatePriceRange(form) {
 		var minInput = form.querySelector('[data-price-from="true"]');
 		var maxInput = form.querySelector('[data-price-to="true"]');
@@ -33,6 +40,44 @@
 			maxInput.reportValidity();
 		}
 		return isValid;
+	}
+
+	function clearDateErrors(form) {
+		form.querySelectorAll('[data-dpicker-error]').forEach(function (el) {
+			el.hidden = true;
+			el.textContent = '';
+		});
+	}
+
+	function validateDateRange(form) {
+		clearDateErrors(form);
+
+		var rangeError = form.getAttribute('data-date-range-error');
+		if (!rangeError) {
+			console.warn('Date range validation skipped: form is missing data-date-range-error attribute');
+			return true;
+		}
+
+		var startInput = form.querySelector('[name="startDate"]');
+		var endInput = form.querySelector('[name="endDate"]');
+		if (!startInput || !endInput) return true;
+
+		var startDate = normalizeDate(startInput.value);
+		var endDate = normalizeDate(endInput.value);
+		if (!startDate || !endDate) return true;
+
+		if (endDate < startDate) {
+			var endContainer = endInput.closest('[data-dpicker="true"]');
+			if (endContainer) {
+				var errorEl = endContainer.querySelector('[data-dpicker-error]');
+				if (errorEl) {
+					errorEl.textContent = rangeError;
+					errorEl.hidden = false;
+				}
+			}
+			return false;
+		}
+		return true;
 	}
 
 	document.addEventListener('click', function (e) {
@@ -70,6 +115,13 @@
 		}
 	});
 
+	document.addEventListener('change', function (e) {
+		if (e.target.matches('[data-dpicker-iso="true"]')) {
+			var form = e.target.closest('form');
+			if (form) clearDateErrors(form);
+		}
+	});
+
 	/* Remember which dropdown was open so we can reopen after page reload */
 	document.addEventListener('click', function (e) {
 		var item = e.target.closest('.filter-dropdown__item');
@@ -90,6 +142,10 @@
 		var panel = e.target.closest('.filter-dropdown__panel');
 		if (panel) {
 			if (!validatePriceRange(e.target)) {
+				e.preventDefault();
+				return;
+			}
+			if (!validateDateRange(e.target)) {
 				e.preventDefault();
 				return;
 			}

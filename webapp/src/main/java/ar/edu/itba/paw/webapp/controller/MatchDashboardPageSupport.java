@@ -25,6 +25,7 @@ import ar.edu.itba.paw.services.TournamentService;
 import ar.edu.itba.paw.webapp.form.SearchForm;
 import ar.edu.itba.paw.webapp.utils.EventCardAttributeUtils;
 import ar.edu.itba.paw.webapp.utils.PaginationUtils;
+import ar.edu.itba.paw.webapp.utils.ViewFormatUtils;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterGroupViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.FilterOptionViewModel;
 import ar.edu.itba.paw.webapp.viewmodel.UiViewModels.MatchListControlsViewModel;
@@ -40,6 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -92,6 +94,18 @@ final class MatchDashboardPageSupport {
         mav.addObject("selectedSort", sort);
         mav.addObject("selectedStartDateValue", startDate);
         mav.addObject("selectedEndDateValue", endDate);
+        String selectedStartDateDisplay =
+                startDate != null
+                        ? ViewFormatUtils.formatShortDate(
+                                searchForm.getStartDate(), LocaleContextHolder.getLocale())
+                        : null;
+        String selectedEndDateDisplay =
+                endDate != null
+                        ? ViewFormatUtils.formatShortDate(
+                                searchForm.getEndDate(), LocaleContextHolder.getLocale())
+                        : null;
+        mav.addObject("selectedStartDateDisplay", selectedStartDateDisplay);
+        mav.addObject("selectedEndDateDisplay", selectedEndDateDisplay);
         mav.addObject("selectedDateMinValue", dateBounds.minDate());
         mav.addObject("selectedDateMaxValue", dateBounds.maxDate());
         mav.addObject("selectedSports", selectedSportsStr);

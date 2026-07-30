@@ -48,6 +48,13 @@ class JspTimeFunctionsTest {
     }
 
     @Test
+    void shortDateUsesNumericLocaleFormatForEnglish() {
+        final OffsetDateTime value = OffsetDateTime.parse("2026-05-25T23:30:00-03:00");
+        final String result = JspTimeFunctions.shortDate(value);
+        Assertions.assertEquals("05/25/2026", result);
+    }
+
+    @Test
     void cardDateUsesCompactWeekdayFormat() {
         // 1. Arrange
         final OffsetDateTime value = OffsetDateTime.parse("2026-05-25T23:30:00-03:00");

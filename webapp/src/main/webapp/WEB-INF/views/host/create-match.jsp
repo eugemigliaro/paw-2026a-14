@@ -19,6 +19,9 @@
 	<body>
 		<div class="app-shell">
 			<%@ include file="/WEB-INF/views/includes/site-header.jspf" %>
+			<spring:message var="eventDateLabel" code="host.form.date" />
+			<spring:message var="endDateLabel" code="host.form.endDate" />
+			<spring:message var="recurrenceUntilDateLabel" code="host.form.recurrence.untilDate" />
 			<spring:message var="titlePlaceholder" code="host.form.title.placeholder" />
 			<spring:message var="descPlaceholder" code="host.form.description.placeholder" />
 			<spring:message var="locationPlaceholder" code="host.form.location.placeholder" />
@@ -341,22 +344,18 @@
 												cssClass="field__error" element="span" />
 										</div>
 
-										<label class="field" for="match-recurrence-until-date"
-											id="recurrence-until-date-field">
-											<span class="field__label">
-												<spring:message
-													code="host.form.recurrence.untilDate" />
-											</span>
-											<form:input path="recurrenceUntilDate"
-												id="match-recurrence-until-date" type="date"
-												cssClass="field__control" />
+										<div id="recurrence-until-date-field">
+											<ui:datePicker name="recurrenceUntilDate"
+												id="match-recurrence-until-date"
+												label="${recurrenceUntilDateLabel}"
+												value="${createEventForm.recurrenceUntilDate}" />
 											<span class="field__hint">
 												<spring:message
 													code="host.form.recurrence.untilDate.hint" />
 											</span>
 											<form:errors path="recurrenceUntilDate"
 												cssClass="field__error" element="span" />
-										</label>
+										</div>
 
 										<label class="field" for="match-recurrence-occurrence-count"
 											id="recurrence-count-field">
@@ -438,15 +437,11 @@
 									</section>
 								</c:if>
 								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="match-date">
-										<span class="field__label">
-											<spring:message code="host.form.date" />
-										</span>
-										<form:input path="eventDate" id="match-date" type="date"
-											cssClass="field__control" required="required" />
-										<form:errors path="eventDate" cssClass="field__error"
-											element="span" />
-									</label>
+									<ui:datePicker name="eventDate" id="match-date"
+										label="${eventDateLabel}" value="${createEventForm.eventDate}"
+										required="true" />
+									<form:errors path="eventDate" cssClass="field__error"
+										element="span" />
 
 									<label class="field" for="match-time">
 										<span class="field__label">
@@ -486,15 +481,11 @@
 									</div>
 								</div>
 								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="match-end-date">
-										<span class="field__label">
-											<spring:message code="host.form.endDate" />
-										</span>
-										<form:input path="endDate" id="match-end-date" type="date"
-											cssClass="field__control" required="required" />
-										<form:errors path="endDate" cssClass="field__error"
-											element="span" />
-									</label>
+									<ui:datePicker name="endDate" id="match-end-date"
+										label="${endDateLabel}" value="${createEventForm.endDate}"
+										required="true" />
+									<form:errors path="endDate" cssClass="field__error"
+										element="span" />
 
 									<label class="field" for="match-end-time">
 										<span class="field__label">

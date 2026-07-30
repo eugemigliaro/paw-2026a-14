@@ -10,6 +10,10 @@
 <spring:message var="formDescription" code="${formDescriptionCode}" />
 <spring:message var="submitLabel" code="${submitLabelCode}" />
 <spring:message var="submitLoadingLabel" code="${submitLoadingLabelCode}" />
+<spring:message var="regOpensDateLabel" code="tournament.form.registrationOpensDate.label" />
+<spring:message var="regClosesDateLabel" code="tournament.form.registrationClosesDate.label" />
+<spring:message var="startDateLabel" code="tournament.form.startDate.label" />
+<spring:message var="endDateLabel" code="tournament.form.endDate.label" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -89,11 +93,9 @@
 							<h2 class="form-card__title"><spring:message code="tournament.create.section.registration.subtitle" /></h2>
 							<div class="create-stack">
 								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="tournament-registration-opens-date">
-										<span class="field__label"><spring:message code="tournament.form.registrationOpensDate.label" /></span>
-										<form:input path="registrationOpensDate" id="tournament-registration-opens-date" type="date" cssClass="field__control" required="required" />
-										<form:errors path="registrationOpensDate" cssClass="field__error" element="span" />
-									</label>
+									<ui:datePicker name="registrationOpensDate" id="tournament-registration-opens-date"
+										label="${regOpensDateLabel}" value="${createTournamentForm.registrationOpensDate}" required="true" />
+									<form:errors path="registrationOpensDate" cssClass="field__error" element="span" />
 									<label class="field" for="tournament-registration-opens-time">
 										<span class="field__label"><spring:message code="tournament.form.registrationOpensTime.label" /></span>
 										<form:input path="registrationOpensTime" id="tournament-registration-opens-time" type="time" cssClass="field__control" required="required" />
@@ -101,11 +103,9 @@
 									</label>
 								</div>
 								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="tournament-registration-closes-date">
-										<span class="field__label"><spring:message code="tournament.form.registrationClosesDate.label" /></span>
-										<form:input path="registrationClosesDate" id="tournament-registration-closes-date" type="date" cssClass="field__control" required="required" />
-										<form:errors path="registrationClosesDate" cssClass="field__error" element="span" />
-									</label>
+									<ui:datePicker name="registrationClosesDate" id="tournament-registration-closes-date"
+										label="${regClosesDateLabel}" value="${createTournamentForm.registrationClosesDate}" required="true" />
+									<form:errors path="registrationClosesDate" cssClass="field__error" element="span" />
 									<label class="field" for="tournament-registration-closes-time">
 										<span class="field__label"><spring:message code="tournament.form.registrationClosesTime.label" /></span>
 										<form:input path="registrationClosesTime" id="tournament-registration-closes-time" type="time" cssClass="field__control" required="required" />
@@ -149,11 +149,9 @@
 							<h2 class="form-card__title"><spring:message code="tournament.create.section.schedule.subtitle" /></h2>
 							<div class="create-stack">
 								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="tournament-start-date">
-										<span class="field__label"><spring:message code="tournament.form.startDate.label" /></span>
-										<form:input path="startDate" id="tournament-start-date" type="date" cssClass="field__control" required="required" />
-										<form:errors path="startDate" cssClass="field__error" element="span" />
-									</label>
+									<ui:datePicker name="startDate" id="tournament-start-date"
+										label="${startDateLabel}" value="${createTournamentForm.startDate}" required="true" />
+									<form:errors path="startDate" cssClass="field__error" element="span" />
 									<label class="field" for="tournament-start-time">
 										<span class="field__label"><spring:message code="tournament.form.startTime.label" /></span>
 										<form:input path="startTime" id="tournament-start-time" type="time" cssClass="field__control" required="required" />
@@ -161,11 +159,9 @@
 									</label>
 								</div>
 								<div class="form-card__grid form-card__grid--datetime">
-									<label class="field" for="tournament-end-date">
-										<span class="field__label"><spring:message code="tournament.form.endDate.label" /></span>
-										<form:input path="endDate" id="tournament-end-date" type="date" cssClass="field__control" required="required" />
-										<form:errors path="endDate" cssClass="field__error" element="span" />
-									</label>
+									<ui:datePicker name="endDate" id="tournament-end-date"
+										label="${endDateLabel}" value="${createTournamentForm.endDate}" required="true" />
+									<form:errors path="endDate" cssClass="field__error" element="span" />
 									<label class="field" for="tournament-end-time">
 										<span class="field__label"><spring:message code="tournament.form.endTime.label" /></span>
 										<form:input path="endTime" id="tournament-end-time" type="time" cssClass="field__control" required="required" />

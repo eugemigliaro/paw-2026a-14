@@ -6,6 +6,8 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="icon" tagdir="/WEB-INF/tags/icons" %>
 <spring:message var="pageTitle" code="page.title.explore" />
+<spring:message var="filterDateFromLabel" code="filter.date.from" />
+<spring:message var="filterDateToLabel" code="filter.date.to" />
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 	<head>
@@ -21,6 +23,7 @@
 			<spring:message var="clearFilterLabel" code="filter.clear" text="Clear" />
 			<spring:message var="seeResultsLabel" code="filter.seeResults" text="See results" />
 			<spring:message var="priceRangeError" code="filter.price.rangeError" />
+			<spring:message var="dateRangeError" code="filter.date.rangeError" />
 			<spring:message var="eventTypeFilterTitle" code="filter.eventType" />
 			<spring:message var="feedSearchPlaceholder" code="feed.search.placeholder" />
 			<spring:message var="feedSearchButtonLabel" code="feed.search.button" />
@@ -215,7 +218,7 @@
 									<spring:message code="filter.date" />
 								</button>
 								<div class="filter-dropdown__panel">
-									<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate">
+									<form method="get" action="${feedFormAction}" class="filter-dropdown__form" novalidate="novalidate" data-date-range-error="${dateRangeError}">
 										<input type="hidden" name="q" value="<c:out value='${searchForm.q}' />" />
 										<c:forEach var="selectedSport" items="${selectedSports}">
 											<input type="hidden" name="sport" value="<c:out value='${selectedSport}' />" />
@@ -227,13 +230,15 @@
 										<input type="hidden" name="minPrice" value="<c:out value='${selectedMinPriceValue}' />" />
 										<input type="hidden" name="maxPrice" value="<c:out value='${selectedMaxPriceValue}' />" />
 
-										<div class="field filter-rail__field">
-											<label class="field__label" for="start-date"><spring:message code="filter.date.from" /></label>
-											<input id="start-date" name="startDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" value="<c:out value='${selectedStartDateValue}' />" />
+										<div class="filter-rail__field">
+											<ui:datePicker name="startDate" id="start-date"
+												label="${filterDateFromLabel}" value="${searchForm.startDate}"
+												min="${selectedDateMinValue}" />
 										</div>
-										<div class="field filter-rail__field">
-											<label class="field__label" for="end-date"><spring:message code="filter.date.to" /></label>
-											<input id="end-date" name="endDate" type="date" class="field__control" min="<c:out value='${selectedDateMinValue}' />" value="<c:out value='${selectedEndDateValue}' />" />
+										<div class="filter-rail__field">
+											<ui:datePicker name="endDate" id="end-date"
+												label="${filterDateToLabel}" value="${searchForm.endDate}"
+												min="${selectedDateMinValue}" />
 										</div>
 
 										<c:url var="clearDateHref" value="${feedPath}">
@@ -257,22 +262,18 @@
 										</div>
 										</form>
 									</div>
-									<c:if test="${not empty selectedStartDateValue or not empty selectedEndDateValue}">
+									<c:if test="${not empty selectedStartDateDisplay or not empty selectedEndDateDisplay}">
 										<div class="filter-dropdown__selected-list">
-											<c:if test="${not empty selectedStartDateValue}">
-												<c:set var="formattedStartDate"
-													value="${fn:substring(selectedStartDateValue, 8, 10)}/${fn:substring(selectedStartDateValue, 5, 7)}/${fn:substring(selectedStartDateValue, 2, 4)}" />
+											<c:if test="${not empty selectedStartDateDisplay}">
 												<span class="filter-dropdown__selected-item">
 													<spring:message code="filter.date.from" />:
-													<c:out value="${formattedStartDate}" />
+													<c:out value="${selectedStartDateDisplay}" />
 												</span>
 											</c:if>
-											<c:if test="${not empty selectedEndDateValue}">
-												<c:set var="formattedEndDate"
-													value="${fn:substring(selectedEndDateValue, 8, 10)}/${fn:substring(selectedEndDateValue, 5, 7)}/${fn:substring(selectedEndDateValue, 2, 4)}" />
+											<c:if test="${not empty selectedEndDateDisplay}">
 												<span class="filter-dropdown__selected-item">
 													<spring:message code="filter.date.to" />:
-													<c:out value="${formattedEndDate}" />
+													<c:out value="${selectedEndDateDisplay}" />
 												</span>
 											</c:if>
 										</div>
