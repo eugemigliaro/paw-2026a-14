@@ -133,7 +133,11 @@ final class EventPageSupport {
                         ? matchService.findSeriesOccurrencesPage(
                                 match.getSeries().getId(), seriesPage, SERIES_PAGE_SIZE)
                         : new PaginatedResult<>(List.of(), 0, 1, SERIES_PAGE_SIZE);
-        final List<Match> seriesOccurrences = seriesOccurrencesPage.getItems();
+        final List<Match> scheduleOccurrences = seriesOccurrencesPage.getItems();
+        final List<Match> seriesOccurrences =
+                match.isRecurringOccurrence()
+                        ? matchService.findSeriesOccurrences(match.getSeries().getId())
+                        : List.of();
         final MatchInteractionState interactionState =
                 matchService.getMatchInteractionState(match, seriesOccurrences, currentUser);
         final boolean suppressReservationErrors =
@@ -154,7 +158,7 @@ final class EventPageSupport {
         mav.addObject("reportMatchCanSubmit", reportMatchVisible && !reportMatchAlreadySubmitted);
         mav.addObject("reservationRequiresLogin", interactionState.isReservationRequiresLogin());
         addRealEventPageAttributes(
-                mav, match, confirmedParticipants, seriesOccurrences, currentUser, locale);
+                mav, match, confirmedParticipants, scheduleOccurrences, currentUser, locale);
         mav.addObject(
                 "userProfileImageUrls",
                 userProfileImageUrls(

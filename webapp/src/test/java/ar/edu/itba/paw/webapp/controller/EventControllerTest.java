@@ -943,6 +943,51 @@ class EventControllerTest {
     }
 
     @Test
+    void getRecurringMatchDetailsRouteComputesSeriesReservationFromAllOccurrencesNotDisplayedPage()
+            throws Exception {
+        final List<Match> fullOccurrences = matchService.findSeriesOccurrences(600L);
+        final List<Match> staleOnlyPage =
+                fullOccurrences.stream()
+                        .filter(occurrence -> !occurrence.getStartsAt().isAfter(FIXED_NOW))
+                        .toList();
+        Mockito.doReturn(new PaginatedResult<>(staleOnlyPage, fullOccurrences.size(), 1, 5))
+                .when(matchService)
+                .findSeriesOccurrencesPage(600L, 1, 5);
+
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("occurrences", Matchers.hasSize(2)))
+                .andExpect(model().attribute("seriesReservationEnabled", true))
+                .andExpect(model().attribute("seriesCancellationEnabled", false));
+    }
+
+    @Test
+    void getRecurringMatchDetailsRouteComputesSeriesCancellationFromAllOccurrencesNotDisplayedPage()
+            throws Exception {
+        final List<Match> fullOccurrences = matchService.findSeriesOccurrences(600L);
+        final List<Match> staleOnlyPage =
+                fullOccurrences.stream()
+                        .filter(occurrence -> !occurrence.getStartsAt().isAfter(FIXED_NOW))
+                        .toList();
+        Mockito.doReturn(new PaginatedResult<>(staleOnlyPage, fullOccurrences.size(), 1, 5))
+                .when(matchService)
+                .findSeriesOccurrencesPage(600L, 1, 5);
+
+        currentUserHasSeriesReservation = true;
+        AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
+
+        mockMvc.perform(get("/matches/46"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("matches/detail"))
+                .andExpect(model().attribute("isConfirmedParticipant", true))
+                .andExpect(model().attribute("seriesReservationEnabled", false))
+                .andExpect(model().attribute("seriesCancellationEnabled", true));
+    }
+
+    @Test
     void getRealMatchDetailsRouteHidesStaleReservationConfirmedNoticeWhenUserWasRemoved()
             throws Exception {
         AuthenticationUtils.authenticateUser(9L, "player@test.com", "player-account");
