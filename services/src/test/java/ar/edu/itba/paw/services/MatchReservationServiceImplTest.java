@@ -256,7 +256,7 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
         Mockito.when(
                         matchParticipantDataService.createSeriesReservationsIfSpace(
-                                100L, u, FIXED_NOW))
+                                List.of(10L, 11L), u))
                 .thenReturn(2);
 
         matchReservationService.reserveSeries(10L, u);
@@ -293,7 +293,7 @@ public class MatchReservationServiceImplTest {
         Mockito.when(matchParticipantDataService.hasActiveReservation(11L, u)).thenReturn(false);
         Mockito.when(
                         matchParticipantDataService.createSeriesReservationsIfSpace(
-                                100L, u, FIXED_NOW))
+                                List.of(10L, 11L), u))
                 .thenReturn(2);
 
         // Exercise
@@ -301,6 +301,35 @@ public class MatchReservationServiceImplTest {
 
         // Assert: the host reserving their own series must not be self-notified
         Assertions.assertTrue(matchNotificationService.actions.isEmpty());
+    }
+
+    @Test
+    public void testReserveSeriesRejectsApprovalRequiredForNonHost() {
+        final Match selectedOccurrence =
+                createRecurringMatch(
+                        10L,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        1,
+                        100L,
+                        1,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
+        final Match secondOccurrence =
+                createRecurringMatch(
+                        11L,
+                        FIXED_NOW.plusSeconds(7200),
+                        4,
+                        0,
+                        100L,
+                        2,
+                        EventJoinPolicy.APPROVAL_REQUIRED);
+        Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDataService.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence, secondOccurrence));
+
+        Assertions.assertThrows(
+                MatchClosedException.class,
+                () -> matchReservationService.reserveSeries(10L, UserUtils.getUser(20L)));
     }
 
     @Test

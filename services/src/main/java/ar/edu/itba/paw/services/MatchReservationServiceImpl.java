@@ -14,6 +14,7 @@ import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.MatchParticipantDataService;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -125,7 +126,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
 
         final int reservedOccurrences =
                 matchParticipantDataService.createSeriesReservationsIfSpace(
-                        match.getSeries().getId(), user, Instant.now(clock));
+                        evaluation.reservableOccurrenceIds(), user);
         if (reservedOccurrences <= 0) {
             final SeriesReservationEvaluation currentEvaluation =
                     evaluateSeriesOccurrences(
@@ -293,6 +294,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
         int joinedFutureOpenOccurrenceCount = 0;
         int reservableOccurrenceCount = 0;
         int fullOccurrenceCount = 0;
+        final List<Long> reservableOccurrenceIds = new ArrayList<>();
         final Instant now = Instant.now(clock);
 
         for (final Match occurrence : occurrences) {
@@ -321,6 +323,7 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             }
 
             reservableOccurrenceCount++;
+            reservableOccurrenceIds.add(occurrence.getId());
         }
 
         final boolean joined =
@@ -332,7 +335,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
                 futureOpenOccurrenceCount,
                 joined,
                 reservableOccurrenceCount,
-                fullOccurrenceCount);
+                fullOccurrenceCount,
+                reservableOccurrenceIds);
     }
 
     private static boolean isSeriesReservableOccurrence(final Match occurrence, final User user) {
@@ -412,7 +416,8 @@ public class MatchReservationServiceImpl implements MatchReservationService {
             int futureOpenOccurrenceCount,
             boolean joined,
             int reservableOccurrenceCount,
-            int fullOccurrenceCount) {}
+            int fullOccurrenceCount,
+            List<Long> reservableOccurrenceIds) {}
 
     private record SeriesCancellationEvaluation(
             int futureOccurrenceCount, int activeFutureReservationCount) {}

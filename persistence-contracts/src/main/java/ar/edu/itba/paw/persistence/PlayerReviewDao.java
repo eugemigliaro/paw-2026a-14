@@ -32,7 +32,9 @@ public interface PlayerReviewDao {
     List<PlayerReview> findReviewsForUser(
             User reviewed, PlayerReviewFilter filter, int limit, int offset);
 
-    boolean canReview(User reviewer, User reviewed);
+    boolean hasCompletedMatchTogether(User reviewer, User reviewed);
+
+    boolean hasDoneTournamentMatchTogether(User reviewer, User reviewed);
 
     List<Long> findReviewableUserIds(User reviewer);
 }

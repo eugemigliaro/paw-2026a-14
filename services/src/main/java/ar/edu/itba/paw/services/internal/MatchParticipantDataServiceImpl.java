@@ -66,9 +66,8 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     }
 
     @Override
-    public int createSeriesReservationsIfSpace(
-            final Long seriesId, final User user, final Instant startsAfter) {
-        return matchParticipantDao.createSeriesReservationsIfSpace(seriesId, user, startsAfter);
+    public int createSeriesReservationsIfSpace(final List<Long> matchIds, final User user) {
+        return matchParticipantDao.createSeriesReservationsIfSpace(matchIds, user);
     }
 
     @Override
@@ -119,9 +118,9 @@ public class MatchParticipantDataServiceImpl implements MatchParticipantDataServ
     }
 
     @Override
-    public int approveSeriesJoinRequest(
-            final Long seriesId, final User user, final Instant startsAfter) {
-        return matchParticipantDao.approveSeriesJoinRequest(seriesId, user, startsAfter);
+    public int approveSeriesJoinRequests(
+            final Long seriesId, final List<Long> matchIds, final User user) {
+        return matchParticipantDao.approveSeriesJoinRequests(seriesId, matchIds, user);
     }
 
     @Override

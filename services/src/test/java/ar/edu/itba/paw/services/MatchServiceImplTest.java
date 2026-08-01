@@ -1392,7 +1392,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 12L,
-                                host,
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
@@ -1458,7 +1457,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 18L,
-                                host,
                                 "Test Address",
                                 "Private Match",
                                 "Test Description",
@@ -1525,7 +1523,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 19L,
-                                UserUtils.getUser(1L),
                                 "Test Address",
                                 "Request Match",
                                 "Test Description",
@@ -1630,7 +1627,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 24L,
-                                user1,
                                 "Test Address",
                                 "Request Match",
                                 "Test Description",
@@ -1685,7 +1681,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 16L,
-                                UserUtils.getUser(1L),
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
@@ -1809,7 +1804,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDataService.findById(23L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(cancelledMatch));
-        Mockito.when(matchDataService.cancelMatch(23L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(23L)).thenReturn(true);
 
         final Match result = matchService.cancelMatch(23L, host);
 
@@ -1874,7 +1869,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDataService.findById(47L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(cancelledMatch));
-        Mockito.when(matchDataService.cancelMatch(47L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(47L)).thenReturn(true);
 
         // Exercise
         final Match result = matchService.cancelMatch(47L, host);
@@ -2124,7 +2119,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 46L,
-                                host,
                                 "Updated Address",
                                 "Updated Weekly Padel",
                                 "Updated Description",
@@ -2143,7 +2137,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 47L,
-                                host,
                                 "Updated Address",
                                 "Updated Weekly Padel",
                                 "Updated Description",
@@ -2313,8 +2306,8 @@ public class MatchServiceImplTest {
                                 futureOccurrence,
                                 cancelledOccurrence));
         final User host = UserUtils.getUser(1L);
-        Mockito.when(matchDataService.cancelMatch(46L, host)).thenReturn(true);
-        Mockito.when(matchDataService.cancelMatch(47L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(46L)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(47L)).thenReturn(true);
 
         // 2. Exercise
         final List<Match> result = matchService.cancelSeriesFromOccurrence(46L, host);
@@ -2409,9 +2402,9 @@ public class MatchServiceImplTest {
                                 laterFutureOccurrence,
                                 cancelledOccurrence));
         final User host = UserUtils.getUser(1L);
-        Mockito.when(matchDataService.cancelMatch(45L, host)).thenReturn(true);
-        Mockito.when(matchDataService.cancelMatch(46L, host)).thenReturn(true);
-        Mockito.when(matchDataService.cancelMatch(47L, host)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(45L)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(46L)).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(47L)).thenReturn(true);
 
         // 2. Exercise
         final List<Match> result = matchService.cancelSeriesFromOccurrence(46L, host);
@@ -2500,7 +2493,6 @@ public class MatchServiceImplTest {
         Mockito.when(
                         matchDataService.updateMatch(
                                 25L,
-                                host,
                                 "Updated Address",
                                 "Updated Title",
                                 "Updated Description",
@@ -2575,7 +2567,7 @@ public class MatchServiceImplTest {
         Mockito.when(matchDataService.findById(26L))
                 .thenReturn(Optional.of(existingMatch))
                 .thenReturn(Optional.of(cancelledMatch));
-        Mockito.when(matchDataService.cancelMatch(26L, UserUtils.getUser(1L))).thenReturn(true);
+        Mockito.when(matchDataService.cancelMatch(26L)).thenReturn(true);
 
         final Match result = matchService.cancelMatch(26L, UserUtils.getUser(1L));
 

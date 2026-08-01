@@ -230,36 +230,15 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private boolean updateStoredMatch(
-            final Match match,
             final Long matchId,
-            final User actingUser,
             final UpdateMatchRequest request,
             final Instant startsAt,
             final Instant endsAt,
             final ImageMetadata bannerImageMetadata,
             final EventJoinPolicy joinPolicy,
             final EventStatus status) {
-        if (!isMatchHost(match, actingUser)) {
-            return matchDataService.updateMatch(
-                    matchId,
-                    request.getAddress(),
-                    request.getTitle(),
-                    request.getDescription(),
-                    startsAt,
-                    endsAt,
-                    request.getMaxPlayers(),
-                    request.getPricePerPlayer(),
-                    request.getSport(),
-                    request.getVisibility(),
-                    joinPolicy,
-                    status,
-                    bannerImageMetadata,
-                    request.getLatitude(),
-                    request.getLongitude());
-        }
         return matchDataService.updateMatch(
                 matchId,
-                actingUser,
                 request.getAddress(),
                 request.getTitle(),
                 request.getDescription(),
@@ -321,9 +300,7 @@ public class MatchServiceImpl implements MatchService {
         }
         final boolean updated =
                 updateStoredMatch(
-                        match,
                         matchId,
-                        actingUser,
                         request,
                         startsAt,
                         endsAt,
@@ -517,9 +494,7 @@ public class MatchServiceImpl implements MatchService {
                     targetStartsAt, targetEndsAt, new MatchUpdateInvalidScheduleException());
             final boolean updated =
                     updateStoredMatch(
-                            target,
                             target.getId(),
-                            actingUser,
                             request,
                             targetStartsAt,
                             targetEndsAt,
@@ -561,7 +536,7 @@ public class MatchServiceImpl implements MatchService {
             throw new MatchForbiddenActionException();
         }
 
-        final boolean updated = cancelStoredMatch(match, actingUser);
+        final boolean updated = cancelStoredMatch(match);
         if (!updated) {
             throw new MatchForbiddenActionException();
         }
@@ -587,7 +562,7 @@ public class MatchServiceImpl implements MatchService {
 
         final List<Match> cancelledMatches = new ArrayList<>();
         for (final Match target : targets) {
-            final boolean updated = cancelStoredMatch(target, actingUser);
+            final boolean updated = cancelStoredMatch(target);
             if (!updated) {
                 throw new MatchForbiddenActionException();
             }
@@ -648,10 +623,7 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
-    private boolean cancelStoredMatch(final Match match, final User actingUser) {
-        if (isMatchHost(match, actingUser)) {
-            return matchDataService.cancelMatch(match.getId(), actingUser);
-        }
+    private boolean cancelStoredMatch(final Match match) {
         return matchDataService.cancelMatch(match.getId());
     }
 

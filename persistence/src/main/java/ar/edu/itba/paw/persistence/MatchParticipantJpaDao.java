@@ -102,13 +102,6 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
             return false;
         }
 
-        if (match.getVisibility() != EventVisibility.PUBLIC
-                || match.getJoinPolicy() != EventJoinPolicy.DIRECT) {
-            if (!match.getHost().getId().equals(user.getId())) {
-                return false;
-            }
-        }
-
         final long joinedCount = countParticipants(matchId, ACTIVE_RESERVATION_STATUSES);
         if (joinedCount >= match.getMaxPlayers()) {
             return false;
@@ -118,39 +111,25 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    public int createSeriesReservationsIfSpace(
-            final Long seriesId, final User user, final Instant startsAfter) {
-        final TypedQuery<Match> query =
-                em.createQuery(
-                        "FROM Match m WHERE m.series.id = :seriesId"
-                                + " AND m.startsAt > :startsAfter"
-                                + " AND m.status = :status"
-                                + " AND ((m.visibility = :publicVis AND m.joinPolicy = :directJoin)"
-                                + "      OR m.host.id = :userId)"
-                                + " ORDER BY m.startsAt ASC",
-                        Match.class);
-        query.setParameter("seriesId", seriesId);
-        query.setParameter("startsAfter", startsAfter);
-        query.setParameter("status", EventStatus.OPEN);
-        query.setParameter("publicVis", EventVisibility.PUBLIC);
-        query.setParameter("directJoin", EventJoinPolicy.DIRECT);
-        query.setParameter("userId", user.getId());
-
-        final List<Match> matches = query.getResultList();
-        if (matches.isEmpty()) {
+    public int createSeriesReservationsIfSpace(final List<Long> matchIds, final User user) {
+        if (matchIds.isEmpty()) {
             return 0;
         }
 
-        for (Match m : matches) {
-            em.lock(m, LockModeType.PESSIMISTIC_WRITE);
+        final List<Match> matches = findMatchesByIds(matchIds);
+        for (final Match match : matches) {
+            em.lock(match, LockModeType.PESSIMISTIC_WRITE);
         }
 
         final Map<Long, Long> counts =
-                countParticipantsBatch(
-                        matches.stream().map(Match::getId).toList(), ACTIVE_RESERVATION_STATUSES);
+                countParticipantsBatch(matchIds, ACTIVE_RESERVATION_STATUSES);
 
         int count = 0;
         for (final Match match : matches) {
+            if (match.getStatus() != EventStatus.OPEN
+                    || !match.getStartsAt().isAfter(Instant.now())) {
+                continue;
+            }
             final long joinedCount = counts.getOrDefault(match.getId(), 0L);
             if (joinedCount < match.getMaxPlayers()) {
                 if (upsertParticipant(
@@ -225,11 +204,11 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     @Override
     public boolean createSeriesJoinRequestIfSpace(final Long matchId, final User user) {
         final Match match = em.find(Match.class, matchId, LockModeType.PESSIMISTIC_WRITE);
-        if (match == null
-                || match.getVisibility() != EventVisibility.PUBLIC
-                || match.getJoinPolicy() != EventJoinPolicy.APPROVAL_REQUIRED
-                || match.getStatus() != EventStatus.OPEN
-                || !match.getStartsAt().isAfter(Instant.now())) {
+        if (match == null) {
+            return false;
+        }
+
+        if (match.getStatus() != EventStatus.OPEN || !match.getStartsAt().isAfter(Instant.now())) {
             return false;
         }
 
@@ -388,38 +367,26 @@ public class MatchParticipantJpaDao implements MatchParticipantDao {
     }
 
     @Override
-    public int approveSeriesJoinRequest(
-            final Long seriesId, final User user, final Instant startsAfter) {
-        final TypedQuery<Match> query =
-                em.createQuery(
-                        "FROM Match m WHERE m.series.id = :seriesId"
-                                + " AND m.startsAt > :startsAfter"
-                                + " AND m.status = :status"
-                                + " AND m.visibility = :publicVis"
-                                + " AND m.joinPolicy = :approvalJoin"
-                                + " ORDER BY m.startsAt ASC",
-                        Match.class);
-        query.setParameter("seriesId", seriesId);
-        query.setParameter("startsAfter", startsAfter);
-        query.setParameter("status", EventStatus.OPEN);
-        query.setParameter("publicVis", EventVisibility.PUBLIC);
-        query.setParameter("approvalJoin", EventJoinPolicy.APPROVAL_REQUIRED);
-
-        final List<Match> matches = query.getResultList();
-        if (matches.isEmpty()) {
+    public int approveSeriesJoinRequests(
+            final Long seriesId, final List<Long> matchIds, final User user) {
+        if (matchIds.isEmpty()) {
             return 0;
         }
 
-        for (Match m : matches) {
-            em.lock(m, LockModeType.PESSIMISTIC_WRITE);
+        final List<Match> matches = findMatchesByIds(matchIds);
+        for (final Match match : matches) {
+            em.lock(match, LockModeType.PESSIMISTIC_WRITE);
         }
 
         final Map<Long, Long> counts =
-                countParticipantsBatch(
-                        matches.stream().map(Match::getId).toList(), ACTIVE_AND_INVITED_STATUSES);
+                countParticipantsBatch(matchIds, ACTIVE_AND_INVITED_STATUSES);
 
         int approvedCount = 0;
         for (final Match match : matches) {
+            if (match.getStatus() != EventStatus.OPEN
+                    || !match.getStartsAt().isAfter(Instant.now())) {
+                continue;
+            }
             final long activeCount = counts.getOrDefault(match.getId(), 0L);
             if (activeCount < match.getMaxPlayers()) {
                 if (upsertParticipant(

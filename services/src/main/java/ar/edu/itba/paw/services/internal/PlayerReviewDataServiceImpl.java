@@ -83,8 +83,13 @@ public class PlayerReviewDataServiceImpl implements PlayerReviewDataService {
     }
 
     @Override
-    public boolean canReview(final User reviewer, final User reviewed) {
-        return playerReviewDao.canReview(reviewer, reviewed);
+    public boolean hasCompletedMatchTogether(final User reviewer, final User reviewed) {
+        return playerReviewDao.hasCompletedMatchTogether(reviewer, reviewed);
+    }
+
+    @Override
+    public boolean hasDoneTournamentMatchTogether(final User reviewer, final User reviewed) {
+        return playerReviewDao.hasDoneTournamentMatchTogether(reviewer, reviewed);
     }
 
     @Override

@@ -27,7 +27,7 @@ public interface MatchParticipantDataService {
 
     boolean createReservationIfSpace(Long matchId, User user);
 
-    int createSeriesReservationsIfSpace(Long seriesId, User user, Instant startsAfter);
+    int createSeriesReservationsIfSpace(List<Long> matchIds, User user);
 
     int cancelFutureSeriesReservations(Long seriesId, User user, Instant startsAfter);
 
@@ -48,7 +48,7 @@ public interface MatchParticipantDataService {
 
     int approveAllPendingRequests(Long matchId);
 
-    int approveSeriesJoinRequest(Long seriesId, User user, Instant startsAfter);
+    int approveSeriesJoinRequests(Long seriesId, List<Long> matchIds, User user);
 
     boolean isSeriesJoinRequest(Long matchId, User user);
 

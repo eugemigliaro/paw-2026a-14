@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.SecurityService;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
@@ -31,19 +32,22 @@ public class SecurityServiceImpl implements SecurityService {
 
     private final MatchDataService matchDataService;
     private final TournamentDataService tournamentDataService;
-    private final PlayerReviewDataService playerReviewService;
+    private final PlayerReviewService playerReviewService;
+    private final PlayerReviewDataService playerReviewDataService;
     private final UserDataService userService;
     private final ModerationService moderationService;
 
     public SecurityServiceImpl(
             final MatchDataService matchDataService,
             final TournamentDataService tournamentDataService,
-            final PlayerReviewDataService playerReviewService,
+            final PlayerReviewService playerReviewService,
+            final PlayerReviewDataService playerReviewDataService,
             final UserDataService userService,
             final ModerationService moderationService) {
         this.matchDataService = matchDataService;
         this.tournamentDataService = tournamentDataService;
         this.playerReviewService = playerReviewService;
+        this.playerReviewDataService = playerReviewDataService;
         this.userService = userService;
         this.moderationService = moderationService;
     }
@@ -240,7 +244,7 @@ public class SecurityServiceImpl implements SecurityService {
         if (current == null || reviewId == null) {
             return false;
         }
-        final PlayerReview review = playerReviewService.findById(reviewId).orElse(null);
+        final PlayerReview review = playerReviewDataService.findById(reviewId).orElse(null);
         if (review == null) {
             return false;
         }
@@ -286,7 +290,7 @@ public class SecurityServiceImpl implements SecurityService {
             return false;
         }
         final PlayerReview review =
-                playerReviewService.findByPair(current, reviewedUser).orElse(null);
+                playerReviewDataService.findByPair(current, reviewedUser).orElse(null);
         return (review != null
                         && review.getReviewer() != null
                         && review.getReviewer().getId().equals(current.getId()))

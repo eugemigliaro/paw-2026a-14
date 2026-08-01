@@ -121,43 +121,6 @@ public class MatchDataServiceImpl implements MatchDataService {
     @Override
     public boolean updateMatch(
             final Long matchId,
-            final User host,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final Sport sport,
-            final EventVisibility visibility,
-            final EventJoinPolicy joinPolicy,
-            final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
-            final Double latitude,
-            final Double longitude) {
-        return matchDao.updateMatch(
-                matchId,
-                host,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                sport,
-                visibility,
-                joinPolicy,
-                status,
-                bannerImageMetadata,
-                latitude,
-                longitude);
-    }
-
-    @Override
-    public boolean updateMatch(
-            final Long matchId,
             final String address,
             final String title,
             final String description,
@@ -188,11 +151,6 @@ public class MatchDataServiceImpl implements MatchDataService {
                 bannerImageMetadata,
                 latitude,
                 longitude);
-    }
-
-    @Override
-    public boolean cancelMatch(final Long matchId, final User host) {
-        return matchDao.cancelMatch(matchId, host);
     }
 
     @Override

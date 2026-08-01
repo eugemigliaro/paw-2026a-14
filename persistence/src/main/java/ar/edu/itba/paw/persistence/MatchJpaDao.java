@@ -134,49 +134,6 @@ public class MatchJpaDao implements MatchDao {
     @Override
     public boolean updateMatch(
             final Long matchId,
-            final User host,
-            final String address,
-            final String title,
-            final String description,
-            final Instant startsAt,
-            final Instant endsAt,
-            final int maxPlayers,
-            final BigDecimal pricePerPlayer,
-            final Sport sport,
-            final EventVisibility visibility,
-            final EventJoinPolicy joinPolicy,
-            final EventStatus status,
-            final ImageMetadata bannerImageMetadata,
-            final Double latitude,
-            final Double longitude) {
-        final Match match = em.find(Match.class, matchId);
-
-        if (match == null || !match.getHost().getId().equals(host.getId())) {
-            return false;
-        }
-
-        updateMatchFields(
-                match,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                sport,
-                visibility,
-                joinPolicy,
-                status,
-                bannerImageMetadata,
-                latitude,
-                longitude);
-        return true;
-    }
-
-    @Override
-    public boolean updateMatch(
-            final Long matchId,
             final String address,
             final String title,
             final String description,
@@ -250,18 +207,6 @@ public class MatchJpaDao implements MatchDao {
     }
 
     @Override
-    public boolean cancelMatch(final Long matchId, final User host) {
-        final Match match = em.find(Match.class, matchId);
-
-        if (match == null || !match.getHost().getId().equals(host.getId())) {
-            return false;
-        }
-
-        cancelMatch(match);
-        return true;
-    }
-
-    @Override
     public boolean cancelMatch(final Long matchId) {
         final Match match = em.find(Match.class, matchId);
 
@@ -328,7 +273,7 @@ public class MatchJpaDao implements MatchDao {
 
         match.setStatus(EventStatus.CANCELLED);
         match.setDeleted(true);
-        match.setDeletedAt(Instant.now());
+        match.setDeletedAt(now);
         match.setDeletedBy(deletedBy);
         match.setDeleteReason(deleteReason);
         match.setUpdatedAt(now);

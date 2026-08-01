@@ -844,7 +844,6 @@ public class MatchJpaDaoTest {
         final boolean updated =
                 matchDao.updateMatch(
                         created.getId(),
-                        host,
                         "Updated Stadium",
                         "Updated Title",
                         "Updated description",
@@ -877,41 +876,6 @@ public class MatchJpaDaoTest {
                 0, new BigDecimal("25.50").compareTo(updatedMatch.getPricePerPlayer()));
         Assertions.assertEquals(-34.61, updatedMatch.getLatitude());
         Assertions.assertEquals(-58.38, updatedMatch.getLongitude());
-    }
-
-    @Test
-    public void testUpdateMatchRejectsWrongHostUserId() {
-        final Match created = createOpenMatch("Original Title", ZonedDateTime.now().plusDays(1), 8);
-        final User other = createUser("other-host", "other-host@test.com");
-        em.flush();
-        em.clear();
-
-        final boolean updated =
-                matchDao.updateMatch(
-                        created.getId(),
-                        other,
-                        "Updated Address",
-                        "Updated Title",
-                        "Updated Description",
-                        ZonedDateTime.now().plusDays(2).toInstant(),
-                        ZonedDateTime.now().plusDays(2).plusHours(2).toInstant(),
-                        10,
-                        new BigDecimal("15"),
-                        Sport.TENNIS,
-                        EventVisibility.PUBLIC,
-                        EventJoinPolicy.DIRECT,
-                        EventStatus.OPEN,
-                        null);
-
-        em.flush();
-        em.clear();
-        final Match found = matchDao.findById(created.getId()).orElseThrow();
-
-        Assertions.assertFalse(updated);
-        Assertions.assertEquals("Test Address", found.getAddress());
-        Assertions.assertEquals("Original Title", found.getTitle());
-        Assertions.assertEquals(Sport.FOOTBALL, found.getSport());
-        Assertions.assertEquals(8, found.getMaxPlayers());
     }
 
     @Test
@@ -978,7 +942,6 @@ public class MatchJpaDaoTest {
         final boolean updated =
                 matchDao.updateMatch(
                         created.getId(),
-                        host,
                         "New Court Address",
                         "Moved Match",
                         "Open match",
@@ -1084,7 +1047,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        final boolean cancelled = matchDao.cancelMatch(created.getId(), host);
+        final boolean cancelled = matchDao.cancelMatch(created.getId());
 
         em.flush();
         em.clear();
@@ -1225,7 +1188,7 @@ public class MatchJpaDaoTest {
         em.flush();
         em.clear();
 
-        final boolean cancelled = matchDao.cancelMatch(secondOccurrence.getId(), host);
+        final boolean cancelled = matchDao.cancelMatch(secondOccurrence.getId());
 
         em.flush();
         em.clear();
@@ -1236,23 +1199,6 @@ public class MatchJpaDaoTest {
         Assertions.assertEquals(EventStatus.OPEN, occurrences.get(0).getStatus());
         Assertions.assertEquals(secondOccurrence.getId(), occurrences.get(1).getId());
         Assertions.assertEquals(EventStatus.CANCELLED, occurrences.get(1).getStatus());
-    }
-
-    @Test
-    public void testCancelMatchRejectsWrongHostUserId() {
-        final Match created = createOpenMatch("Original Title", ZonedDateTime.now().plusDays(1), 8);
-        final User other = createUser("other-host", "other-host@test.com");
-        em.flush();
-        em.clear();
-
-        final boolean cancelled = matchDao.cancelMatch(created.getId(), other);
-
-        em.flush();
-        em.clear();
-        final Match found = matchDao.findById(created.getId()).orElseThrow();
-
-        Assertions.assertFalse(cancelled);
-        Assertions.assertEquals(EventStatus.OPEN, found.getStatus());
     }
 
     @Test
@@ -1289,7 +1235,7 @@ public class MatchJpaDaoTest {
                         .setParameter("matchId", created.getId())
                         .getSingleResult();
 
-        final boolean cancelled = matchDao.cancelMatch(created.getId(), host);
+        final boolean cancelled = matchDao.cancelMatch(created.getId());
 
         em.flush();
 

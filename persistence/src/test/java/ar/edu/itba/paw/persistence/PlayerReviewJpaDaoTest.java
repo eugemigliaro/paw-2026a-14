@@ -340,39 +340,40 @@ public class PlayerReviewJpaDaoTest {
     }
 
     @Test
-    public void testCanReviewSharedCompletedMatch() {
+    public void testHasCompletedMatchTogetherSharedCompletedMatch() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.CHECKED_IN);
 
-        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
+        Assertions.assertTrue(playerReviewDao.hasCompletedMatchTogether(user2, user3));
+        Assertions.assertFalse(playerReviewDao.hasDoneTournamentMatchTogether(user2, user3));
     }
 
     @Test
-    public void testCanReviewDerivedCompletedOpenPastMatch() {
+    public void testHasCompletedMatchTogetherDerivedFromOpenPastMatch() {
         joinMatch(matchOpenPast, user2, ParticipantStatus.JOINED);
         joinMatch(matchOpenPast, user3, ParticipantStatus.JOINED);
 
-        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
+        Assertions.assertTrue(playerReviewDao.hasCompletedMatchTogether(user2, user3));
     }
 
     @Test
-    public void testCanReviewRejectsInvalidCases() {
+    public void testHasCompletedMatchTogetherRejectsFutureAndCancelledMatches() {
         joinMatch(matchOpenFuture, user2, ParticipantStatus.JOINED);
         joinMatch(matchOpenFuture, user3, ParticipantStatus.JOINED);
         joinMatch(matchCancelled, user2, ParticipantStatus.JOINED);
         joinMatch(matchCancelled, user3, ParticipantStatus.JOINED);
 
-        Assertions.assertFalse(playerReviewDao.canReview(user2, user2));
-        Assertions.assertFalse(playerReviewDao.canReview(user2, user4));
-        Assertions.assertFalse(playerReviewDao.canReview(user2, user3));
+        Assertions.assertFalse(playerReviewDao.hasCompletedMatchTogether(user2, user4));
+        Assertions.assertFalse(playerReviewDao.hasCompletedMatchTogether(user2, user3));
+        Assertions.assertFalse(playerReviewDao.hasDoneTournamentMatchTogether(user2, user3));
     }
 
     @Test
-    public void testCanReviewRejectsCancelledParticipant() {
+    public void testHasCompletedMatchTogetherRejectsCancelledParticipant() {
         joinMatch(matchCompleted, user2, ParticipantStatus.JOINED);
         joinMatch(matchCompleted, user3, ParticipantStatus.CANCELLED);
 
-        Assertions.assertFalse(playerReviewDao.canReview(user2, user3));
+        Assertions.assertFalse(playerReviewDao.hasCompletedMatchTogether(user2, user3));
     }
 
     @Test
@@ -392,7 +393,7 @@ public class PlayerReviewJpaDaoTest {
     }
 
     @Test
-    public void testCanReviewSharedDoneTournamentMatchOpponent() {
+    public void testHasDoneTournamentMatchTogetherSharedDoneMatchOpponent() {
         Tournament tournament = createTournament();
         TournamentTeam teamA = createTeam(tournament, 1);
         TournamentTeam teamB = createTeam(tournament, 2);
@@ -400,11 +401,11 @@ public class PlayerReviewJpaDaoTest {
         addTeamMember(teamB, user3);
         createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.DONE);
 
-        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
+        Assertions.assertTrue(playerReviewDao.hasDoneTournamentMatchTogether(user2, user3));
     }
 
     @Test
-    public void testCanReviewSharedDoneTournamentMatchTeammate() {
+    public void testHasDoneTournamentMatchTogetherSharedDoneMatchTeammate() {
         Tournament tournament = createTournament();
         TournamentTeam teamA = createTeam(tournament, 1);
         TournamentTeam teamB = createTeam(tournament, 2);
@@ -413,11 +414,11 @@ public class PlayerReviewJpaDaoTest {
         addTeamMember(teamB, user4);
         createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.DONE);
 
-        Assertions.assertTrue(playerReviewDao.canReview(user2, user3));
+        Assertions.assertTrue(playerReviewDao.hasDoneTournamentMatchTogether(user2, user3));
     }
 
     @Test
-    public void testCanReviewRejectsTournamentMatchNotDone() {
+    public void testHasDoneTournamentMatchTogetherRejectsNotDoneMatch() {
         Tournament tournament = createTournament();
         TournamentTeam teamA = createTeam(tournament, 1);
         TournamentTeam teamB = createTeam(tournament, 2);
@@ -425,7 +426,7 @@ public class PlayerReviewJpaDaoTest {
         addTeamMember(teamB, user3);
         createTournamentMatch(tournament, teamA, teamB, TournamentMatchStatus.AWAITING_RESULT);
 
-        Assertions.assertFalse(playerReviewDao.canReview(user2, user3));
+        Assertions.assertFalse(playerReviewDao.hasDoneTournamentMatchTogether(user2, user3));
     }
 
     @Test

@@ -253,8 +253,10 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         if (match.isRecurringOccurrence()
                 && matchParticipantDataService.isSeriesJoinRequest(matchId, targetUser)) {
             final int approvedRows =
-                    matchParticipantDataService.approveSeriesJoinRequest(
-                            match.getSeries().getId(), targetUser, Instant.now(clock));
+                    matchParticipantDataService.approveSeriesJoinRequests(
+                            match.getSeries().getId(),
+                            futureRequestableOccurrenceIdsForSeries(match.getSeries().getId()),
+                            targetUser);
             if (approvedRows <= 0) {
                 throw new MatchFullException();
             }
@@ -704,6 +706,15 @@ public class MatchParticipationServiceImpl implements MatchParticipationService 
         return EventStatus.OPEN.equals(occurrence.getStatus())
                 && occurrence.getVisibility() == EventVisibility.PUBLIC
                 && occurrence.getJoinPolicy() == EventJoinPolicy.APPROVAL_REQUIRED;
+    }
+
+    private List<Long> futureRequestableOccurrenceIdsForSeries(final Long seriesId) {
+        final Instant now = Instant.now(clock);
+        return matchDataService.findSeriesOccurrences(seriesId).stream()
+                .filter(occurrence -> occurrence.getStartsAt().isAfter(now))
+                .filter(MatchParticipationServiceImpl::isSeriesJoinRequestableOccurrence)
+                .map(Match::getId)
+                .toList();
     }
 
     private SeriesInvitationEvaluation evaluateSeriesInvitationTargets(

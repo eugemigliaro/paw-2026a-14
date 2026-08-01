@@ -157,58 +157,6 @@ public interface MatchDao {
 
     default boolean updateMatch(
             Long matchId,
-            User host,
-            String address,
-            String title,
-            String description,
-            Instant startsAt,
-            Instant endsAt,
-            int maxPlayers,
-            BigDecimal pricePerPlayer,
-            Sport sport,
-            EventVisibility visibility,
-            EventJoinPolicy joinPolicy,
-            EventStatus status,
-            ImageMetadata bannerImageMetadata) {
-        return updateMatch(
-                matchId,
-                host,
-                address,
-                title,
-                description,
-                startsAt,
-                endsAt,
-                maxPlayers,
-                pricePerPlayer,
-                sport,
-                visibility,
-                joinPolicy,
-                status,
-                bannerImageMetadata,
-                null,
-                null);
-    }
-
-    boolean updateMatch(
-            Long matchId,
-            User host,
-            String address,
-            String title,
-            String description,
-            Instant startsAt,
-            Instant endsAt,
-            int maxPlayers,
-            BigDecimal pricePerPlayer,
-            Sport sport,
-            EventVisibility visibility,
-            EventJoinPolicy joinPolicy,
-            EventStatus status,
-            ImageMetadata bannerImageMetadata,
-            Double latitude,
-            Double longitude);
-
-    default boolean updateMatch(
-            Long matchId,
             String address,
             String title,
             String description,
@@ -255,8 +203,6 @@ public interface MatchDao {
             ImageMetadata bannerImageMetadata,
             Double latitude,
             Double longitude);
-
-    boolean cancelMatch(Long matchId, User host);
 
     boolean cancelMatch(Long matchId);
 

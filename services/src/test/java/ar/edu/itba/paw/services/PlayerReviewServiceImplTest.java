@@ -38,7 +38,7 @@ public class PlayerReviewServiceImplTest {
         final PlayerReview persisted =
                 review(1L, 2L, 3L, PlayerReviewReaction.LIKE, "Great teammate", null);
         Mockito.when(
-                        playerReviewDataService.canReview(
+                        playerReviewDataService.hasCompletedMatchTogether(
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(true);
         Mockito.when(
@@ -64,7 +64,7 @@ public class PlayerReviewServiceImplTest {
     public void testSubmitReviewAllowsOnceEverEditableBehavior() {
         final PlayerReview updated = review(1L, 2L, 3L, PlayerReviewReaction.DISLIKE, "Late", null);
         Mockito.when(
-                        playerReviewDataService.canReview(
+                        playerReviewDataService.hasCompletedMatchTogether(
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(true);
         Mockito.when(
@@ -101,7 +101,11 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testSubmitReviewRejectsIneligibleUsers() {
         Mockito.when(
-                        playerReviewDataService.canReview(
+                        playerReviewDataService.hasCompletedMatchTogether(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
+        Mockito.when(
+                        playerReviewDataService.hasDoneTournamentMatchTogether(
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(false);
 
@@ -128,7 +132,7 @@ public class PlayerReviewServiceImplTest {
     public void testSubmitReviewStoresBlankCommentAsNull() {
         final PlayerReview persisted = review(1L, 2L, 3L, PlayerReviewReaction.LIKE, null, null);
         Mockito.when(
-                        playerReviewDataService.canReview(
+                        playerReviewDataService.hasCompletedMatchTogether(
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(true);
         Mockito.when(
@@ -152,7 +156,7 @@ public class PlayerReviewServiceImplTest {
     @Test
     public void testSubmitReviewRejectsTooLongComment() {
         Mockito.when(
-                        playerReviewDataService.canReview(
+                        playerReviewDataService.hasCompletedMatchTogether(
                                 UserUtils.getUser(2L), UserUtils.getUser(3L)))
                 .thenReturn(true);
         final String tooLongComment = "a".repeat(PlayerReviewService.MAX_COMMENT_LENGTH + 1);
@@ -165,6 +169,70 @@ public class PlayerReviewServiceImplTest {
                                 UserUtils.getUser(3L),
                                 PlayerReviewReaction.LIKE,
                                 tooLongComment));
+    }
+
+    @Test
+    public void testCanReviewTrueWhenUsersCompletedMatchTogether() {
+        Mockito.when(
+                        playerReviewDataService.hasCompletedMatchTogether(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
+
+        Assertions.assertTrue(
+                playerReviewService.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)));
+    }
+
+    @Test
+    public void testCanReviewTrueWhenUsersDoneTournamentMatchTogether() {
+        Mockito.when(
+                        playerReviewDataService.hasCompletedMatchTogether(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
+        Mockito.when(
+                        playerReviewDataService.hasDoneTournamentMatchTogether(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(true);
+
+        Assertions.assertTrue(
+                playerReviewService.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)));
+    }
+
+    @Test
+    public void testCanReviewFalseWhenUsersNeverSharedMatch() {
+        Mockito.when(
+                        playerReviewDataService.hasCompletedMatchTogether(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
+        Mockito.when(
+                        playerReviewDataService.hasDoneTournamentMatchTogether(
+                                UserUtils.getUser(2L), UserUtils.getUser(3L)))
+                .thenReturn(false);
+
+        Assertions.assertFalse(
+                playerReviewService.canReview(UserUtils.getUser(2L), UserUtils.getUser(3L)));
+    }
+
+    @Test
+    public void testCanReviewRejectsSelfReviewWithoutDataAccess() {
+        Assertions.assertFalse(
+                playerReviewService.canReview(UserUtils.getUser(2L), UserUtils.getUser(2L)));
+    }
+
+    @Test
+    public void testCanReviewRejectsMissingUsersWithoutDataAccess() {
+        Assertions.assertFalse(playerReviewService.canReview(null, UserUtils.getUser(3L)));
+        Assertions.assertFalse(playerReviewService.canReview(UserUtils.getUser(2L), null));
+    }
+
+    @Test
+    public void testGetProfileReviewStateLocksSelfReviewWithoutDataAccess() {
+        final PlayerReviewProfileState state =
+                playerReviewService.getProfileReviewState(
+                        UserUtils.getUser(2L), UserUtils.getUser(2L));
+
+        Assertions.assertFalse(state.canSubmit());
+        Assertions.assertEquals(
+                PlayerReviewProfileState.LockedReason.SELF, state.getLockedReason());
     }
 
     @Test
@@ -401,7 +469,12 @@ public class PlayerReviewServiceImplTest {
         }
 
         @Override
-        public boolean canReview(final User reviewer, final User reviewed) {
+        public boolean hasCompletedMatchTogether(final User reviewer, final User reviewed) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean hasDoneTournamentMatchTogether(final User reviewer, final User reviewed) {
             throw new UnsupportedOperationException();
         }
 

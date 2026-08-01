@@ -490,9 +490,11 @@ public class MatchParticipationServiceImplTest {
                         100L,
                         1);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(selectedOccurrence));
+        Mockito.when(matchDataService.findSeriesOccurrences(100L))
+                .thenReturn(List.of(selectedOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchParticipantDataService.isSeriesJoinRequest(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDataService.approveSeriesJoinRequest(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.approveSeriesJoinRequests(100L, List.of(10L), u))
                 .thenReturn(2);
 
         // Exercise
@@ -517,10 +519,23 @@ public class MatchParticipationServiceImplTest {
                         0,
                         100L,
                         1);
+        final Match futureOccurrence =
+                createRecurringMatch(
+                        11L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.APPROVAL_REQUIRED,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        0,
+                        100L,
+                        2);
         Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(staleOccurrence));
+        Mockito.when(matchDataService.findSeriesOccurrences(100L))
+                .thenReturn(List.of(staleOccurrence, futureOccurrence));
         final User u = UserUtils.getUser(20L);
         Mockito.when(matchParticipantDataService.isSeriesJoinRequest(10L, u)).thenReturn(true);
-        Mockito.when(matchParticipantDataService.approveSeriesJoinRequest(100L, u, FIXED_NOW))
+        Mockito.when(matchParticipantDataService.approveSeriesJoinRequests(100L, List.of(11L), u))
                 .thenReturn(1);
 
         // Exercise
@@ -868,6 +883,39 @@ public class MatchParticipationServiceImplTest {
         Assertions.assertThrows(
                 MatchNotRecurringException.class,
                 () -> matchParticipationService.requestToJoinSeries(10L, UserUtils.getUser(20L)));
+    }
+
+    @Test
+    public void testRequestToJoinSeriesRejectsSeriesWithoutRequestableOccurrences() {
+        // Arrange
+        final Match directOccurrence =
+                createRecurringMatch(
+                        10L,
+                        EventVisibility.PUBLIC,
+                        EventJoinPolicy.DIRECT,
+                        EventStatus.OPEN,
+                        FIXED_NOW.plusSeconds(3600),
+                        4,
+                        0,
+                        100L,
+                        1);
+        Mockito.when(matchDataService.findById(10L)).thenReturn(Optional.of(directOccurrence));
+        Mockito.when(matchDataService.findSeriesOccurrences(100L))
+                .thenReturn(List.of(directOccurrence));
+        final User u = UserUtils.getUser(20L);
+        Mockito.when(
+                        matchParticipantDataService.findActiveFutureReservationMatchIdsForSeries(
+                                100L, u, FIXED_NOW))
+                .thenReturn(List.of());
+        Mockito.when(
+                        matchParticipantDataService.findPendingFutureRequestMatchIdsForSeries(
+                                100L, u, FIXED_NOW))
+                .thenReturn(List.of());
+
+        // Exercise + Assert
+        Assertions.assertThrows(
+                MatchSeriesClosedException.class,
+                () -> matchParticipationService.requestToJoinSeries(10L, u));
     }
 
     @Test

@@ -935,7 +935,12 @@ public class ModerationServiceImplTest {
         }
 
         @Override
-        public boolean canReview(final User reviewer, final User reviewed) {
+        public boolean hasCompletedMatchTogether(final User reviewer, final User reviewed) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean hasDoneTournamentMatchTogether(final User reviewer, final User reviewed) {
             throw new UnsupportedOperationException();
         }
 

@@ -203,57 +203,60 @@ public class PlayerReviewJpaDao implements PlayerReviewDao {
     }
 
     @Override
-    public boolean canReview(final User reviewer, final User reviewed) {
-        if (reviewer == null || reviewer.equals(reviewed)) {
+    public boolean hasCompletedMatchTogether(final User reviewer, final User reviewed) {
+        if (reviewer == null || reviewed == null) {
             return false;
         }
 
-        final List<Long> matchResults =
-                em.createQuery(
-                                "SELECT 1L"
-                                        + " FROM MatchParticipant reviewer"
-                                        + " JOIN MatchParticipant reviewed"
-                                        + " ON reviewed.match.id = reviewer.match.id"
-                                        + " JOIN reviewer.match m"
-                                        + " WHERE reviewer.user.id = :reviewerUserId"
-                                        + " AND reviewer.status IN :participantStatuses"
-                                        + " AND reviewed.user.id = :reviewedUserId"
-                                        + " AND reviewed.status IN :participantStatuses"
-                                        + " AND (m.status = :completedStatus"
-                                        + " OR (m.status = :openStatus"
-                                        + " AND COALESCE(m.endsAt, m.startsAt) <= CURRENT_TIMESTAMP))",
-                                Long.class)
-                        .setParameter("reviewerUserId", reviewer.getId())
-                        .setParameter("reviewedUserId", reviewed.getId())
-                        .setParameter(
-                                "participantStatuses",
-                                List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
-                        .setParameter("completedStatus", EventStatus.COMPLETED)
-                        .setParameter("openStatus", EventStatus.OPEN)
-                        .setMaxResults(1)
-                        .getResultList();
-        if (!matchResults.isEmpty()) {
-            return true;
+        return !em.createQuery(
+                        "SELECT 1L"
+                                + " FROM MatchParticipant reviewer"
+                                + " JOIN MatchParticipant reviewed"
+                                + " ON reviewed.match.id = reviewer.match.id"
+                                + " JOIN reviewer.match m"
+                                + " WHERE reviewer.user.id = :reviewerUserId"
+                                + " AND reviewer.status IN :participantStatuses"
+                                + " AND reviewed.user.id = :reviewedUserId"
+                                + " AND reviewed.status IN :participantStatuses"
+                                + " AND (m.status = :completedStatus"
+                                + " OR (m.status = :openStatus"
+                                + " AND COALESCE(m.endsAt, m.startsAt) <= CURRENT_TIMESTAMP))",
+                        Long.class)
+                .setParameter("reviewerUserId", reviewer.getId())
+                .setParameter("reviewedUserId", reviewed.getId())
+                .setParameter(
+                        "participantStatuses",
+                        List.of(ParticipantStatus.JOINED, ParticipantStatus.CHECKED_IN))
+                .setParameter("completedStatus", EventStatus.COMPLETED)
+                .setParameter("openStatus", EventStatus.OPEN)
+                .setMaxResults(1)
+                .getResultList()
+                .isEmpty();
+    }
+
+    @Override
+    public boolean hasDoneTournamentMatchTogether(final User reviewer, final User reviewed) {
+        if (reviewer == null || reviewed == null) {
+            return false;
         }
 
-        final List<Long> tournamentResults =
-                em.createQuery(
-                                "SELECT 1L"
-                                        + " FROM TournamentMatch tm"
-                                        + " WHERE tm.status = :doneStatus"
-                                        + " AND EXISTS (SELECT 1 FROM TournamentTeamMember rm"
-                                        + " WHERE rm.user.id = :reviewerUserId"
-                                        + " AND (rm.team = tm.teamA OR rm.team = tm.teamB))"
-                                        + " AND EXISTS (SELECT 1 FROM TournamentTeamMember dm"
-                                        + " WHERE dm.user.id = :reviewedUserId"
-                                        + " AND (dm.team = tm.teamA OR dm.team = tm.teamB))",
-                                Long.class)
-                        .setParameter("reviewerUserId", reviewer.getId())
-                        .setParameter("reviewedUserId", reviewed.getId())
-                        .setParameter("doneStatus", TournamentMatchStatus.DONE)
-                        .setMaxResults(1)
-                        .getResultList();
-        return !tournamentResults.isEmpty();
+        return !em.createQuery(
+                        "SELECT 1L"
+                                + " FROM TournamentMatch tm"
+                                + " WHERE tm.status = :doneStatus"
+                                + " AND EXISTS (SELECT 1 FROM TournamentTeamMember rm"
+                                + " WHERE rm.user.id = :reviewerUserId"
+                                + " AND (rm.team = tm.teamA OR rm.team = tm.teamB))"
+                                + " AND EXISTS (SELECT 1 FROM TournamentTeamMember dm"
+                                + " WHERE dm.user.id = :reviewedUserId"
+                                + " AND (dm.team = tm.teamA OR dm.team = tm.teamB))",
+                        Long.class)
+                .setParameter("reviewerUserId", reviewer.getId())
+                .setParameter("reviewedUserId", reviewed.getId())
+                .setParameter("doneStatus", TournamentMatchStatus.DONE)
+                .setMaxResults(1)
+                .getResultList()
+                .isEmpty();
     }
 
     @Override

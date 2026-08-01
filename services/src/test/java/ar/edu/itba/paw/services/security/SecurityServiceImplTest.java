@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.types.EventJoinPolicy;
 import ar.edu.itba.paw.models.types.EventVisibility;
 import ar.edu.itba.paw.models.types.TournamentStatus;
 import ar.edu.itba.paw.services.ModerationService;
+import ar.edu.itba.paw.services.PlayerReviewService;
 import ar.edu.itba.paw.services.internal.MatchDataService;
 import ar.edu.itba.paw.services.internal.PlayerReviewDataService;
 import ar.edu.itba.paw.services.internal.TournamentDataService;
@@ -31,7 +32,8 @@ class SecurityServiceImplTest {
     private SecurityServiceImpl securityService;
     private MatchDataService matchDataService;
     private TournamentDataService tournamentDataService;
-    private PlayerReviewDataService playerReviewService;
+    private PlayerReviewService playerReviewService;
+    private PlayerReviewDataService playerReviewDataService;
     private UserDataService userService;
     private ModerationService moderationService;
 
@@ -39,7 +41,8 @@ class SecurityServiceImplTest {
     void setUp() {
         matchDataService = Mockito.mock(MatchDataService.class);
         tournamentDataService = Mockito.mock(TournamentDataService.class);
-        playerReviewService = Mockito.mock(PlayerReviewDataService.class);
+        playerReviewService = Mockito.mock(PlayerReviewService.class);
+        playerReviewDataService = Mockito.mock(PlayerReviewDataService.class);
         userService = Mockito.mock(UserDataService.class);
         moderationService = Mockito.mock(ModerationService.class);
         securityService =
@@ -47,6 +50,7 @@ class SecurityServiceImplTest {
                         matchDataService,
                         tournamentDataService,
                         playerReviewService,
+                        playerReviewDataService,
                         userService,
                         moderationService);
     }

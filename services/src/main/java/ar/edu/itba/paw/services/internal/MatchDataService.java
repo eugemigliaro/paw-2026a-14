@@ -68,7 +68,6 @@ public interface MatchDataService {
 
     boolean updateMatch(
             Long matchId,
-            User host,
             String address,
             String title,
             String description,
@@ -83,25 +82,6 @@ public interface MatchDataService {
             ImageMetadata bannerImageMetadata,
             Double latitude,
             Double longitude);
-
-    boolean updateMatch(
-            Long matchId,
-            String address,
-            String title,
-            String description,
-            Instant startsAt,
-            Instant endsAt,
-            int maxPlayers,
-            BigDecimal pricePerPlayer,
-            Sport sport,
-            EventVisibility visibility,
-            EventJoinPolicy joinPolicy,
-            EventStatus status,
-            ImageMetadata bannerImageMetadata,
-            Double latitude,
-            Double longitude);
-
-    boolean cancelMatch(Long matchId, User host);
 
     boolean cancelMatch(Long matchId);
 

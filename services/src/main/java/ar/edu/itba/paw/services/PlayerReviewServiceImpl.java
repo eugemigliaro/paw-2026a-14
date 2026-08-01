@@ -107,7 +107,7 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
             return new PlayerReviewProfileState(
                     viewerReview, false, PlayerReviewProfileState.LockedReason.SELF);
         }
-        if (!playerReviewDataService.canReview(reviewer, reviewed)) {
+        if (!canReview(reviewer, reviewed)) {
             return new PlayerReviewProfileState(
                     viewerReview, false, PlayerReviewProfileState.LockedReason.NOT_ELIGIBLE);
         }
@@ -117,10 +117,11 @@ public class PlayerReviewServiceImpl implements PlayerReviewService {
 
     @Override
     public boolean canReview(final User reviewer, final User reviewed) {
-        return reviewer != null
-                && reviewed != null
-                && !reviewer.equals(reviewed)
-                && playerReviewDataService.canReview(reviewer, reviewed);
+        if (reviewer == null || reviewed == null || reviewer.equals(reviewed)) {
+            return false;
+        }
+        return playerReviewDataService.hasCompletedMatchTogether(reviewer, reviewed)
+                || playerReviewDataService.hasDoneTournamentMatchTogether(reviewer, reviewed);
     }
 
     @Override
